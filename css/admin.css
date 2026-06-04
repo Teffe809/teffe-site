@@ -1,4 +1,5 @@
 /* ── PAINEL ADMINISTRATIVO ── */
+#adm-login-bg{z-index:9999;}
 
 /* Navbar */
 .adm-navbar{background:#1A3F80;padding:0 32px;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;box-shadow:0 2px 12px rgba(0,0,0,.15);}
