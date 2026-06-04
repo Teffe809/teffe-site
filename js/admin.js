@@ -1,6 +1,5 @@
 'use strict';
 // ADMIN_URL e ADMIN_ANON são carregados de js/admin-keys.js
-// ADMIN_SRK é opcional — adicione localmente em admin-keys.js sem commitar
 
 let _admUid=null,_admNome='',_admTecs=[];
 
@@ -8,12 +7,9 @@ let _admUid=null,_admNome='',_admTecs=[];
 const _supabase=supabase.createClient(ADMIN_URL,ADMIN_ANON);
 
 // ── HTTP ──
-// Operações de dados com SRK (se disponível) — leitura de chamados, clientes etc.
+// Operações de dados com anon key — leitura de chamados, clientes etc.
 async function admHttp(path,opts){
-  const srk=typeof ADMIN_SRK!=='undefined'&&ADMIN_SRK&&ADMIN_SRK!=='COLE_SUA_SERVICE_ROLE_KEY_AQUI';
-  const key=srk?ADMIN_SRK:ADMIN_ANON;
-  const token=srk?ADMIN_SRK:ADMIN_ANON;
-  const h={'apikey':key,'Content-Type':'application/json','Authorization':'Bearer '+token};
+  const h={'apikey':ADMIN_ANON,'Content-Type':'application/json','Authorization':'Bearer '+ADMIN_ANON};
   const r=await fetch(ADMIN_URL+path,{...opts,headers:{...h,...(opts&&opts.headers||{})}});
   return {data:await r.json().catch(()=>null),ok:r.ok};
 }
@@ -192,31 +188,24 @@ async function admCriarTecnico(){
   if(!senha){erroEl.style.display='block';erroEl.textContent='Defina uma senha temporária para o técnico.';return;}
   btn.disabled=true;btn.textContent='Criando...';erroEl.style.display='none';
   let userId=null;
-  const srkOk=typeof ADMIN_SRK!=='undefined'&&ADMIN_SRK&&ADMIN_SRK!=='COLE_SUA_SERVICE_ROLE_KEY_AQUI';
-  console.log('[admCriarTecnico] srkOk:', srkOk, '| email:', email, '| nome:', nome);
-  if(srkOk){
-    console.log('[admCriarTecnico] Chamando Admin API /auth/v1/admin/users...');
-    const r=await fetch(ADMIN_URL+'/auth/v1/admin/users',{
-      method:'POST',
-      headers:{'apikey':ADMIN_SRK,'Authorization':'Bearer '+ADMIN_SRK,'Content-Type':'application/json'},
-      body:JSON.stringify({email,password:senha,email_confirm:true,user_metadata:{role:'tecnico',nome}})
-    });
-    const authUser=await r.json().catch(()=>null);
-    console.log('[admCriarTecnico] Admin API status:', r.status, '| resposta completa:', JSON.stringify(authUser));
-    if(!r.ok){
-      erroEl.style.display='block';
-      erroEl.textContent='Erro ao criar login: '+(authUser&&authUser.message?authUser.message:'verifique a service role key.');
-      btn.disabled=false;btn.textContent='Criar Técnico';return;
-    }
-    if(authUser&&authUser.id) userId=authUser.id;
-    console.log('[admCriarTecnico] userId obtido do Auth:', userId);
+
+  // Cria login do técnico via signUp (anon key — sem service role key)
+  const {data:signUpData,error:signUpError}=await _supabase.auth.signUp({
+    email,password:senha,
+    options:{data:{role:'tecnico',nome}}
+  });
+  if(signUpError){
+    erroEl.style.display='block';
+    erroEl.textContent='Erro ao criar login: '+signUpError.message;
+    btn.disabled=false;btn.textContent='Criar Técnico';return;
   }
-  console.log('[admCriarTecnico] Iniciando INSERT em tecnicos | payload:', JSON.stringify({nome,email,telefone:tel||null,matricula:mat||null,user_id:userId}));
+  if(signUpData.user) userId=signUpData.user.id;
+
+  // INSERT na tabela tecnicos com JWT do admin logado (RLS reconhece auth.uid())
   const {ok,data:errD}=await admHttpUser('/rest/v1/tecnicos',{
     method:'POST',headers:{'Prefer':'return=minimal'},
     body:JSON.stringify({nome,email,telefone:tel||null,matricula:mat||null,user_id:userId})
   });
-  console.log('[admCriarTecnico] INSERT resultado | ok:', ok, '| resposta:', JSON.stringify(errD));
   btn.disabled=false;btn.textContent='Criar Técnico';
   if(!ok){erroEl.style.display='block';erroEl.textContent=errD&&errD.message?errD.message:'Erro ao cadastrar técnico.';return;}
   ['adm-tec-nome','adm-tec-email','adm-tec-tel','adm-tec-mat','adm-tec-senha'].forEach(id=>document.getElementById(id).value='');
