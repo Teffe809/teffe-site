@@ -1,10 +1,9 @@
+Object.keys(localStorage).forEach(k=>{if(k.startsWith('sb-')) localStorage.removeItem(k);});
+
 'use strict';
 // ADMIN_URL e ADMIN_ANON são carregados de js/admin-keys.js
 
 let _admUid=null,_admNome='',_admTecs=[];
-
-// Limpa token antes de criar o cliente para impedir restauração automática de sessão antiga
-localStorage.removeItem('sb-hlfjcpgrxiktgctozilk-auth-token');
 
 // Cliente Supabase com anon key — gerencia a sessão do admin logado
 const _supabase=supabase.createClient(ADMIN_URL,ADMIN_ANON);
@@ -112,7 +111,6 @@ function admFecharLogin(){
 
 // Ponto de entrada: sempre faz signOut e limpa estado antes de mostrar login
 async function admInit(){
-  Object.keys(localStorage).forEach(k=>{if(k.startsWith('sb-')) localStorage.removeItem(k);});
   await _supabase.auth.signOut();
   _admUid=null;_admNome='';_admTecs=[];
   admMostrarLogin();
