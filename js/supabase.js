@@ -33,11 +33,13 @@ async function fazerLogout(){
   _tok=null;_uid=null;_cid=null;
   localStorage.removeItem('tt');localStorage.removeItem('tu');
   document.getElementById('area-cliente').style.display='none';
+  history.replaceState(null,'',location.pathname); // Remove hash da URL
 }
 
 // ── CARREGAR ÁREA ──
 async function carregarArea(){
   document.getElementById('area-cliente').style.display='block';
+  history.pushState(null,'','#cliente');
   const {data:cl}=await sf('/rest/v1/clientes?user_id=eq.'+_uid+'&limit=1&select=*');
   const c=cl&&cl[0];
   _cid=c?c.id:null;
@@ -54,6 +56,8 @@ function acMostrarView(id){
   document.querySelectorAll('.ac-view').forEach(v=>v.classList.remove('ac-view-active'));
   document.getElementById('ac-view-'+id).classList.add('ac-view-active');
   document.getElementById('area-cliente').scrollTop=0;
+  const hashes={dash:'cliente',assist:'cliente/assistencia',suprim:'cliente/suprimentos'};
+  history.replaceState(null,'','#'+(hashes[id]||'cliente'));
 }
 
 // ── CHAMADOS (assistência + suprimentos) ──
@@ -304,5 +308,5 @@ function acMostrarArquivo(textId,input){
 
 window.addEventListener('DOMContentLoaded',()=>{
   const t=localStorage.getItem('tt'),u=localStorage.getItem('tu');
-  if(t&&u){_tok=t;_uid=u;carregarArea();}
+  if(t&&u){_tok=t;_uid=u;} // Restaura tokens mas NÃO abre área do cliente automaticamente
 });
