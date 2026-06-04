@@ -1,8 +1,6 @@
 'use strict';
-const ADMIN_URL='https://hlfjcpgrxiktgctozilk.supabase.co';
-const ADMIN_ANON='sb_publishable_-Iu8PbqhLeZAXSBcczr2mQ_lzlGr4_g';
-// ADMIN_SRK é carregado de js/admin-keys.js (arquivo no .gitignore, nunca commitar)
-// Se typeof ADMIN_SRK === 'undefined', o painel funcionará sem criar logins no Auth.
+// ADMIN_URL e ADMIN_ANON são carregados de js/admin-keys.js
+// ADMIN_SRK é opcional — adicione localmente em admin-keys.js sem commitar
 
 let _admUid=null,_admNome='',_admTecs=[];
 
