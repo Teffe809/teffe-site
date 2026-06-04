@@ -6,6 +6,7 @@
 <title>Teffe – Tecnologia que você pode confiar.</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,300&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="css/style.css"/>
+<link rel="stylesheet" href="css/admin.css"/>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css"/>
 </head>
 <body>
@@ -2020,5 +2021,139 @@
 
 </div>
 <script src="js/supabase.js"></script>
+
+<!-- ADMIN LOGIN MODAL -->
+<div class="modal-bg" id="adm-login-bg">
+  <div class="modal" style="max-width:420px;">
+    <button class="modal-x" onclick="admFecharLogin()">✕</button>
+    <h2>Painel Administrativo</h2>
+    <p class="msub">Acesso restrito a administradores.</p>
+    <div id="adm-login-erro" class="adm-err"></div>
+    <div class="fg"><label>E-mail</label><input id="adm-email" type="email" placeholder="admin@teffe.com.br"/></div>
+    <div class="fg" style="margin-top:12px;"><label>Senha</label><input id="adm-senha" type="password" placeholder="••••••••"/></div>
+    <button class="btn-login" id="adm-btn-entrar" onclick="admFazerLogin()">Entrar →</button>
+  </div>
+</div>
+
+<!-- PAINEL ADMINISTRATIVO -->
+<div id="admin-panel" style="display:none;position:fixed;inset:0;z-index:5100;background:#F5F7FA;overflow-y:auto;">
+
+  <div class="adm-navbar">
+    <div class="adm-navbar-left">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 580 175" style="height:34px;width:auto;">
+        <rect width="580" height="175" fill="#1A3F80"/>
+        <polygon points="95,31 140,57 140,109 95,135 50,109 50,57" fill="none" stroke="#E07820" stroke-width="5" stroke-linejoin="round"/>
+        <polygon points="95,37 135,60 135,106 95,129 55,106 55,60" fill="#1A3F80"/>
+        <polygon points="95,43 130,63 130,103 95,123 60,103 60,63" fill="#fff"/>
+        <rect x="78" y="62" width="34" height="6" rx="2.5" fill="#E07820"/>
+        <rect x="91" y="62" width="7" height="30" rx="2.5" fill="#E07820"/>
+        <text font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="76" x="200" y="103"><tspan fill="#fff">TE</tspan><tspan fill="#E07820">FFE</tspan></text>
+        <rect x="200" y="111" width="310" height="3" rx="1.5" fill="#E07820"/>
+        <text x="202" y="139" font-family="Arial,sans-serif" font-weight="700" font-size="15" fill="#E07820" letter-spacing="6">TECNOLOGIA</text>
+      </svg>
+      <span class="adm-navbar-tag">Painel Admin</span>
+    </div>
+    <div class="adm-navbar-right">
+      <i class="ti ti-user-circle" style="font-size:20px;"></i>
+      <span id="adm-nome-display"></span>
+      <button class="adm-sair-btn" onclick="admFazerLogout()"><i class="ti ti-logout"></i> Sair</button>
+    </div>
+  </div>
+
+  <div class="adm-layout">
+
+    <div class="adm-sidebar">
+      <div class="adm-sidebar-label">Menu</div>
+      <button class="adm-nav-item" data-adm-view="dash" onclick="admMostrarView('dash')"><i class="ti ti-layout-dashboard"></i> Dashboard</button>
+      <button class="adm-nav-item" data-adm-view="tecnicos" onclick="admMostrarView('tecnicos')"><i class="ti ti-users"></i> Técnicos</button>
+      <button class="adm-nav-item" data-adm-view="clientes" onclick="admMostrarView('clientes')"><i class="ti ti-building"></i> Clientes</button>
+      <button class="adm-nav-item" data-adm-view="chamados" onclick="admMostrarView('chamados')"><i class="ti ti-ticket"></i> Chamados</button>
+    </div>
+
+    <div class="adm-content">
+
+      <!-- DASHBOARD -->
+      <div id="adm-view-dash" class="adm-view">
+        <h1 class="adm-pg-title">Dashboard</h1>
+        <p class="adm-pg-sub">Visão geral do painel administrativo Teffe</p>
+        <div class="adm-stat-cards">
+          <div class="adm-stat-card" onclick="admMostrarView('tecnicos')">
+            <i class="ti ti-users"></i>
+            <div class="adm-stat-num" id="adm-n-tecs">–</div>
+            <div class="adm-stat-label">Técnicos cadastrados</div>
+          </div>
+          <div class="adm-stat-card" onclick="admMostrarView('clientes')">
+            <i class="ti ti-building"></i>
+            <div class="adm-stat-num" id="adm-n-cli">–</div>
+            <div class="adm-stat-label">Clientes</div>
+          </div>
+          <div class="adm-stat-card" onclick="admMostrarView('chamados')">
+            <i class="ti ti-ticket"></i>
+            <div class="adm-stat-num" id="adm-n-cham">–</div>
+            <div class="adm-stat-label">Chamados abertos</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TÉCNICOS -->
+      <div id="adm-view-tecnicos" class="adm-view">
+        <h1 class="adm-pg-title">Técnicos</h1>
+        <div class="adm-form-card">
+          <h3><i class="ti ti-user-plus"></i> Novo Técnico</h3>
+          <div id="adm-tec-erro" class="adm-err"></div>
+          <div class="adm-grid-3">
+            <div class="ac-fg"><label class="ac-label">Nome *</label><input type="text" id="adm-tec-nome" class="ac-input" placeholder="Nome completo"/></div>
+            <div class="ac-fg"><label class="ac-label">E-mail *</label><input type="email" id="adm-tec-email" class="ac-input" placeholder="tecnico@empresa.com.br"/></div>
+            <div class="ac-fg"><label class="ac-label">Senha temporária *</label><input type="password" id="adm-tec-senha" class="ac-input" placeholder="Senha para primeiro acesso"/></div>
+          </div>
+          <div class="adm-grid-2">
+            <div class="ac-fg"><label class="ac-label">Telefone</label><input type="tel" id="adm-tec-tel" class="ac-input" placeholder="(14) 9 0000-0000" oninput="maskPhone(event)"/></div>
+            <div class="ac-fg"><label class="ac-label">Matrícula</label><input type="text" id="adm-tec-mat" class="ac-input" placeholder="Ex: TEC-001"/></div>
+          </div>
+          <button class="adm-btn" id="adm-btn-criar-tec" onclick="admCriarTecnico()"><i class="ti ti-plus"></i> Criar Técnico</button>
+        </div>
+        <div class="ac-section">
+          <div class="ac-section-header"><h2>Técnicos cadastrados</h2></div>
+          <div id="adm-lista-tecs"><div class="ac-empty">Carregando...</div></div>
+        </div>
+      </div>
+
+      <!-- CLIENTES -->
+      <div id="adm-view-clientes" class="adm-view">
+        <h1 class="adm-pg-title">Clientes</h1>
+        <p class="adm-pg-sub">Vincule cada cliente ao técnico responsável pelo atendimento.</p>
+        <div class="ac-section">
+          <div class="ac-section-header"><h2>Vínculo cliente × técnico</h2></div>
+          <div id="adm-lista-clientes"><div class="ac-empty">Carregando...</div></div>
+        </div>
+      </div>
+
+      <!-- CHAMADOS -->
+      <div id="adm-view-chamados" class="adm-view">
+        <h1 class="adm-pg-title">Chamados de Assistência Técnica</h1>
+        <div class="adm-filters">
+          <label>Status</label>
+          <select id="adm-filtro-status" onchange="admCarregarChamados()">
+            <option value="">Todos</option>
+            <option value="aberto">Aberto</option>
+            <option value="andamento">Em andamento</option>
+            <option value="encerrado">Encerrado</option>
+          </select>
+          <label>Técnico</label>
+          <select id="adm-filtro-tec" onchange="admCarregarChamados()">
+            <option value="">Todos</option>
+          </select>
+          <button class="adm-btn adm-btn-outline" onclick="admCarregarChamados()"><i class="ti ti-refresh"></i> Atualizar</button>
+        </div>
+        <div class="ac-section">
+          <div id="adm-lista-chamados"><div class="ac-empty">Carregando...</div></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="js/admin.js"></script>
 </body>
 </html>
