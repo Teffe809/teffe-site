@@ -82,7 +82,7 @@ async function carregarChamados(){
     todos.map(r=>`<tr>
       <td><b>#${r.numero||r.id.slice(0,6)}</b></td>
       <td><span class="badge ${r._tipo==='suprimento'?'badge-suprim':'badge-assist'}">${r._tipo==='suprimento'?'Suprimentos':'Assistência'}</span></td>
-      <td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.titulo||r.descricao||'–'}</td>
+      <td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r._tipo==='suprimento'?'Solicitação de Suprimentos':(r.descricao||r.titulo||'–')}</td>
       <td><span class="badge badge-${r.status}">${r.status}</span></td>
       <td>${new Date(r.created_at).toLocaleDateString('pt-BR')}</td>
     </tr>`).join('')+
