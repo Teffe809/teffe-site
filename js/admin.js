@@ -16,11 +16,18 @@ async function admHttp(path,opts){
   const r=await fetch(ADMIN_URL+path,{...opts,headers:{...h,...(opts&&opts.headers||{})}});
   return {data:await r.json().catch(()=>null),ok:r.ok};
 }
-// Usado SEMPRE com o JWT do usuário — nunca com SRK — para verificação de role
+// Usado SEMPRE com o JWT do usuário — nunca com SRK
+// GET simples (verificação de role, etc.)
 async function admHttpAuth(path){
   const r=await fetch(ADMIN_URL+path,{
     headers:{'apikey':ADMIN_ANON,'Content-Type':'application/json','Authorization':'Bearer '+_admTok}
   });
+  return {data:await r.json().catch(()=>null),ok:r.ok};
+}
+// POST/PATCH/DELETE com JWT do usuário (para que RLS reconheça auth.uid())
+async function admHttpUser(path,opts){
+  const h={'apikey':ADMIN_ANON,'Content-Type':'application/json','Authorization':'Bearer '+_admTok};
+  const r=await fetch(ADMIN_URL+path,{...opts,headers:{...h,...(opts&&opts.headers||{})}});
   return {data:await r.json().catch(()=>null),ok:r.ok};
 }
 
@@ -205,7 +212,8 @@ async function admCriarTecnico(){
     }
     if(authUser&&authUser.id) userId=authUser.id;
   }
-  const {ok,data:errD}=await admHttp('/rest/v1/tecnicos',{
+  // INSERT com JWT do usuário logado para que o RLS reconheça auth.uid()
+  const {ok,data:errD}=await admHttpUser('/rest/v1/tecnicos',{
     method:'POST',headers:{'Prefer':'return=minimal'},
     body:JSON.stringify({nome,email,telefone:tel||null,matricula:mat||null,user_id:userId})
   });
