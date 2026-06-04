@@ -239,11 +239,11 @@ async function admCarregarClientes(){
 }
 
 async function admAtribuirTecnico(clienteId,tecnicoId){
-  const {ok}=await admHttp('/rest/v1/clientes?id=eq.'+clienteId,{
+  const {ok,data:errD}=await admHttp('/rest/v1/clientes?id=eq.'+clienteId,{
     method:'PATCH',headers:{'Prefer':'return=minimal'},
     body:JSON.stringify({tecnico_id:tecnicoId||null})
   });
-  if(!ok) alert('Erro ao salvar vínculo.');
+  if(!ok){console.error('Erro vínculo:',errD);alert('Erro ao salvar vínculo.');}
 }
 
 // ── CHAMADOS ──
