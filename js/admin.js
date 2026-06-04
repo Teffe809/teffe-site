@@ -239,7 +239,7 @@ async function admCarregarClientes(){
 }
 
 async function admAtribuirTecnico(clienteId,tecnicoId){
-  const resultado=await admHttpUser('/rest/v1/clientes?id=eq.'+clienteId,{
+  const resultado=await admHttp('/rest/v1/clientes?id=eq.'+clienteId,{
     method:'PATCH',headers:{'Prefer':'return=minimal'},
     body:JSON.stringify({tecnico_id:tecnicoId||null})
   });
