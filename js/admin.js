@@ -291,13 +291,28 @@ async function admRedistribuir(chamadoId,tecnicoId){
 }
 
 // ── MODAL DETALHE CHAMADO ──
-function admAbrirDetalhe(jsonStr){
+async function admAbrirDetalhe(jsonStr){
   const c=typeof jsonStr==='string'?JSON.parse(jsonStr):jsonStr;
   const fmt=v=>v?new Date(v).toLocaleString('pt-BR'):'–';
   const fmtD=v=>v?new Date(v).toLocaleDateString('pt-BR'):'–';
   const statusLabels={aberto:'Aberto',andamento:'Em andamento',encerrado:'Encerrado',concluido:'Concluído',resolvido:'Resolvido'};
   const prioLabels={baixa:'Baixa',normal:'Normal',alta:'Alta',urgente:'Urgente'};
   const encerrado=['encerrado','concluido','resolvido'].includes(c.status);
+
+  // Peças utilizadas
+  const {data:pRows}=await admHttpUser('/rest/v1/chamado_pecas?chamado_id=eq.'+c.id+'&select=*,pecas(codigo,descricao,unidade)');
+  c._pecas=pRows||[];
+  const pecasModalHtml=c._pecas.length?`<div class="adm-det-section">
+    <div class="adm-det-label">Peças Utilizadas</div>
+    <table class="ac-table" style="margin-top:6px;">
+      <thead><tr><th>Código</th><th>Descrição</th><th>Qtd.</th></tr></thead>
+      <tbody>${c._pecas.map(p=>`<tr>
+        <td>${(p.pecas&&p.pecas.codigo)||'–'}</td>
+        <td>${(p.pecas&&p.pecas.descricao)||'–'}</td>
+        <td>${p.quantidade||0} ${(p.pecas&&p.pecas.unidade)||'un'}</td>
+      </tr>`).join('')}</tbody>
+    </table>
+  </div>`:'';
 
   document.getElementById('adm-detalhe-corpo').innerHTML=`
     <div class="adm-det-grid">
@@ -313,6 +328,7 @@ function admAbrirDetalhe(jsonStr){
     </div>
     ${c.descricao?`<div class="adm-det-section"><div class="adm-det-label">Descrição</div><div class="adm-det-text">${c.descricao.replace(/\n/g,'<br>')}</div></div>`:''}
     ${encerrado&&c.resolucao?`<div class="adm-det-section"><div class="adm-det-label">Resolução do Técnico</div><div class="adm-det-text adm-det-resolucao">${c.resolucao.replace(/\n/g,'<br>')}</div></div>`:''}
+    ${pecasModalHtml}
     ${c.data_fechamento?`<div class="adm-det-row" style="margin-top:12px;"><span class="adm-det-label">Data de fechamento</span><span class="adm-det-val">${fmtD(c.data_fechamento)}</span></div>`:''}
   `;
   document.getElementById('adm-detalhe-btn-os').onclick=()=>admImprimirOS(c);
@@ -403,6 +419,13 @@ function admImprimirOS(c){
 ${descEscapada?`<div class="os-section">
   <div class="os-section-title">Descrição do Problema</div>
   <div class="os-text-block">${descEscapada}</div>
+</div>`:''}
+${c._pecas&&c._pecas.length?`<div class="os-section">
+  <div class="os-section-title">Peças Utilizadas</div>
+  <table class="os-table">
+    <thead><tr><th style="width:120px">Código</th><th>Descrição</th><th style="width:70px;text-align:center">Qtd.</th></tr></thead>
+    <tbody>${c._pecas.map(p=>`<tr><td>${(p.pecas&&p.pecas.codigo)||'–'}</td><td>${(p.pecas&&p.pecas.descricao)||'–'}</td><td style="text-align:center">${p.quantidade||0} ${(p.pecas&&p.pecas.unidade)||'un'}</td></tr>`).join('')}</tbody>
+  </table>
 </div>`:''}
 <div class="os-section">
   <div class="os-section-title">Solução / Resolução do Técnico</div>

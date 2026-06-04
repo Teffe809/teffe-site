@@ -125,7 +125,7 @@ async function carregarChamados(){
     '</tbody></table>';
 }
 
-function abrirDetalhesChamado(id){
+async function abrirDetalhesChamado(id){
   const c=_chamadosCache[id];
   if(!c) return;
   const isAssistencia=c._tipo!=='suprimento';
@@ -140,6 +140,28 @@ function abrirDetalhesChamado(id){
   const insumoNome=c.insumos
     ?(c.insumos.codigo_insumo?'['+c.insumos.codigo_insumo+'] '+c.insumos.descricao:c.insumos.descricao)
     :'–';
+
+  // Peças utilizadas (apenas assistência técnica)
+  c._pecas=[];
+  let pecasModalHtml='';
+  if(isAssistencia){
+    const {data:pRows}=await sf('/rest/v1/chamado_pecas?chamado_id=eq.'+c.id+'&select=*,pecas(codigo,descricao,unidade)');
+    c._pecas=pRows||[];
+    if(c._pecas.length){
+      pecasModalHtml=`<div class="ac-det-item ac-det-full" style="margin-top:4px;">
+        <span class="ac-det-lbl">Peças Utilizadas</span>
+        <table class="ac-table" style="margin-top:6px;">
+          <thead><tr><th>Código</th><th>Descrição</th><th>Qtd.</th></tr></thead>
+          <tbody>${c._pecas.map(p=>`<tr>
+            <td>${(p.pecas&&p.pecas.codigo)||'–'}</td>
+            <td>${(p.pecas&&p.pecas.descricao)||'–'}</td>
+            <td>${p.quantidade||0} ${(p.pecas&&p.pecas.unidade)||'un'}</td>
+          </tr>`).join('')}</tbody>
+        </table>
+      </div>`;
+    }
+  }
+
   document.getElementById('ac-detalhe-conteudo').innerHTML=`
     <div class="ac-det-title">Chamado #${c.numero||c.id.slice(0,6)}</div>
     <div class="ac-det-grid">
@@ -157,6 +179,7 @@ function abrirDetalhesChamado(id){
       ${!isAssistencia&&c.contador_atual!=null?`<div class="ac-det-item"><span class="ac-det-lbl">Contador Atual (Páginas)</span><span class="ac-det-val">${c.contador_atual}</span></div>`:''}
       ${isAssistencia&&(c.descricao||c.titulo)?`<div class="ac-det-item ac-det-full"><span class="ac-det-lbl">Descrição</span><span class="ac-det-val">${(c.descricao||c.titulo).replace(/\n/g,'<br>')}</span></div>`:''}
       ${isAssistencia&&encerrado&&c.resolucao?`<div class="ac-det-item ac-det-full ac-det-resolucao"><span class="ac-det-lbl">Resolução do Técnico</span><span class="ac-det-val">${c.resolucao.replace(/\n/g,'<br>')}</span></div>`:''}
+      ${pecasModalHtml}
       ${c.data_fechamento?`<div class="ac-det-item"><span class="ac-det-lbl">Data de fechamento</span><span class="ac-det-val">${fmtD(c.data_fechamento)}</span></div>`:''}
     </div>`;
   document.getElementById('ac-detalhe-btn-os').onclick=()=>imprimirOS(c);
@@ -254,6 +277,13 @@ function imprimirOS(c){
 ${isAssistencia&&descEscapada?`<div class="os-section">
   <div class="os-section-title">Descrição do Problema</div>
   <div class="os-text-block">${descEscapada}</div>
+</div>`:''}
+${isAssistencia&&c._pecas&&c._pecas.length?`<div class="os-section">
+  <div class="os-section-title">Peças Utilizadas</div>
+  <table class="os-table os-table-pecas">
+    <thead><tr><th style="width:120px">Código</th><th>Descrição</th><th style="width:70px;text-align:center">Qtd.</th></tr></thead>
+    <tbody>${c._pecas.map(p=>`<tr><td>${(p.pecas&&p.pecas.codigo)||'–'}</td><td>${(p.pecas&&p.pecas.descricao)||'–'}</td><td style="text-align:center">${p.quantidade||0} ${(p.pecas&&p.pecas.unidade)||'un'}</td></tr>`).join('')}</tbody>
+  </table>
 </div>`:''}
 ${isAssistencia?`<div class="os-section">
   <div class="os-section-title">Solução / Resolução do Técnico</div>
