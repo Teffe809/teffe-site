@@ -47,9 +47,19 @@ async function fazerLogin(){
   if(!r.ok){erro.style.display='block';erro.textContent='E-mail ou senha incorretos.';btn.textContent='Entrar →';btn.disabled=false;return;}
   _tok=d.access_token;_uid=d.user.id;
   localStorage.setItem('tt',_tok);localStorage.setItem('tu',_uid);
+  _resetarModalLogin();
   document.getElementById('modal').classList.remove('open');
   document.getElementById('login-inatividade').style.display='none';
   carregarArea();
+}
+
+function _resetarModalLogin(){
+  document.getElementById('login-email').value='';
+  document.getElementById('login-senha').value='';
+  document.getElementById('login-erro').style.display='none';
+  const btn=document.getElementById('btn-entrar');
+  btn.textContent='Entrar →';
+  btn.disabled=false;
 }
 
 async function fazerLogout(inatividade=false){
@@ -58,6 +68,7 @@ async function fazerLogout(inatividade=false){
   localStorage.removeItem('tt');localStorage.removeItem('tu');
   document.getElementById('area-cliente').style.display='none';
   history.replaceState(null,'',location.pathname);
+  _resetarModalLogin();
   if(inatividade){
     document.getElementById('login-inatividade').style.display='flex';
     document.getElementById('modal').classList.add('open');
