@@ -1890,20 +1890,14 @@
       </div>
 
       <div class="ac-tipo-btns">
-        <button class="ac-tipo-btn ac-tipo-assist" onclick="acMostrarView('assist')">
+        <button class="ac-tipo-btn" onclick="acMostrarView('assist')">
           <i class="ti ti-tool ac-tipo-icon"></i>
-          <div class="ac-tipo-text">
-            <strong>Assistência Técnica</strong>
-            <span>Reporte defeitos e solicite reparos</span>
-          </div>
+          <span class="ac-tipo-label">Assistência Técnica</span>
           <i class="ti ti-chevron-right ac-tipo-arrow"></i>
         </button>
-        <button class="ac-tipo-btn ac-tipo-suprim" onclick="acMostrarView('suprim')">
+        <button class="ac-tipo-btn" onclick="acMostrarView('suprim')">
           <i class="ti ti-package ac-tipo-icon"></i>
-          <div class="ac-tipo-text">
-            <strong>Solicitar Suprimentos</strong>
-            <span>Toners, cartuchos e insumos de impressão</span>
-          </div>
+          <span class="ac-tipo-label">Solicitar Suprimentos</span>
           <i class="ti ti-chevron-right ac-tipo-arrow"></i>
         </button>
       </div>
@@ -1952,7 +1946,7 @@
 
         <div class="ac-form-2col">
           <div class="ac-fg"><label class="ac-label">Solicitante *</label><input type="text" id="at-nome" class="ac-input" placeholder="Nome completo"/></div>
-          <div class="ac-fg"><label class="ac-label">Telefone</label><input type="tel" id="at-tel" class="ac-input" placeholder="(14) 9 0000-0000"/></div>
+          <div class="ac-fg"><label class="ac-label">Telefone</label><input type="tel" id="at-tel" class="ac-input" placeholder="(14) 9 0000-0000" oninput="maskPhone(event)"/></div>
         </div>
         <div class="ac-fg"><label class="ac-label">E-mail</label><input type="email" id="at-email" class="ac-input" placeholder="seu@email.com"/></div>
         <div class="ac-fg"><label class="ac-label">Descrição do defeito *</label><textarea id="at-desc" class="ac-input ac-textarea" placeholder="Descreva o problema com detalhes..."></textarea></div>
@@ -1989,7 +1983,7 @@
 
         <div class="ac-form-2col">
           <div class="ac-fg"><label class="ac-label">Solicitante *</label><input type="text" id="sp-nome" class="ac-input" placeholder="Nome completo"/></div>
-          <div class="ac-fg"><label class="ac-label">Telefone</label><input type="tel" id="sp-tel" class="ac-input" placeholder="(14) 9 0000-0000"/></div>
+          <div class="ac-fg"><label class="ac-label">Telefone</label><input type="tel" id="sp-tel" class="ac-input" placeholder="(14) 9 0000-0000" oninput="maskPhone(event)"/></div>
         </div>
         <div class="ac-fg"><label class="ac-label">E-mail</label><input type="email" id="sp-email" class="ac-input" placeholder="seu@email.com"/></div>
 
@@ -2003,7 +1997,7 @@
 
         <div class="ac-fg">
           <label class="ac-label">Contador atual *</label>
-          <input type="number" id="sp-contador" class="ac-input" placeholder="Informe a leitura do contador" oninput="validarContador()"/>
+          <input type="text" inputmode="numeric" id="sp-contador" class="ac-input" placeholder="Informe a leitura do contador" oninput="validarContador()"/>
           <div id="sp-contador-erro" class="ac-counter-error" style="display:none;"></div>
         </div>
 

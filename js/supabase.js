@@ -149,7 +149,7 @@ async function buscarEquipAC(prefix){
     <div><span class="ac-equip-lbl">Modelo</span><span class="ac-equip-val">${eq.modelo||'–'}</span></div>
     <div><span class="ac-equip-lbl">Marca</span><span class="ac-equip-val">${eq.marca||'–'}</span></div>
     <div><span class="ac-equip-lbl">Série</span><span class="ac-equip-val">${eq.serial||'–'}</span></div>
-    <div><span class="ac-equip-lbl">Código</span><span class="ac-equip-val">${eq.codigo||'–'}</span></div>
+    <div><span class="ac-equip-lbl">TEFFE</span><span class="ac-equip-val">${eq.codigo||'–'}</span></div>
   </div>`;
 }
 
@@ -157,7 +157,7 @@ async function buscarEquipAC(prefix){
 async function carregarInsumos(modelo){
   const sel=document.getElementById('sp-insumo');
   sel.innerHTML='<option value="">Carregando...</option>';
-  const {data}=await sf('/rest/v1/insumos?modelo_equipamento=eq.'+encodeURIComponent(modelo)+'&ativo=eq.true&select=*');
+  const {data}=await sf('/rest/v1/insumos?modelo_equipamento=ilike.'+encodeURIComponent(modelo)+'&ativo=eq.true&select=*');
   if(!data||!data.length){sel.innerHTML='<option value="">Nenhum insumo cadastrado para este modelo</option>';return;}
   sel.innerHTML='<option value="">Selecione o insumo</option>'+
     data.map(i=>`<option value="${i.id}">${i.codigo_insumo?'['+i.codigo_insumo+'] ':''}${i.descricao}</option>`).join('');
@@ -207,12 +207,11 @@ async function enviarAssistencia(){
     if(upRes&&upRes.ok) imgUrl=SURL+'/storage/v1/object/public/chamados/'+fname;
   }
 
-  const {ok}=await sf('/rest/v1/chamados',{
+  const {ok,data:errData}=await sf('/rest/v1/chamados',{
     method:'POST',
     headers:{'Prefer':'return=minimal'},
     body:JSON.stringify({
       cliente_id:_cid,
-      equipamento_id:_atEquipId,
       titulo:'Assistência – '+desc.slice(0,60),
       descricao:desc,
       tipo_chamado:'assistencia',
@@ -224,7 +223,11 @@ async function enviarAssistencia(){
       prioridade:'normal'
     })
   });
-  if(!ok){alert('Erro ao abrir chamado. Tente novamente.');return;}
+  if(!ok){
+    const msg=errData&&errData.message?errData.message:JSON.stringify(errData);
+    alert('Erro ao abrir chamado:\n'+msg);
+    return;
+  }
 
   ['at-nome','at-tel','at-email','at-desc','at-serial'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('at-img').value='';
@@ -255,7 +258,7 @@ async function enviarSuprimento(){
     return;
   }
 
-  const {ok}=await sf('/rest/v1/solicitacoes_suprimento',{
+  const {ok,data:errData}=await sf('/rest/v1/solicitacoes_suprimento',{
     method:'POST',
     headers:{'Prefer':'return=minimal'},
     body:JSON.stringify({
@@ -270,7 +273,11 @@ async function enviarSuprimento(){
       status:'aberto'
     })
   });
-  if(!ok){alert('Erro ao abrir solicitação. Tente novamente.');return;}
+  if(!ok){
+    const msg=errData&&errData.message?errData.message:JSON.stringify(errData);
+    alert('Erro ao abrir solicitação:\n'+msg);
+    return;
+  }
 
   ['sp-nome','sp-tel','sp-email','sp-serial'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('sp-qtd').value='1';
