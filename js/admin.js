@@ -17,10 +17,10 @@ async function admHttp(path,opts){
 async function admHttpUser(path,opts){
   const {data:{session}}=await _supabase.auth.getSession();
   const token=session?.access_token;
-  if(!token) return {data:null,ok:false};
+  if(!token) return {data:null,ok:false,status:0};
   const h={'apikey':ADMIN_ANON,'Content-Type':'application/json','Authorization':'Bearer '+token};
   const r=await fetch(ADMIN_URL+path,{...opts,headers:{...h,...(opts&&opts.headers||{})}});
-  return {data:await r.json().catch(()=>null),ok:r.ok};
+  return {data:await r.json().catch(()=>null),ok:r.ok,status:r.status};
 }
 
 // ── VERIFICAÇÃO DE ROLE ──
@@ -239,11 +239,16 @@ async function admCarregarClientes(){
 }
 
 async function admAtribuirTecnico(clienteId,tecnicoId){
-  const {ok,data:errD}=await admHttpUser('/rest/v1/clientes?id=eq.'+clienteId,{
+  const {status,data:errD}=await admHttpUser('/rest/v1/clientes?id=eq.'+clienteId,{
     method:'PATCH',headers:{'Prefer':'return=minimal'},
     body:JSON.stringify({tecnico_id:tecnicoId||null})
   });
-  if(!ok){console.error('Erro vínculo:',errD);alert('Erro ao salvar vínculo.');}
+  if([200,201,204].includes(status)){
+    console.log('Técnico vinculado com sucesso!');
+  } else {
+    console.error('Erro vínculo:',errD);
+    alert('Erro ao salvar vínculo.');
+  }
 }
 
 // ── CHAMADOS ──
