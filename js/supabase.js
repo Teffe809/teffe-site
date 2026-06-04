@@ -65,14 +65,8 @@ function _resetarModalLogin(){
 async function fazerLogout(inatividade=false){
   _pararInatividade();
   _tok=null;_uid=null;_cid=null;
-  localStorage.removeItem('tt');localStorage.removeItem('tu');
-  document.getElementById('area-cliente').style.display='none';
-  history.replaceState(null,'',location.pathname);
-  _resetarModalLogin();
-  if(inatividade){
-    document.getElementById('login-inatividade').style.display='flex';
-    document.getElementById('modal').classList.add('open');
-  }
+  localStorage.clear();
+  window.location.href='https://teffe.com.br';
 }
 
 // ── CARREGAR ÁREA ──

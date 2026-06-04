@@ -111,8 +111,8 @@ async function admFazerLogin(){
 
 function admFazerLogout(){
   _admTok=null;_admUid=null;_admNome='';_admTecs=[];
-  document.getElementById('admin-panel').style.display='none';
-  history.replaceState(null,'',location.pathname);
+  localStorage.clear();
+  window.location.href='https://teffe.com.br';
 }
 
 function admFecharLogin(){
