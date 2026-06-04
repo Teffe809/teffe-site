@@ -248,3 +248,27 @@ document.querySelectorAll('.seg-card,.equip-card,.sol-item').forEach(el=>{
   el.style.transition='opacity .5s ease, transform .5s ease';
   obs.observe(el);
 });
+
+// ── MÁSCARAS ──
+function maskPhone(e){
+  let v = e.target.value.replace(/\D/g,'').slice(0,11);
+  if(v.length <= 10)
+    v = v.replace(/^(\d{2})(\d{4})(\d{0,4})$/,'($1) $2-$3');
+  else
+    v = v.replace(/^(\d{2})(\d{5})(\d{0,4})$/,'($1) $2-$3');
+  e.target.value = v.replace(/-$/,'');
+}
+function maskCNPJ(e){
+  let v = e.target.value.replace(/\D/g,'').slice(0,14);
+  v = v.replace(/^(\d{2})(\d)/,'$1.$2');
+  v = v.replace(/^(\d{2})\.(\d{3})(\d)/,'$1.$2.$3');
+  v = v.replace(/\.(\d{3})(\d)/,'.$1/$2');
+  v = v.replace(/(\d{4})(\d)/,'$1-$2');
+  e.target.value = v;
+}
+['cta-tel','tc-tel','of-tel'].forEach(function(id){
+  var el = document.getElementById(id);
+  if(el) el.addEventListener('input', maskPhone);
+});
+var cnpjEl = document.getElementById('of-cnpj');
+if(cnpjEl) cnpjEl.addEventListener('input', maskCNPJ);
