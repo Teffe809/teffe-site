@@ -256,6 +256,21 @@ document.querySelectorAll('.seg-card,.equip-card,.sol-item').forEach(el=>{
   obs.observe(el);
 });
 
+// ── TEXTO ROTATIVO ──
+(function(){
+  var words=['Tecnologia','Inovação','Confiança','Eficiência','Resultados'];
+  var idx=0;
+  var el=document.getElementById('rotatingWord');
+  if(!el) return;
+  setInterval(function(){
+    idx=(idx+1)%words.length;
+    el.style.animation='none';
+    el.offsetHeight;
+    el.textContent=words[idx];
+    el.style.animation='';
+  },2500);
+})();
+
 // ── MÁSCARAS ──
 function maskPhone(e){
   let v = e.target.value.replace(/\D/g,'').slice(0,11);
