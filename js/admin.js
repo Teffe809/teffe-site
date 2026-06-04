@@ -4,36 +4,33 @@ const ADMIN_ANON='sb_publishable_-Iu8PbqhLeZAXSBcczr2mQ_lzlGr4_g';
 // ADMIN_SRK é carregado de js/admin-keys.js (arquivo no .gitignore, nunca commitar)
 // Se typeof ADMIN_SRK === 'undefined', o painel funcionará sem criar logins no Auth.
 
-let _admTok=null,_admUid=null,_admNome='',_admTecs=[];
+let _admUid=null,_admNome='',_admTecs=[];
+
+// Cliente Supabase com anon key — gerencia a sessão do admin logado
+const _supabase=supabase.createClient(ADMIN_URL,ADMIN_ANON);
 
 // ── HTTP ──
-// Usado para operações de dados (usa SRK se disponível)
+// Operações de dados com SRK (se disponível) — leitura de chamados, clientes etc.
 async function admHttp(path,opts){
   const srk=typeof ADMIN_SRK!=='undefined'&&ADMIN_SRK&&ADMIN_SRK!=='COLE_SUA_SERVICE_ROLE_KEY_AQUI';
   const key=srk?ADMIN_SRK:ADMIN_ANON;
-  const token=srk?ADMIN_SRK:(_admTok||ADMIN_ANON);
+  const token=srk?ADMIN_SRK:ADMIN_ANON;
   const h={'apikey':key,'Content-Type':'application/json','Authorization':'Bearer '+token};
   const r=await fetch(ADMIN_URL+path,{...opts,headers:{...h,...(opts&&opts.headers||{})}});
   return {data:await r.json().catch(()=>null),ok:r.ok};
 }
-// Usado SEMPRE com o JWT do usuário — nunca com SRK
-// GET simples (verificação de role, etc.)
-async function admHttpAuth(path){
-  const r=await fetch(ADMIN_URL+path,{
-    headers:{'apikey':ADMIN_ANON,'Content-Type':'application/json','Authorization':'Bearer '+_admTok}
-  });
-  return {data:await r.json().catch(()=>null),ok:r.ok};
-}
-// POST/PATCH/DELETE com JWT do usuário (para que RLS reconheça auth.uid())
+// JWT obtido via getSession() — para que RLS reconheça auth.uid()
 async function admHttpUser(path,opts){
-  const h={'apikey':ADMIN_ANON,'Content-Type':'application/json','Authorization':'Bearer '+_admTok};
+  const {data:{session}}=await _supabase.auth.getSession();
+  const token=session?.access_token;
+  if(!token) return {data:null,ok:false};
+  const h={'apikey':ADMIN_ANON,'Content-Type':'application/json','Authorization':'Bearer '+token};
   const r=await fetch(ADMIN_URL+path,{...opts,headers:{...h,...(opts&&opts.headers||{})}});
   return {data:await r.json().catch(()=>null),ok:r.ok};
 }
 
 // ── VERIFICAÇÃO DE ROLE ──
 async function admVerificarRole(uid,token){
-  // Verifica na tabela profiles com o JWT do próprio usuário (não SRK)
   const r=await fetch(ADMIN_URL+'/rest/v1/profiles?id=eq.'+uid+'&select=role,nome&limit=1',{
     headers:{'apikey':ADMIN_ANON,'Content-Type':'application/json','Authorization':'Bearer '+token}
   });
@@ -41,14 +38,15 @@ async function admVerificarRole(uid,token){
   return Array.isArray(data)&&data.length?data[0]:null;
 }
 
-// Verifica role de sessão existente e abre o painel — nunca mostra o painel antes disso
+// Verifica sessão ativa via getSession() — nunca mostra o painel antes disso
 async function admVerificarEAbrir(){
-  if(!_admTok||!_admUid){admMostrarLogin();return;}
-  const perfil=await admVerificarRole(_admUid,_admTok);
-  if(!perfil||perfil.role!=='admin'){
-    admAcessoNegado();
-    return;
-  }
+  const {data:{session}}=await _supabase.auth.getSession();
+  if(!session){admMostrarLogin();return;}
+  const uid=session.user.id;
+  const token=session.access_token;
+  _admUid=uid;
+  const perfil=await admVerificarRole(uid,token);
+  if(!perfil||perfil.role!=='admin'){admAcessoNegado();return;}
   _admNome=perfil.nome||'Admin';
   document.getElementById('admin-panel').style.display='block';
   document.getElementById('adm-nome-display').textContent=_admNome;
@@ -64,7 +62,8 @@ function admMostrarLogin(){
 }
 
 function admAcessoNegado(){
-  _admTok=null;_admUid=null;_admNome='';_admTecs=[];
+  _admUid=null;_admNome='';_admTecs=[];
+  _supabase.auth.signOut();
   document.getElementById('admin-panel').style.display='none';
   document.getElementById('adm-login-bg').classList.remove('open');
   history.replaceState(null,'','#cliente');
@@ -83,19 +82,20 @@ async function admFazerLogin(){
   if(!email||!senha){erroEl.style.display='block';erroEl.textContent='Preencha e-mail e senha.';return;}
   btn.textContent='Verificando...';btn.disabled=true;erroEl.style.display='none';
 
-  // 1. Autenticar
-  const r=await fetch(ADMIN_URL+'/auth/v1/token?grant_type=password',{
-    method:'POST',headers:{'apikey':ADMIN_ANON,'Content-Type':'application/json'},
-    body:JSON.stringify({email,password:senha})
-  });
-  const d=await r.json();
-  if(!r.ok){erroEl.style.display='block';erroEl.textContent='Credenciais inválidas.';btn.textContent='Entrar →';btn.disabled=false;return;}
+  // 1. Autenticar via cliente Supabase (anon key) — sessão válida gerenciada pelo cliente
+  const {data,error}=await _supabase.auth.signInWithPassword({email,password:senha});
+  if(error||!data.session){
+    erroEl.style.display='block';erroEl.textContent='Credenciais inválidas.';
+    btn.textContent='Entrar →';btn.disabled=false;return;
+  }
+  const uid=data.user.id;
+  const token=data.session.access_token;
 
-  // 2. Verificar role 'admin' na tabela profiles usando o JWT do usuário
-  const perfil=await admVerificarRole(d.user.id,d.access_token);
+  // 2. Verificar role 'admin' na tabela profiles com o JWT da sessão
+  const perfil=await admVerificarRole(uid,token);
   if(!perfil||perfil.role!=='admin'){
+    await _supabase.auth.signOut();
     btn.textContent='Entrar →';btn.disabled=false;
-    // Redireciona para #cliente com mensagem
     document.getElementById('adm-login-bg').classList.remove('open');
     document.getElementById('admin-panel').style.display='none';
     history.replaceState(null,'','#cliente');
@@ -106,7 +106,7 @@ async function admFazerLogin(){
   }
 
   // 3. Acesso autorizado
-  _admTok=d.access_token;_admUid=d.user.id;_admNome=perfil.nome||email;
+  _admUid=uid;_admNome=perfil.nome||email;
   document.getElementById('adm-login-bg').classList.remove('open');
   document.getElementById('adm-nome-display').textContent=_admNome;
   document.getElementById('adm-email').value='';document.getElementById('adm-senha').value='';
@@ -117,7 +117,8 @@ async function admFazerLogin(){
 }
 
 function admFazerLogout(){
-  _admTok=null;_admUid=null;_admNome='';_admTecs=[];
+  _admUid=null;_admNome='';_admTecs=[];
+  _supabase.auth.signOut();
   localStorage.clear();
   window.location.href='https://teffe.com.br';
 }
@@ -128,13 +129,9 @@ function admFecharLogin(){
   history.replaceState(null,'',location.pathname);
 }
 
-// Ponto de entrada: nunca mostra painel sem verificação
+// Ponto de entrada: getSession() decide se mostra login ou painel
 function admInit(){
-  if(_admTok&&_admUid){
-    admVerificarEAbrir(); // Re-verifica role mesmo com token ativo
-  } else {
-    admMostrarLogin(); // Sem token → tela de login
-  }
+  admVerificarEAbrir();
 }
 
 // ── NAVEGAÇÃO ──
