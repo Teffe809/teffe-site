@@ -4,9 +4,10 @@ const ADMIN_ANON='sb_publishable_-Iu8PbqhLeZAXSBcczr2mQ_lzlGr4_g';
 // ADMIN_SRK é carregado de js/admin-keys.js (arquivo no .gitignore, nunca commitar)
 // Se typeof ADMIN_SRK === 'undefined', o painel funcionará sem criar logins no Auth.
 
-let _admTok=null,_admNome='',_admTecs=[];
+let _admTok=null,_admUid=null,_admNome='',_admTecs=[];
 
 // ── HTTP ──
+// Usado para operações de dados (usa SRK se disponível)
 async function admHttp(path,opts){
   const srk=typeof ADMIN_SRK!=='undefined'&&ADMIN_SRK&&ADMIN_SRK!=='COLE_SUA_SERVICE_ROLE_KEY_AQUI';
   const key=srk?ADMIN_SRK:ADMIN_ANON;
@@ -15,11 +16,55 @@ async function admHttp(path,opts){
   const r=await fetch(ADMIN_URL+path,{...opts,headers:{...h,...(opts&&opts.headers||{})}});
   return {data:await r.json().catch(()=>null),ok:r.ok};
 }
-async function admAuthCheck(uid,token){
-  const r=await fetch(ADMIN_URL+'/rest/v1/admins?user_id=eq.'+uid+'&limit=1&select=nome',{
-    headers:{'apikey':ADMIN_ANON,'Authorization':'Bearer '+token}
+// Usado SEMPRE com o JWT do usuário — nunca com SRK — para verificação de role
+async function admHttpAuth(path){
+  const r=await fetch(ADMIN_URL+path,{
+    headers:{'apikey':ADMIN_ANON,'Content-Type':'application/json','Authorization':'Bearer '+_admTok}
   });
-  return r.json().catch(()=>[]);
+  return {data:await r.json().catch(()=>null),ok:r.ok};
+}
+
+// ── VERIFICAÇÃO DE ROLE ──
+async function admVerificarRole(uid,token){
+  // Verifica na tabela profiles com o JWT do próprio usuário (não SRK)
+  const r=await fetch(ADMIN_URL+'/rest/v1/profiles?id=eq.'+uid+'&select=role,nome&limit=1',{
+    headers:{'apikey':ADMIN_ANON,'Content-Type':'application/json','Authorization':'Bearer '+token}
+  });
+  const data=await r.json().catch(()=>[]);
+  return Array.isArray(data)&&data.length?data[0]:null;
+}
+
+// Verifica role de sessão existente e abre o painel — nunca mostra o painel antes disso
+async function admVerificarEAbrir(){
+  if(!_admTok||!_admUid){admMostrarLogin();return;}
+  const perfil=await admVerificarRole(_admUid,_admTok);
+  if(!perfil||perfil.role!=='admin'){
+    admAcessoNegado();
+    return;
+  }
+  _admNome=perfil.nome||'Admin';
+  document.getElementById('admin-panel').style.display='block';
+  document.getElementById('adm-nome-display').textContent=_admNome;
+  history.replaceState(null,'','#admin');
+  await admCarregarTecnicos();
+  admMostrarView('dash');
+}
+
+function admMostrarLogin(){
+  document.getElementById('admin-panel').style.display='block';
+  document.getElementById('adm-login-bg').classList.add('open');
+  history.replaceState(null,'','#admin');
+}
+
+function admAcessoNegado(){
+  _admTok=null;_admUid=null;_admNome='';_admTecs=[];
+  document.getElementById('admin-panel').style.display='none';
+  document.getElementById('adm-login-bg').classList.remove('open');
+  history.replaceState(null,'','#cliente');
+  // Exibe mensagem no modal de login do cliente e abre o modal
+  const msg=document.getElementById('login-acesso-negado');
+  if(msg) msg.style.display='flex';
+  if(typeof openModal==='function') openModal(null);
 }
 
 // ── LOGIN / LOGOUT ──
@@ -29,29 +74,43 @@ async function admFazerLogin(){
   const erroEl=document.getElementById('adm-login-erro');
   const btn=document.getElementById('adm-btn-entrar');
   if(!email||!senha){erroEl.style.display='block';erroEl.textContent='Preencha e-mail e senha.';return;}
-  btn.textContent='Entrando...';btn.disabled=true;erroEl.style.display='none';
+  btn.textContent='Verificando...';btn.disabled=true;erroEl.style.display='none';
+
+  // 1. Autenticar
   const r=await fetch(ADMIN_URL+'/auth/v1/token?grant_type=password',{
     method:'POST',headers:{'apikey':ADMIN_ANON,'Content-Type':'application/json'},
     body:JSON.stringify({email,password:senha})
   });
   const d=await r.json();
   if(!r.ok){erroEl.style.display='block';erroEl.textContent='Credenciais inválidas.';btn.textContent='Entrar →';btn.disabled=false;return;}
-  const adm=await admAuthCheck(d.user.id,d.access_token);
-  if(!adm||!adm.length){
-    erroEl.style.display='block';erroEl.textContent='Acesso negado. Usuário sem permissão de administrador.';
-    btn.textContent='Entrar →';btn.disabled=false;return;
+
+  // 2. Verificar role 'admin' na tabela profiles usando o JWT do usuário
+  const perfil=await admVerificarRole(d.user.id,d.access_token);
+  if(!perfil||perfil.role!=='admin'){
+    btn.textContent='Entrar →';btn.disabled=false;
+    // Redireciona para #cliente com mensagem
+    document.getElementById('adm-login-bg').classList.remove('open');
+    document.getElementById('admin-panel').style.display='none';
+    history.replaceState(null,'','#cliente');
+    const msg=document.getElementById('login-acesso-negado');
+    if(msg) msg.style.display='flex';
+    if(typeof openModal==='function') openModal(null);
+    return;
   }
-  _admTok=d.access_token;_admNome=adm[0].nome||email;
+
+  // 3. Acesso autorizado
+  _admTok=d.access_token;_admUid=d.user.id;_admNome=perfil.nome||email;
   document.getElementById('adm-login-bg').classList.remove('open');
   document.getElementById('adm-nome-display').textContent=_admNome;
   document.getElementById('adm-email').value='';document.getElementById('adm-senha').value='';
   btn.textContent='Entrar →';btn.disabled=false;
+  history.replaceState(null,'','#admin');
   await admCarregarTecnicos();
   admMostrarView('dash');
 }
 
 function admFazerLogout(){
-  _admTok=null;_admNome='';_admTecs=[];
+  _admTok=null;_admUid=null;_admNome='';_admTecs=[];
   document.getElementById('admin-panel').style.display='none';
   history.replaceState(null,'',location.pathname);
 }
@@ -62,13 +121,12 @@ function admFecharLogin(){
   history.replaceState(null,'',location.pathname);
 }
 
+// Ponto de entrada: nunca mostra painel sem verificação
 function admInit(){
-  document.getElementById('admin-panel').style.display='block';
-  history.replaceState(null,'','#admin');
-  if(_admTok){
-    admCarregarTecnicos().then(()=>admMostrarView('dash'));
+  if(_admTok&&_admUid){
+    admVerificarEAbrir(); // Re-verifica role mesmo com token ativo
   } else {
-    document.getElementById('adm-login-bg').classList.add('open');
+    admMostrarLogin(); // Sem token → tela de login
   }
 }
 

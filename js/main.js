@@ -167,6 +167,7 @@ function openModal(e){
 function closeModal(){
   document.getElementById('modal').classList.remove('open');
   document.getElementById('login-inatividade').style.display='none';
+  document.getElementById('login-acesso-negado').style.display='none';
 }
 document.getElementById('modal').addEventListener('click',function(e){if(e.target===this)closeModal();});
 
