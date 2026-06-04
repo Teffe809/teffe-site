@@ -266,13 +266,13 @@ async function admCarregarChamados(){
   const el=document.getElementById('adm-lista-chamados');
   if(!data||!data.length){el.innerHTML='<div class="ac-empty">Nenhum chamado encontrado com os filtros selecionados.</div>';return;}
   el.innerHTML='<table class="ac-table"><thead><tr><th>#</th><th>Cliente</th><th>Descrição</th><th>Solicitante</th><th>Status</th><th>Técnico</th><th>Data</th></tr></thead><tbody>'+
-    data.map(r=>`<tr>
+    data.map(r=>`<tr style="cursor:pointer;" onclick="admAbrirDetalhe(${JSON.stringify(JSON.stringify(r))})">
       <td><b>#${r.numero||r.id.slice(0,6)}</b></td>
       <td>${r.clientes?r.clientes.empresa||r.clientes.nome:'–'}</td>
       <td class="adm-td-trunc" title="${(r.descricao||'').replace(/"/g,'&quot;')}">${r.descricao||r.titulo||'–'}</td>
       <td>${r.solicitante_nome||'–'}</td>
       <td><span class="badge badge-${r.status}">${r.status}</span></td>
-      <td>
+      <td onclick="event.stopPropagation()">
         <select class="adm-sel-inline" onchange="admRedistribuir('${r.id}',this.value)">
           <option value="">Sem técnico</option>
           ${_admTecs.map(t=>`<option value="${t.id}"${t.id===r.tecnico_id?' selected':''}>${t.nome}</option>`).join('')}
@@ -288,6 +288,137 @@ async function admRedistribuir(chamadoId,tecnicoId){
     body:JSON.stringify({tecnico_id:tecnicoId||null})
   });
   if(!ok) alert('Erro ao redistribuir chamado. Verifique permissões no Supabase.');
+}
+
+// ── MODAL DETALHE CHAMADO ──
+function admAbrirDetalhe(jsonStr){
+  const c=typeof jsonStr==='string'?JSON.parse(jsonStr):jsonStr;
+  const fmt=v=>v?new Date(v).toLocaleString('pt-BR'):'–';
+  const fmtD=v=>v?new Date(v).toLocaleDateString('pt-BR'):'–';
+  const statusLabels={aberto:'Aberto',andamento:'Em andamento',encerrado:'Encerrado',concluido:'Concluído',resolvido:'Resolvido'};
+  const prioLabels={baixa:'Baixa',normal:'Normal',alta:'Alta',urgente:'Urgente'};
+  const encerrado=['encerrado','concluido','resolvido'].includes(c.status);
+
+  document.getElementById('adm-detalhe-corpo').innerHTML=`
+    <div class="adm-det-grid">
+      <div class="adm-det-row"><span class="adm-det-label">Número</span><span class="adm-det-val">#${c.numero||c.id.slice(0,6)}</span></div>
+      <div class="adm-det-row"><span class="adm-det-label">Abertura</span><span class="adm-det-val">${fmt(c.created_at)}</span></div>
+      <div class="adm-det-row"><span class="adm-det-label">Status</span><span class="adm-det-val"><span class="badge badge-${c.status}">${statusLabels[c.status]||c.status}</span></span></div>
+      ${c.tipo_chamado?`<div class="adm-det-row"><span class="adm-det-label">Tipo</span><span class="adm-det-val">${c.tipo_chamado}</span></div>`:''}
+      ${c.solicitante_nome?`<div class="adm-det-row"><span class="adm-det-label">Solicitante</span><span class="adm-det-val">${c.solicitante_nome}</span></div>`:''}
+      ${c.solicitante_telefone?`<div class="adm-det-row"><span class="adm-det-label">Telefone</span><span class="adm-det-val">${c.solicitante_telefone}</span></div>`:''}
+      ${c.solicitante_email?`<div class="adm-det-row"><span class="adm-det-label">E-mail</span><span class="adm-det-val">${c.solicitante_email}</span></div>`:''}
+      ${c.prioridade?`<div class="adm-det-row"><span class="adm-det-label">Prioridade</span><span class="adm-det-val">${prioLabels[c.prioridade]||c.prioridade}</span></div>`:''}
+      ${c.tecnico?`<div class="adm-det-row"><span class="adm-det-label">Técnico</span><span class="adm-det-val">${c.tecnico}</span></div>`:''}
+    </div>
+    ${c.descricao?`<div class="adm-det-section"><div class="adm-det-label">Descrição</div><div class="adm-det-text">${c.descricao.replace(/\n/g,'<br>')}</div></div>`:''}
+    ${encerrado&&c.resolucao?`<div class="adm-det-section"><div class="adm-det-label">Resolução do Técnico</div><div class="adm-det-text adm-det-resolucao">${c.resolucao.replace(/\n/g,'<br>')}</div></div>`:''}
+    ${c.data_fechamento?`<div class="adm-det-row" style="margin-top:12px;"><span class="adm-det-label">Data de fechamento</span><span class="adm-det-val">${fmtD(c.data_fechamento)}</span></div>`:''}
+  `;
+  document.getElementById('adm-detalhe-btn-os').onclick=()=>imprimirOS(c);
+  document.getElementById('adm-detalhe-bg').classList.add('open');
+}
+
+function admFecharDetalhe(){
+  document.getElementById('adm-detalhe-bg').classList.remove('open');
+}
+
+// ── IMPRIMIR OS ──
+function imprimirOS(c){
+  const fmt=v=>v?new Date(v).toLocaleString('pt-BR'):'–';
+  const fmtD=v=>v?new Date(v).toLocaleDateString('pt-BR'):'–';
+  const statusLabels={aberto:'Aberto',andamento:'Em andamento',encerrado:'Encerrado',concluido:'Concluído',resolvido:'Resolvido'};
+  const prioLabels={baixa:'Baixa',normal:'Normal',alta:'Alta',urgente:'Urgente'};
+  const encerrado=['encerrado','concluido','resolvido'].includes(c.status);
+  const num=c.numero||c.id.slice(0,6);
+
+  const rows=[
+    ['Número',`#${num}`],
+    ['Data/Hora de Abertura',fmt(c.created_at)],
+    ['Status',statusLabels[c.status]||c.status],
+    c.tipo_chamado&&['Tipo de Chamado',c.tipo_chamado],
+    c.solicitante_nome&&['Solicitante',c.solicitante_nome],
+    c.solicitante_telefone&&['Telefone do Solicitante',c.solicitante_telefone],
+    c.solicitante_email&&['E-mail do Solicitante',c.solicitante_email],
+    c.prioridade&&['Prioridade',prioLabels[c.prioridade]||c.prioridade],
+    c.tecnico&&['Técnico Responsável',c.tecnico],
+    encerrado&&c.data_fechamento&&['Data de Fechamento',fmtD(c.data_fechamento)],
+  ].filter(Boolean);
+
+  const rowsHTML=rows.map(([l,v])=>`<tr><th>${l}</th><td>${v}</td></tr>`).join('');
+
+  const html=`<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<title>OS #${num} — Teffe Tecnologia</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:Arial,sans-serif;font-size:13px;color:#222;background:#fff;padding:32px;}
+  .os-header{display:flex;align-items:center;gap:20px;border-bottom:3px solid #E07820;padding-bottom:16px;margin-bottom:20px;}
+  .os-header img{height:54px;}
+  .os-header-text h1{font-size:18px;font-weight:900;color:#1A3F80;}
+  .os-header-text p{font-size:12px;color:#555;margin-top:2px;}
+  table.os-table{width:100%;border-collapse:collapse;margin-bottom:18px;}
+  table.os-table th{width:200px;text-align:left;background:#f0f4fa;padding:7px 10px;font-weight:700;border:1px solid #dde3ee;color:#1A3F80;}
+  table.os-table td{padding:7px 10px;border:1px solid #dde3ee;}
+  .os-section{margin-bottom:16px;}
+  .os-section-title{font-size:12px;font-weight:700;color:#E07820;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;border-bottom:1px solid #f0d0a0;padding-bottom:4px;}
+  .os-text-block{border:1px solid #dde3ee;border-radius:4px;padding:10px 12px;min-height:60px;line-height:1.6;background:#fafbfd;white-space:pre-wrap;}
+  .os-assinaturas{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:40px;}
+  .os-assinatura{border-top:1px solid #888;padding-top:8px;text-align:center;font-size:12px;color:#555;}
+  .os-footer{text-align:center;font-size:11px;color:#888;border-top:1px solid #dde3ee;padding-top:12px;margin-top:32px;}
+  .os-btns{display:flex;gap:12px;justify-content:flex-end;margin-bottom:20px;}
+  .os-btn{padding:8px 20px;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;}
+  .os-btn-print{background:#1A3F80;color:#fff;}
+  .os-btn-close{background:#eee;color:#333;}
+  @media print{
+    .os-btns{display:none!important;}
+    body{padding:16px;}
+    @page{size:A4;margin:18mm 16mm;}
+  }
+</style>
+</head>
+<body>
+<div class="os-btns no-print">
+  <button class="os-btn os-btn-close" onclick="window.close()">Fechar</button>
+  <button class="os-btn os-btn-print" onclick="window.print()">Imprimir</button>
+</div>
+<div class="os-header">
+  <img src="https://teffe.com.br/assets/images/logo-teffe.png" alt="Teffe Tecnologia" onerror="this.style.display='none'"/>
+  <div class="os-header-text">
+    <h1>ORDEM DE SERVIÇO Nº ${num}</h1>
+    <p>Teffe Tecnologia — Suporte e Assistência Técnica</p>
+  </div>
+</div>
+
+<div class="os-section">
+  <div class="os-section-title">Dados do Chamado</div>
+  <table class="os-table">${rowsHTML}</table>
+</div>
+
+${c.descricao?`<div class="os-section">
+  <div class="os-section-title">Descrição do Problema</div>
+  <div class="os-text-block">${(c.descricao||'').replace(/</g,'&lt;')}</div>
+</div>`:''}
+
+${encerrado&&c.resolucao?`<div class="os-section">
+  <div class="os-section-title">Resolução do Técnico</div>
+  <div class="os-text-block">${(c.resolucao||'').replace(/</g,'&lt;')}</div>
+</div>`:''}
+
+<div class="os-assinaturas">
+  <div class="os-assinatura">Assinatura do Técnico</div>
+  <div class="os-assinatura">Assinatura do Cliente</div>
+</div>
+
+<div class="os-footer">Teffe Tecnologia — teffe.com.br — (14) 99828-9248</div>
+</body>
+<script>window.onload=function(){window.print();}<\/script>
+</html>`;
+
+  const w=window.open('','_blank','width=860,height=700');
+  if(w){w.document.open();w.document.write(html);w.document.close();}
 }
 
 // ── HASH ──

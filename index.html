@@ -2156,6 +2156,20 @@
 
     </div>
   </div>
+
+  <!-- MODAL DETALHE CHAMADO (admin) -->
+  <div class="modal-bg" id="adm-detalhe-bg" style="z-index:6000;">
+    <div class="modal" style="max-width:600px;max-height:85vh;overflow-y:auto;">
+      <button class="modal-x" onclick="admFecharDetalhe()">✕</button>
+      <h2 style="margin-bottom:16px;">Detalhes do Chamado</h2>
+      <div id="adm-detalhe-corpo"></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;border-top:1px solid #eee;padding-top:16px;">
+        <button id="adm-detalhe-btn-os" class="adm-btn adm-btn-outline"><i class="ti ti-printer"></i> Imprimir OS</button>
+        <button class="adm-btn" onclick="admFecharDetalhe()">Fechar</button>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>

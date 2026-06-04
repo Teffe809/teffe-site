@@ -64,3 +64,15 @@
 
 /* Table cell truncation */
 .adm-td-trunc{max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+/* Modal detalhe chamado */
+.adm-det-grid{display:flex;flex-direction:column;gap:0;border:1px solid #EEF1F7;border-radius:10px;overflow:hidden;margin-bottom:16px;}
+.adm-det-row{display:flex;align-items:baseline;gap:0;border-bottom:1px solid #EEF1F7;}
+.adm-det-row:last-child{border-bottom:none;}
+.adm-det-label{min-width:180px;padding:9px 14px;font-size:12px;font-weight:700;color:#1A3F80;background:#f0f4fa;text-transform:uppercase;letter-spacing:.3px;}
+.adm-det-val{padding:9px 14px;font-size:13.5px;color:#222;flex:1;}
+.adm-det-section{margin-bottom:14px;}
+.adm-det-section .adm-det-label{display:block;font-size:11px;font-weight:700;color:#E07820;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;background:none;padding:0;}
+.adm-det-text{border:1px solid #EEF1F7;border-radius:8px;padding:12px 14px;font-size:13.5px;line-height:1.6;background:#fafbfd;white-space:pre-wrap;color:#333;}
+.adm-det-resolucao{background:#f0faf2;border-color:#b2dfdb;}
+
