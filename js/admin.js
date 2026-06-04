@@ -6,7 +6,9 @@ Object.keys(localStorage).forEach(k=>{if(k.startsWith('sb-')) localStorage.remov
 let _admUid=null,_admNome='',_admTecs=[];
 
 // Cliente Supabase com anon key — gerencia a sessão do admin logado
-const _supabase=supabase.createClient(ADMIN_URL,ADMIN_ANON);
+const _supabase=supabase.createClient(ADMIN_URL,ADMIN_ANON,{
+  auth:{storage:sessionStorage,persistSession:false}
+});
 
 // ── HTTP ──
 // Operações de dados com anon key — leitura de chamados, clientes etc.
