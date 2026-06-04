@@ -38,6 +38,7 @@ async function admVerificarRole(uid,token){
 
 
 function admMostrarLogin(){
+  console.log('ADMIN: mostrando login');
   document.getElementById('admin-panel').style.display='block';
   document.getElementById('adm-login-bg').classList.add('open');
   history.replaceState(null,'','#admin');
@@ -88,6 +89,7 @@ async function admFazerLogin(){
   }
 
   // 3. Acesso autorizado
+  console.log('ADMIN: logado como',email);
   _admUid=uid;_admNome=perfil.nome||email;
   document.getElementById('adm-login-bg').classList.remove('open');
   document.getElementById('adm-nome-display').textContent=_admNome;
