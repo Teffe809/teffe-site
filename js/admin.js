@@ -3,6 +3,9 @@
 
 let _admUid=null,_admNome='',_admTecs=[];
 
+// Limpa token antes de criar o cliente para impedir restauração automática de sessão antiga
+localStorage.removeItem('sb-hlfjcpgrxiktgctozilk-auth-token');
+
 // Cliente Supabase com anon key — gerencia a sessão do admin logado
 const _supabase=supabase.createClient(ADMIN_URL,ADMIN_ANON);
 
