@@ -241,7 +241,7 @@ async function admCarregarClientes(){
 async function admAtribuirTecnico(clienteId,tecnicoId){
   const resultado=await admHttp('/rest/v1/clientes?id=eq.'+clienteId,{
     method:'PATCH',headers:{'Prefer':'return=minimal'},
-    body:JSON.stringify({tecnico_id:tecnicoId||null})
+    body:JSON.stringify({tecnico_responsavel_id:tecnicoId||null})
   });
   console.log('resultado completo:',resultado);
   const {status,data:errD}=resultado;
