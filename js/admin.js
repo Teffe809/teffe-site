@@ -32,27 +32,6 @@ async function admVerificarRole(uid,token){
   return Array.isArray(data)&&data.length?data[0]:null;
 }
 
-// Verifica sessão ativa via getSession() — nunca mostra o painel antes disso
-async function admVerificarEAbrir(){
-  const {data:{session}}=await _supabase.auth.getSession();
-  if(!session){admMostrarLogin();return;}
-  const uid=session.user.id;
-  const token=session.access_token;
-  _admUid=uid;
-  const perfil=await admVerificarRole(uid,token);
-  if(!perfil||perfil.role!=='admin'){
-    // Sessão ativa mas sem role admin (ex: sessão do técnico após signUp) — limpa e mostra login
-    await _supabase.auth.signOut();
-    admMostrarLogin();
-    return;
-  }
-  _admNome=perfil.nome||'Admin';
-  document.getElementById('admin-panel').style.display='block';
-  document.getElementById('adm-nome-display').textContent=_admNome;
-  history.replaceState(null,'','#admin');
-  await admCarregarTecnicos();
-  admMostrarView('dash');
-}
 
 function admMostrarLogin(){
   document.getElementById('admin-panel').style.display='block';
