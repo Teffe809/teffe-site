@@ -239,10 +239,12 @@ async function admCarregarClientes(){
 }
 
 async function admAtribuirTecnico(clienteId,tecnicoId){
-  const {status,data:errD}=await admHttpUser('/rest/v1/clientes?id=eq.'+clienteId,{
+  const resultado=await admHttpUser('/rest/v1/clientes?id=eq.'+clienteId,{
     method:'PATCH',headers:{'Prefer':'return=minimal'},
     body:JSON.stringify({tecnico_id:tecnicoId||null})
   });
+  console.log('resultado completo:',resultado);
+  const {status,data:errD}=resultado;
   if([200,201,204].includes(status)){
     console.log('Técnico vinculado com sucesso!');
   } else {
