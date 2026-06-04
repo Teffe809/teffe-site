@@ -112,6 +112,7 @@ function admFecharLogin(){
 
 // Ponto de entrada: sempre faz signOut e limpa estado antes de mostrar login
 async function admInit(){
+  Object.keys(localStorage).forEach(k=>{if(k.startsWith('sb-')) localStorage.removeItem(k);});
   await _supabase.auth.signOut();
   _admUid=null;_admNome='';_admTecs=[];
   admMostrarLogin();
