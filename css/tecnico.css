@@ -1,0 +1,99 @@
+/* ══════════════════════════════════════
+   PORTAL DO TÉCNICO — tecnico.css
+══════════════════════════════════════ */
+
+/* ── HEADER ── */
+.tec-header{background:#1A3F80;padding:0 28px;height:58px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;box-shadow:0 2px 12px rgba(0,0,0,.18);}
+.tec-header-left{display:flex;align-items:center;gap:14px;}
+.tec-portal-tag{background:rgba(255,255,255,.14);color:#fff;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;padding:3px 10px;border-radius:20px;}
+.tec-header-right{display:flex;align-items:center;gap:12px;color:#fff;}
+.tec-sair-btn{background:rgba(255,255,255,.15);color:#fff;border:none;padding:6px 14px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;}
+.tec-sair-btn:hover{background:rgba(255,255,255,.27);}
+
+/* ── CONTEÚDO ── */
+.tec-content{max-width:1200px;margin:0 auto;padding:28px 24px;}
+.tec-page-title{font-family:'Syne',sans-serif;font-size:19px;font-weight:800;color:#1A3F80;margin-bottom:20px;}
+.tec-empty,.tec-loading{text-align:center;padding:52px 24px;color:#9CA3AF;font-size:15px;}
+
+/* ── GRID DE CARDS ── */
+.tec-cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:16px;}
+
+/* ── CARD ── */
+.tec-card{border-radius:14px;padding:18px 20px;cursor:pointer;border:2px solid transparent;transition:transform .15s,box-shadow .15s;}
+.tec-card:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(0,0,0,.13);}
+
+/* Cores por status */
+.tec-card-aberto{background:#EBF4FF;border-color:#BFDBFE;}
+.tec-card-em_deslocamento{background:#FFFBEB;border-color:#FDE68A;}
+.tec-card-em_atendimento,.tec-card-andamento{background:#FFF7ED;border-color:#FED7AA;}
+.tec-card-aguardando_peca{background:#FFF1F2;border-color:#FECDD3;}
+.tec-card-pendente{background:#F3F4F6;border-color:#D1D5DB;}
+.tec-card-encerrado{background:#F0FDF4;border-color:#BBF7D0;}
+
+/* Elementos do card */
+.tec-card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+.tec-card-num{font-family:'Syne',sans-serif;font-size:17px;font-weight:900;color:#1A3F80;}
+.tec-card-tipo{font-size:11.5px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;}
+.tec-card-cliente{font-size:15px;font-weight:700;color:#1A202C;margin-bottom:2px;}
+.tec-card-local{font-size:12.5px;color:#666;margin-bottom:3px;}
+.tec-card-sla{font-size:12px;font-weight:600;color:#6B7280;margin-top:10px;padding-top:8px;border-top:1px solid rgba(0,0,0,.07);}
+.tec-sla-atrasado{color:#DC2626!important;font-weight:800;}
+
+/* ── BADGES DE STATUS ── */
+.tec-badge-st{font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:20px;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap;}
+.tec-st-aberto{background:#DBEAFE;color:#1D4ED8;}
+.tec-st-em_deslocamento{background:#FEF3C7;color:#92400E;}
+.tec-st-em_atendimento,.tec-st-andamento{background:#FFEDD5;color:#C2410C;}
+.tec-st-aguardando_peca{background:#FFE4E6;color:#BE123C;}
+.tec-st-pendente{background:#E5E7EB;color:#374151;}
+.tec-st-encerrado{background:#DCFCE7;color:#166534;}
+
+/* ── MODAL DO CHAMADO ── */
+.tec-modal-header{display:flex;align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap;}
+.tec-modal-header h2{font-family:'Syne',sans-serif;font-size:19px;font-weight:900;color:#1A3F80;margin:0;}
+.tec-modal-sla{display:inline-block;font-size:12.5px;font-weight:600;color:#4B5563;background:#F0F4FA;padding:5px 12px;border-radius:8px;margin-bottom:14px;}
+
+/* Grid de detalhes */
+.tec-det-grid{border:1px solid #EEF1F7;border-radius:10px;overflow:hidden;margin-bottom:14px;}
+.tec-det-row{display:flex;align-items:stretch;border-bottom:1px solid #EEF1F7;}
+.tec-det-row:last-child{border-bottom:none;}
+.tec-det-lbl{min-width:130px;width:130px;flex-shrink:0;padding:8px 12px;font-size:11px;font-weight:700;color:#1A3F80;background:#F0F4FA;text-transform:uppercase;letter-spacing:.3px;}
+.tec-det-val{padding:8px 12px;font-size:13px;color:#222;flex:1;}
+.tec-det-row-full{flex-direction:column;}
+.tec-det-row-full .tec-det-lbl{width:100%;border-bottom:1px solid #EEF1F7;}
+.tec-det-row-full .tec-det-val{padding:10px 12px;}
+.tec-det-section{margin-bottom:14px;}
+.tec-det-lbl-standalone{font-size:11px;font-weight:700;color:#1A3F80;text-transform:uppercase;letter-spacing:.3px;margin-bottom:8px;}
+
+/* ── BOTÕES DE AÇÃO ── */
+.tec-acoes{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;padding-top:14px;border-top:1px solid #EEF1F7;}
+.tec-btn{padding:9px 18px;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;transition:opacity .15s;white-space:nowrap;}
+.tec-btn:hover{opacity:.83;}
+.tec-btn-amarelo{background:#F59E0B;color:#fff;}
+.tec-btn-laranja{background:#F97316;color:#fff;}
+.tec-btn-verde{background:#22C55E;color:#fff;}
+.tec-btn-vermelho{background:#EF4444;color:#fff;}
+.tec-btn-cinza{background:#6B7280;color:#fff;}
+.tec-btn-fechar{background:#EEF1F7;color:#4A5568;padding:8px 20px;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;}
+.tec-btn-fechar:hover{background:#E2E8F0;}
+
+/* ── FOTOS ── */
+.tec-fotos-section{margin-top:14px;padding-top:14px;border-top:1px solid #EEF1F7;}
+.tec-fotos-grid{display:flex;flex-wrap:wrap;gap:8px;min-height:8px;margin-bottom:10px;}
+.tec-foto-thumb{width:68px;height:68px;object-fit:cover;border-radius:8px;border:2px solid #EEF1F7;transition:opacity .15s;}
+.tec-foto-thumb:hover{opacity:.85;}
+.tec-btn-foto{display:inline-block;background:#EBF4FF;color:#1A3F80;border:1.5px solid #BFDBFE;padding:7px 14px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;}
+.tec-btn-foto:hover{background:#DBEAFE;}
+
+/* ── LINHA DE PEÇA (modal encerrar) ── */
+.tec-peca-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+.tec-peca-row .ac-input{margin:0;}
+
+/* ── RESPONSIVO ── */
+@media(max-width:600px){
+  .tec-cards-grid{grid-template-columns:1fr;}
+  .tec-content{padding:14px;}
+  .tec-header{padding:0 16px;}
+  .tec-acoes{flex-direction:column;}
+  .tec-btn{width:100%;}
+}

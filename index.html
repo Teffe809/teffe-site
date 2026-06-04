@@ -7,6 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,300&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="css/style.css"/>
 <link rel="stylesheet" href="css/admin.css"/>
+<link rel="stylesheet" href="css/tecnico.css"/>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css"/>
 </head>
 <body>
@@ -2173,6 +2174,100 @@
     </div>
   </div>
 
+</div>
+
+<!-- ═══════════════════════════════════
+     PORTAL DO TÉCNICO
+═══════════════════════════════════ -->
+
+<!-- TEC: LOGIN -->
+<div class="modal-bg" id="tec-login-bg" style="z-index:9000;">
+  <div class="modal" style="max-width:420px;">
+    <button class="modal-x" onclick="tecFecharLogin()">✕</button>
+    <h2>Portal do Técnico</h2>
+    <p class="msub">Acesso exclusivo para técnicos Teffe.</p>
+    <div id="tec-login-erro" class="adm-err"></div>
+    <div class="fg"><label>E-mail</label><input id="tec-email" type="email" placeholder="tecnico@teffe.com.br"/></div>
+    <div class="fg" style="margin-top:12px;"><label>Senha</label><input id="tec-senha" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')tecFazerLogin()"/></div>
+    <button class="btn-login" id="tec-btn-entrar" onclick="tecFazerLogin()" style="margin-top:20px;">Entrar →</button>
+  </div>
+</div>
+
+<!-- TEC: PAINEL -->
+<div id="portal-tecnico" style="display:none;position:fixed;inset:0;z-index:5200;background:#F0F4F8;overflow-y:auto;">
+  <div class="tec-header">
+    <div class="tec-header-left">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="198 26 314 120" style="height:32px;width:auto;">
+        <text font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="76" x="200" y="103"><tspan fill="#fff">TE</tspan><tspan fill="#E07820">FFE</tspan></text>
+        <rect x="200" y="111" width="310" height="3" rx="1.5" fill="#E07820"/>
+        <text x="202" y="139" font-family="Arial,sans-serif" font-weight="700" font-size="15" fill="#E07820" letter-spacing="6">TECNOLOGIA</text>
+      </svg>
+      <span class="tec-portal-tag">Portal do Técnico</span>
+    </div>
+    <div class="tec-header-right">
+      <span id="tec-nome-display" style="font-size:14px;font-weight:600;"></span>
+      <button class="tec-sair-btn" onclick="tecFazerLogout()"><i class="ti ti-logout"></i> Sair</button>
+    </div>
+  </div>
+  <div class="tec-content">
+    <div class="tec-page-title">Meus Chamados</div>
+    <div id="tec-lista-chamados" class="tec-cards-grid"></div>
+  </div>
+</div>
+
+<!-- TEC: MODAL DETALHE CHAMADO -->
+<div class="modal-bg" id="tec-chamado-modal" style="z-index:5300;" onclick="if(event.target===this)tecFecharDetalhe()">
+  <div class="modal" style="max-width:580px;max-height:90vh;overflow-y:auto;text-align:left;">
+    <button class="modal-x" onclick="tecFecharDetalhe()">✕</button>
+    <div id="tec-modal-conteudo"></div>
+    <div id="tec-modal-acoes" class="tec-acoes"></div>
+    <div style="text-align:right;margin-top:14px;padding-top:14px;border-top:1px solid #EEF1F7;">
+      <button onclick="tecFecharDetalhe()" class="tec-btn-fechar">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- TEC: MODAL ENCERRAR -->
+<div class="modal-bg" id="tec-encerrar-modal" style="z-index:5400;" onclick="if(event.target===this)tecFecharEncerrar()">
+  <div class="modal" style="max-width:540px;max-height:90vh;overflow-y:auto;text-align:left;">
+    <button class="modal-x" onclick="tecFecharEncerrar()">✕</button>
+    <h2 style="margin-bottom:20px;">Encerrar Chamado</h2>
+    <div class="ac-fg">
+      <label class="ac-label">Defeito encontrado *</label>
+      <textarea id="tec-desc-defeito" class="ac-input" rows="3" placeholder="Descreva o defeito encontrado..."></textarea>
+    </div>
+    <div class="ac-fg" style="margin-top:12px;">
+      <label class="ac-label">Solução aplicada *</label>
+      <textarea id="tec-solucao" class="ac-input" rows="3" placeholder="Descreva a solução aplicada..."></textarea>
+    </div>
+    <div style="margin-top:14px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <label class="ac-label" style="margin:0;">Peças utilizadas</label>
+        <button type="button" class="adm-btn adm-btn-sm adm-btn-outline" onclick="tecAdicionarPecaEncerrar()"><i class="ti ti-plus"></i> Adicionar peça</button>
+      </div>
+      <div id="tec-pecas-lista"></div>
+    </div>
+    <div id="tec-encerrar-erro" class="adm-err" style="margin-top:12px;"></div>
+    <button class="adm-btn" style="margin-top:16px;width:100%;" onclick="tecConfirmarEncerramento()">Confirmar Encerramento</button>
+  </div>
+</div>
+
+<!-- TEC: MODAL AGUARDANDO PEÇA -->
+<div class="modal-bg" id="tec-peca-modal" style="z-index:5400;" onclick="if(event.target===this)tecFecharPecaModal()">
+  <div class="modal" style="max-width:440px;text-align:left;">
+    <button class="modal-x" onclick="tecFecharPecaModal()">✕</button>
+    <h2 style="margin-bottom:20px;">Solicitar Peça</h2>
+    <div class="ac-fg">
+      <label class="ac-label">Peça *</label>
+      <select id="tec-peca-sel" class="ac-input"></select>
+    </div>
+    <div class="ac-fg" style="margin-top:12px;">
+      <label class="ac-label">Quantidade *</label>
+      <input id="tec-peca-qtd" type="number" min="1" value="1" class="ac-input"/>
+    </div>
+    <div id="tec-peca-erro" class="adm-err" style="margin-top:12px;"></div>
+    <button class="adm-btn" style="margin-top:16px;width:100%;" onclick="tecConfirmarPeca()">Confirmar Solicitação</button>
+  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
