@@ -130,25 +130,127 @@ function abrirDetalhesChamado(id){
   if(!c) return;
   const tipo=c._tipo==='suprimento'?'Suprimentos':'Assistência Técnica';
   const badgeTipo=`<span class="badge ${c._tipo==='suprimento'?'badge-suprim':'badge-assist'}">${tipo}</span>`;
-  const badgeStatus=`<span class="badge badge-${c.status}">${c.status}</span>`;
+  const statusLabels={aberto:'Aberto',andamento:'Em andamento',encerrado:'Encerrado',concluido:'Concluído',resolvido:'Resolvido'};
+  const prioLabels={baixa:'Baixa',normal:'Normal',alta:'Alta',urgente:'Urgente'};
+  const badgeStatus=`<span class="badge badge-${c.status}">${statusLabels[c.status]||c.status}</span>`;
   const data=new Date(c.created_at).toLocaleString('pt-BR');
-  const encerrado=c.status==='encerrado'||c.status==='concluido';
+  const encerrado=['encerrado','concluido','resolvido'].includes(c.status);
+  const fmtD=v=>v?new Date(v).toLocaleDateString('pt-BR'):'';
   document.getElementById('ac-detalhe-conteudo').innerHTML=`
     <div class="ac-det-title">Chamado #${c.numero||c.id.slice(0,6)}</div>
     <div class="ac-det-grid">
+      <div class="ac-det-item"><span class="ac-det-lbl">Número</span><span class="ac-det-val">#${c.numero||c.id.slice(0,6)}</span></div>
       <div class="ac-det-item"><span class="ac-det-lbl">Data de abertura</span><span class="ac-det-val">${data}</span></div>
       <div class="ac-det-item"><span class="ac-det-lbl">Status</span><span>${badgeStatus}</span></div>
       <div class="ac-det-item"><span class="ac-det-lbl">Tipo</span><span>${badgeTipo}</span></div>
       ${c.solicitante_nome?`<div class="ac-det-item"><span class="ac-det-lbl">Solicitante</span><span class="ac-det-val">${c.solicitante_nome}</span></div>`:''}
       ${c.solicitante_telefone?`<div class="ac-det-item"><span class="ac-det-lbl">Telefone</span><span class="ac-det-val">${c.solicitante_telefone}</span></div>`:''}
-      ${c.descricao||c.titulo?`<div class="ac-det-item ac-det-full"><span class="ac-det-lbl">Descrição</span><span class="ac-det-val">${c.descricao||c.titulo}</span></div>`:''}
-      ${encerrado&&c.resolucao?`<div class="ac-det-item ac-det-full ac-det-resolucao"><span class="ac-det-lbl">Resolução do Técnico</span><span class="ac-det-val">${c.resolucao}</span></div>`:''}
+      ${c.solicitante_email?`<div class="ac-det-item"><span class="ac-det-lbl">E-mail</span><span class="ac-det-val">${c.solicitante_email}</span></div>`:''}
+      ${c.prioridade?`<div class="ac-det-item"><span class="ac-det-lbl">Prioridade</span><span class="ac-det-val">${prioLabels[c.prioridade]||c.prioridade}</span></div>`:''}
+      ${c.tecnico?`<div class="ac-det-item"><span class="ac-det-lbl">Técnico</span><span class="ac-det-val">${c.tecnico}</span></div>`:''}
+      ${c.descricao||c.titulo?`<div class="ac-det-item ac-det-full"><span class="ac-det-lbl">Descrição</span><span class="ac-det-val">${(c.descricao||c.titulo).replace(/\n/g,'<br>')}</span></div>`:''}
+      ${encerrado&&c.resolucao?`<div class="ac-det-item ac-det-full ac-det-resolucao"><span class="ac-det-lbl">Resolução do Técnico</span><span class="ac-det-val">${c.resolucao.replace(/\n/g,'<br>')}</span></div>`:''}
+      ${c.data_fechamento?`<div class="ac-det-item"><span class="ac-det-lbl">Data de fechamento</span><span class="ac-det-val">${fmtD(c.data_fechamento)}</span></div>`:''}
     </div>`;
+  document.getElementById('ac-detalhe-btn-os').onclick=()=>imprimirOS(c);
   document.getElementById('ac-detalhe-modal').classList.add('open');
 }
 
 function acFecharDetalhe(){
   document.getElementById('ac-detalhe-modal').classList.remove('open');
+}
+
+function imprimirOS(c){
+  const fmt=v=>v?new Date(v).toLocaleString('pt-BR'):'–';
+  const fmtD=v=>v?new Date(v).toLocaleDateString('pt-BR'):'–';
+  const statusLabels={aberto:'Aberto',andamento:'Em andamento',encerrado:'Encerrado',concluido:'Concluído',resolvido:'Resolvido'};
+  const prioLabels={baixa:'Baixa',normal:'Normal',alta:'Alta',urgente:'Urgente'};
+  const tipoLabel=c._tipo==='suprimento'?'Suprimentos':'Assistência Técnica';
+  const encerrado=['encerrado','concluido','resolvido'].includes(c.status);
+  const num=c.numero||c.id.slice(0,6);
+
+  const rows=[
+    ['Número',`#${num}`],
+    ['Data/Hora de Abertura',fmt(c.created_at)],
+    ['Status',statusLabels[c.status]||c.status],
+    ['Tipo de Chamado',tipoLabel],
+    c.solicitante_nome&&['Solicitante',c.solicitante_nome],
+    c.solicitante_telefone&&['Telefone do Solicitante',c.solicitante_telefone],
+    c.solicitante_email&&['E-mail do Solicitante',c.solicitante_email],
+    c.prioridade&&['Prioridade',prioLabels[c.prioridade]||c.prioridade],
+    c.tecnico&&['Técnico Responsável',c.tecnico],
+    encerrado&&c.data_fechamento&&['Data de Fechamento',fmtD(c.data_fechamento)],
+  ].filter(Boolean);
+
+  const rowsHTML=rows.map(([l,v])=>`<tr><th>${l}</th><td>${v}</td></tr>`).join('');
+
+  const html=`<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<title>OS #${num} — Teffe Tecnologia</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:Arial,sans-serif;font-size:13px;color:#222;background:#fff;padding:32px;}
+  .os-header{display:flex;align-items:center;gap:20px;border-bottom:3px solid #E07820;padding-bottom:16px;margin-bottom:20px;}
+  .os-header img{height:54px;}
+  .os-header-text h1{font-size:18px;font-weight:900;color:#1A3F80;}
+  .os-header-text p{font-size:12px;color:#555;margin-top:2px;}
+  table.os-table{width:100%;border-collapse:collapse;margin-bottom:18px;}
+  table.os-table th{width:200px;text-align:left;background:#f0f4fa;padding:7px 10px;font-weight:700;border:1px solid #dde3ee;color:#1A3F80;}
+  table.os-table td{padding:7px 10px;border:1px solid #dde3ee;}
+  .os-section{margin-bottom:16px;}
+  .os-section-title{font-size:12px;font-weight:700;color:#E07820;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;border-bottom:1px solid #f0d0a0;padding-bottom:4px;}
+  .os-text-block{border:1px solid #dde3ee;border-radius:4px;padding:10px 12px;min-height:60px;line-height:1.6;background:#fafbfd;white-space:pre-wrap;}
+  .os-assinaturas{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:40px;}
+  .os-assinatura{border-top:1px solid #888;padding-top:8px;text-align:center;font-size:12px;color:#555;}
+  .os-footer{text-align:center;font-size:11px;color:#888;border-top:1px solid #dde3ee;padding-top:12px;margin-top:32px;}
+  .os-btns{display:flex;gap:12px;justify-content:flex-end;margin-bottom:20px;}
+  .os-btn{padding:8px 20px;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;}
+  .os-btn-print{background:#1A3F80;color:#fff;}
+  .os-btn-close{background:#eee;color:#333;}
+  @media print{
+    .os-btns{display:none!important;}
+    body{padding:16px;}
+    @page{size:A4;margin:18mm 16mm;}
+  }
+</style>
+</head>
+<body>
+<div class="os-btns">
+  <button class="os-btn os-btn-close" onclick="window.close()">Fechar</button>
+  <button class="os-btn os-btn-print" onclick="window.print()">Imprimir</button>
+</div>
+<div class="os-header">
+  <img src="https://teffe.com.br/assets/images/logo-teffe.png" alt="Teffe Tecnologia" onerror="this.style.display='none'"/>
+  <div class="os-header-text">
+    <h1>ORDEM DE SERVIÇO Nº ${num}</h1>
+    <p>Teffe Tecnologia — Suporte e Assistência Técnica</p>
+  </div>
+</div>
+<div class="os-section">
+  <div class="os-section-title">Dados do Chamado</div>
+  <table class="os-table">${rowsHTML}</table>
+</div>
+${c.descricao||c.titulo?`<div class="os-section">
+  <div class="os-section-title">Descrição do Problema</div>
+  <div class="os-text-block">${((c.descricao||c.titulo)||'').replace(/</g,'&lt;')}</div>
+</div>`:''}
+${encerrado&&c.resolucao?`<div class="os-section">
+  <div class="os-section-title">Resolução do Técnico</div>
+  <div class="os-text-block">${(c.resolucao||'').replace(/</g,'&lt;')}</div>
+</div>`:''}
+<div class="os-assinaturas">
+  <div class="os-assinatura">Assinatura do Técnico</div>
+  <div class="os-assinatura">Assinatura do Cliente</div>
+</div>
+<div class="os-footer">Teffe Tecnologia — teffe.com.br — (14) 99828-9248</div>
+</body>
+<script>window.onload=function(){window.print();}<\/script>
+</html>`;
+
+  const w=window.open('','_blank','width=860,height=700');
+  if(w){w.document.open();w.document.write(html);w.document.close();}
 }
 
 // ── EQUIPAMENTOS ──
