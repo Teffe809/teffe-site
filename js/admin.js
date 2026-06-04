@@ -128,9 +128,11 @@ function admFecharLogin(){
   history.replaceState(null,'',location.pathname);
 }
 
-// Ponto de entrada: getSession() decide se mostra login ou painel
-function admInit(){
-  admVerificarEAbrir();
+// Ponto de entrada: sempre faz signOut e limpa estado antes de mostrar login
+async function admInit(){
+  await _supabase.auth.signOut();
+  _admUid=null;_admNome='';_admTecs=[];
+  admMostrarLogin();
 }
 
 // ── NAVEGAÇÃO ──
