@@ -76,6 +76,7 @@ async function carregarChamados(){
   const suprimentos=(rSp.data||[]).map(r=>({...r,titulo:'Suprimento #'+r.numero,_tipo:'suprimento'}));
   const todos=[...chamados,...suprimentos].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
   document.getElementById('n-cham').textContent=todos.filter(r=>r.status==='aberto').length;
+  document.getElementById('n-encerrado').textContent=todos.filter(r=>r.status==='encerrado').length;
   if(!todos.length){el.innerHTML='<div class="ac-empty">Nenhum chamado ainda.</div>';return;}
   el.innerHTML='<table class="ac-table"><thead><tr><th>#</th><th>Tipo</th><th>Descrição</th><th>Status</th><th>Data</th></tr></thead><tbody>'+
     todos.map(r=>`<tr>
@@ -161,8 +162,13 @@ async function buscarEquipAC(prefix){
 async function carregarInsumos(modelo){
   const sel=document.getElementById('sp-insumo');
   sel.innerHTML='<option value="">Carregando...</option>';
-  const {data}=await sf('/rest/v1/insumos?modelo_equipamento=ilike.'+encodeURIComponent(modelo)+'&ativo=eq.true&select=*');
-  if(!data||!data.length){sel.innerHTML='<option value="">Nenhum insumo cadastrado para este modelo</option>';return;}
+  const m=(modelo||'').trim();
+  if(!m){sel.innerHTML='<option value="">Modelo não identificado no equipamento</option>';return;}
+  const {data}=await sf('/rest/v1/insumos?modelo_equipamento=ilike.'+encodeURIComponent(m)+'&ativo=eq.true&select=*');
+  if(!data||!data.length){
+    sel.innerHTML='<option value="">Nenhum insumo para o modelo: '+m+'</option>';
+    return;
+  }
   sel.innerHTML='<option value="">Selecione o insumo</option>'+
     data.map(i=>`<option value="${i.id}">${i.codigo_insumo?'['+i.codigo_insumo+'] ':''}${i.descricao}</option>`).join('');
 }
