@@ -224,6 +224,7 @@ Mensagem: ${msg}
         nome, empresa, email, tel, solucao
       })
     });
+    document.querySelectorAll('#orcaForm input, #orcaForm select, #orcaForm textarea').forEach(function(el){ el.value=''; });
     document.getElementById('orcaForm').style.display='none';
     document.getElementById('orcaSuccess').style.display='block';
   } catch(err){
@@ -236,7 +237,13 @@ function setTab(btn,id){
   btn.classList.add('active');
   document.getElementById('tab-'+id).classList.add('active');
 }
-function enviar(){alert('<i class="ti ti-circle-check"></i> Solicitação enviada!\nEntraremos em contato em até 1 dia útil.');}
+function enviar(){
+  document.querySelectorAll('.cta-form input, .cta-form select, .cta-form textarea').forEach(function(el){ el.value=''; });
+  document.getElementById('ctaSuccessModal').classList.add('open');
+}
+function closeCTASuccess(){
+  document.getElementById('ctaSuccessModal').classList.remove('open');
+}
 window.addEventListener('scroll',()=>{
   document.querySelector('.navbar').style.boxShadow=window.scrollY>10?'0 4px 20px rgba(26,63,128,.12)':'0 2px 12px rgba(26,63,128,.07)';
 });
