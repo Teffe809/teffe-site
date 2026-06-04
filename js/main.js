@@ -178,6 +178,35 @@ function openOrca(e, solucao){
 function closeOrca(){document.getElementById('orcaModal').classList.remove('open');}
 document.getElementById('orcaModal').addEventListener('click',function(e){if(e.target===this)closeOrca();});
 
+// ── MODAL CONTATO ──
+function openContatoModal(e){
+  e && e.preventDefault();
+  document.getElementById('contatoModal').classList.add('open');
+}
+function closeContatoModal(){document.getElementById('contatoModal').classList.remove('open');}
+document.getElementById('contatoModal').addEventListener('click',function(e){if(e.target===this)closeContatoModal();});
+
+async function enviarContato(){
+  const nome  = document.getElementById('mc-nome').value.trim();
+  const email = document.getElementById('mc-email').value.trim();
+  const tel   = document.getElementById('mc-tel').value.trim();
+  const msg   = document.getElementById('mc-msg').value.trim();
+  if(!nome||!email||!tel||!msg){alert('Por favor preencha todos os campos obrigatórios (*)');return;}
+  const corpo = `Novo contato pelo site da Teffe\n\nNome: ${nome}\nTelefone: ${tel}\nE-mail: ${email}\nMensagem: ${msg}`;
+  try {
+    await fetch('https://formspree.io/f/xyzknqvp',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Accept':'application/json'},
+      body:JSON.stringify({_replyto:email,_subject:'Novo contato Teffe – '+nome,message:corpo,nome,email,tel})
+    });
+    document.querySelectorAll('#contatoModal input,#contatoModal textarea').forEach(function(el){el.value='';});
+    closeContatoModal();
+    document.getElementById('ctaSuccessModal').classList.add('open');
+  } catch(err){
+    alert('Erro ao enviar. Por favor tente novamente ou entre em contato pelo WhatsApp.');
+  }
+}
+
 async function enviarOrca(){
   const nome     = document.getElementById('of-nome').value.trim();
   const sobre    = document.getElementById('of-sobrenome').value.trim();
@@ -288,7 +317,7 @@ function maskCNPJ(e){
   v = v.replace(/(\d{4})(\d)/,'$1-$2');
   e.target.value = v;
 }
-['cta-tel','tc-tel','of-tel'].forEach(function(id){
+['cta-tel','tc-tel','of-tel','mc-tel'].forEach(function(id){
   var el = document.getElementById(id);
   if(el) el.addEventListener('input', maskPhone);
 });

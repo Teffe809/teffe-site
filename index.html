@@ -81,7 +81,7 @@
         <a href="#" onclick="openInstPage(event,'ambiental')">Teffe EcoTech</a>
       </div>
     </div>
-    <div class="nav-item"><a href="#contato-cta">Contato</a></div>
+    <div class="nav-item"><a href="#" onclick="openContatoModal(event)">Contato</a></div>
   </nav>
   <div class="nav-actions">
     <a href="#" class="btn-cliente" onclick="openModal(event)">Já sou cliente</a>
@@ -154,7 +154,7 @@
 
   <!-- Contato -->
   <div class="mobile-menu-item">
-    <a href="#contato-cta" onclick="closeMobileMenu()">Contato</a>
+    <a href="#" onclick="closeMobileMenu();openContatoModal(event)">Contato</a>
   </div>
 
   <a href="#" class="mobile-btn-cliente" onclick="closeMobileMenu();openModal(event)">Já sou cliente</a>
@@ -366,6 +366,20 @@
     </div>
   </div>
 </section>
+
+<!-- MODAL CONTATO -->
+<div class="modal-bg" id="contatoModal">
+  <div class="modal" style="max-width:480px;">
+    <button class="modal-x" onclick="closeContatoModal()">✕</button>
+    <h2>Fale com a Teffe</h2>
+    <p class="msub">Preencha o formulário e nosso time entra em contato em breve.</p>
+    <div class="fg"><label>Nome *</label><input type="text" id="mc-nome" placeholder="Seu nome completo"/></div>
+    <div class="fg"><label>E-mail *</label><input type="email" id="mc-email" placeholder="seu@empresa.com"/></div>
+    <div class="fg"><label>Telefone *</label><input type="tel" id="mc-tel" placeholder="(14) 9 0000-0000"/></div>
+    <div class="fg"><label>Como podemos ajudar? *</label><textarea id="mc-msg" placeholder="Conte um pouco sobre sua necessidade..."></textarea></div>
+    <button class="btn-enviar" onclick="enviarContato()">Quero minha solução →</button>
+  </div>
+</div>
 
 <!-- MODAL SUCESSO FORMULÁRIO PRINCIPAL -->
 <div class="modal-bg" id="ctaSuccessModal">
