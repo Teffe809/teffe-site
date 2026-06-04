@@ -189,30 +189,20 @@ async function admCriarTecnico(){
   btn.disabled=true;btn.textContent='Criando...';erroEl.style.display='none';
   let userId=null;
 
-  // Salva sessão do admin antes do signUp (signUp sobrescreve a sessão ativa)
-  const {data:{session:adminSession}}=await _supabase.auth.getSession();
-  if(!adminSession){
-    erroEl.style.display='block';erroEl.textContent='Sessão do admin expirou. Faça login novamente.';
-    btn.disabled=false;btn.textContent='Criar Técnico';return;
-  }
-
-  // Cria login do técnico via signUp (anon key — sem service role key)
-  const {data:signUpData,error:signUpError}=await _supabase.auth.signUp({
+  // Cliente isolado para o signUp — não interfere na sessão do admin em _supabase
+  const _supabaseSignup=supabase.createClient(ADMIN_URL,ADMIN_ANON);
+  const {data:signUpData,error:signUpError}=await _supabaseSignup.auth.signUp({
     email,password:senha,
     options:{data:{role:'tecnico',nome}}
   });
   if(signUpError){
-    await _supabase.auth.setSession({access_token:adminSession.access_token,refresh_token:adminSession.refresh_token});
     erroEl.style.display='block';
     erroEl.textContent='Erro ao criar login: '+signUpError.message;
     btn.disabled=false;btn.textContent='Criar Técnico';return;
   }
   if(signUpData.user) userId=signUpData.user.id;
 
-  // Restaura sessão do admin para que o INSERT use o JWT correto no RLS
-  await _supabase.auth.setSession({access_token:adminSession.access_token,refresh_token:adminSession.refresh_token});
-
-  // INSERT na tabela tecnicos com sessão do admin restaurada
+  // INSERT com JWT do admin (_supabase intacto — sessão não foi afetada pelo signUp)
   const {ok,data:errD}=await admHttpUser('/rest/v1/tecnicos',{
     method:'POST',headers:{'Prefer':'return=minimal'},
     body:JSON.stringify({nome,email,telefone:tel||null,matricula:mat||null,user_id:userId})
