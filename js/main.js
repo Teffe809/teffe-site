@@ -317,7 +317,7 @@ function maskCNPJ(e){
   v = v.replace(/(\d{4})(\d)/,'$1-$2');
   e.target.value = v;
 }
-['cta-tel','tc-tel','of-tel','mc-tel'].forEach(function(id){
+['cta-tel','tc-tel','of-tel','mc-tel','at-tel','sp-tel'].forEach(function(id){
   var el = document.getElementById(id);
   if(el) el.addEventListener('input', maskPhone);
 });

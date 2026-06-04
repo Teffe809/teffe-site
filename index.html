@@ -1830,52 +1830,199 @@
 
 <script src="js/main.js"></script>
 
+<!-- ÁREA DO CLIENTE -->
 <div id="area-cliente" style="display:none;position:fixed;inset:0;z-index:5000;background:#F5F7FA;overflow-y:auto;">
-<div class="ac-navbar">
-  <div style="display:flex;align-items:center;gap:10px;">
-    <span style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;"><span style="color:#1A3F80;">TE</span><span style="color:#E07820;">FFE</span></span>
-    <span style="font-size:13px;color:#8896AB;">| Área do Cliente</span>
+
+  <div class="ac-navbar">
+    <div style="display:flex;align-items:center;gap:14px;">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 580 175" style="height:36px;width:auto;">
+        <rect width="580" height="175" fill="#ffffff"/>
+        <polygon points="95,31 140,57 140,109 95,135 50,109 50,57" fill="none" stroke="#E07820" stroke-width="5" stroke-linejoin="round"/>
+        <polygon points="95,37 135,60 135,106 95,129 55,106 55,60" fill="#ffffff"/>
+        <polygon points="95,43 130,63 130,103 95,123 60,103 60,63" fill="#1A2E5A"/>
+        <rect x="78" y="62" width="34" height="6" rx="2.5" fill="#E07820"/>
+        <rect x="91" y="62" width="7" height="30" rx="2.5" fill="#E07820"/>
+        <line x1="140" y1="57" x2="163" y2="44" stroke="#E07820" stroke-width="1.8"/><circle cx="166" cy="42" r="3.8" fill="#E07820"/>
+        <line x1="140" y1="109" x2="163" y2="122" stroke="#E07820" stroke-width="1.8"/><circle cx="166" cy="124" r="3.8" fill="#E07820"/>
+        <line x1="95" y1="135" x2="95" y2="158" stroke="#E07820" stroke-width="1.8"/><circle cx="95" cy="161" r="3.8" fill="#E07820"/>
+        <line x1="50" y1="109" x2="27" y2="122" stroke="#E07820" stroke-width="1.8"/><circle cx="24" cy="124" r="3.8" fill="#E07820"/>
+        <line x1="50" y1="57" x2="27" y2="44" stroke="#E07820" stroke-width="1.8"/><circle cx="24" cy="42" r="3.8" fill="#E07820"/>
+        <text font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="76" x="200" y="103"><tspan fill="#1A2E5A">TE</tspan><tspan fill="#E07820">FFE</tspan></text>
+        <rect x="200" y="111" width="310" height="3" rx="1.5" fill="#E07820"/>
+        <text x="202" y="139" font-family="Arial, sans-serif" font-weight="700" font-size="15" fill="#E07820" letter-spacing="6">TECNOLOGIA</text>
+      </svg>
+      <span style="font-size:13px;color:#8896AB;">Área do Cliente</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:16px;font-size:14px;color:#4A5568;">
+      <span>Olá, <strong id="ac-nome"></strong></span>
+      <button class="ac-sair" onclick="fazerLogout()"><i class="ti ti-logout"></i> Sair</button>
+    </div>
   </div>
-  <div style="display:flex;align-items:center;gap:12px;font-size:14px;color:#4A5568;">
-    Olá, <strong id="ac-nome"></strong>
-    <button class="ac-sair" onclick="fazerLogout()">Sair</button>
+
+  <div class="ac-body">
+
+    <!-- VIEW DASHBOARD -->
+    <div id="ac-view-dash" class="ac-view ac-view-active">
+      <h1 id="ac-empresa" class="ac-pg-title">Minha Área</h1>
+      <p class="ac-pg-sub">Bem-vindo ao portal de atendimento Teffe</p>
+
+      <div class="ac-cards">
+        <div class="ac-card">
+          <i class="ti ti-device-desktop-analytics ac-card-icon"></i>
+          <div class="ac-card-num" id="n-equip">–</div>
+          <div class="ac-card-label">Equipamentos</div>
+        </div>
+        <div class="ac-card">
+          <i class="ti ti-ticket ac-card-icon"></i>
+          <div class="ac-card-num" id="n-cham">–</div>
+          <div class="ac-card-label">Chamados abertos</div>
+        </div>
+        <div class="ac-card">
+          <i class="ti ti-file-description ac-card-icon"></i>
+          <div class="ac-card-num" id="n-cont">–</div>
+          <div class="ac-card-label">Contratos ativos</div>
+        </div>
+        <div class="ac-card">
+          <i class="ti ti-headset ac-card-icon"></i>
+          <div class="ac-card-num" style="font-size:16px;margin-top:4px;">Teffe</div>
+          <div class="ac-card-label">Suporte</div>
+        </div>
+      </div>
+
+      <div class="ac-tipo-btns">
+        <button class="ac-tipo-btn ac-tipo-assist" onclick="acMostrarView('assist')">
+          <i class="ti ti-tool ac-tipo-icon"></i>
+          <div class="ac-tipo-text">
+            <strong>Assistência Técnica</strong>
+            <span>Reporte defeitos e solicite reparos</span>
+          </div>
+          <i class="ti ti-chevron-right ac-tipo-arrow"></i>
+        </button>
+        <button class="ac-tipo-btn ac-tipo-suprim" onclick="acMostrarView('suprim')">
+          <i class="ti ti-package ac-tipo-icon"></i>
+          <div class="ac-tipo-text">
+            <strong>Solicitar Suprimentos</strong>
+            <span>Toners, cartuchos e insumos de impressão</span>
+          </div>
+          <i class="ti ti-chevron-right ac-tipo-arrow"></i>
+        </button>
+      </div>
+
+      <div class="ac-section">
+        <div class="ac-section-header">
+          <h2><i class="ti ti-ticket" style="margin-right:7px;vertical-align:-2px;"></i>Chamados</h2>
+        </div>
+        <div id="lista-cham"><div class="ac-empty">Carregando...</div></div>
+      </div>
+
+      <div class="ac-section">
+        <div class="ac-section-header">
+          <h2><i class="ti ti-device-desktop-analytics" style="margin-right:7px;vertical-align:-2px;"></i>Equipamentos</h2>
+        </div>
+        <div id="lista-equip"><div class="ac-empty">Carregando...</div></div>
+      </div>
+
+      <div class="ac-section">
+        <div class="ac-section-header">
+          <h2><i class="ti ti-file-description" style="margin-right:7px;vertical-align:-2px;"></i>Contratos</h2>
+        </div>
+        <div id="lista-cont"><div class="ac-empty">Carregando...</div></div>
+      </div>
+    </div>
+
+    <!-- VIEW ASSISTÊNCIA TÉCNICA -->
+    <div id="ac-view-assist" class="ac-view">
+      <div class="ac-view-header">
+        <button class="ac-back-btn" onclick="acMostrarView('dash')"><i class="ti ti-arrow-left"></i> Voltar</button>
+        <div>
+          <h2 class="ac-pg-title" style="margin-bottom:2px;">Assistência Técnica</h2>
+          <p class="ac-pg-sub">Relate defeitos e solicite reparo de equipamentos</p>
+        </div>
+      </div>
+
+      <div class="ac-form-card">
+        <div class="ac-fg">
+          <label class="ac-label">Número de série ou código do equipamento *</label>
+          <div class="ac-search-row">
+            <input type="text" id="at-serial" class="ac-input" placeholder="Ex: SRV12345 ou EQ-001"/>
+            <button class="ac-search-btn" onclick="buscarEquipAC('at')"><i class="ti ti-search"></i> Buscar</button>
+          </div>
+          <div id="at-equip-info" class="ac-equip-info" style="display:none;"></div>
+        </div>
+
+        <div class="ac-form-2col">
+          <div class="ac-fg"><label class="ac-label">Solicitante *</label><input type="text" id="at-nome" class="ac-input" placeholder="Nome completo"/></div>
+          <div class="ac-fg"><label class="ac-label">Telefone</label><input type="tel" id="at-tel" class="ac-input" placeholder="(14) 9 0000-0000"/></div>
+        </div>
+        <div class="ac-fg"><label class="ac-label">E-mail</label><input type="email" id="at-email" class="ac-input" placeholder="seu@email.com"/></div>
+        <div class="ac-fg"><label class="ac-label">Descrição do defeito *</label><textarea id="at-desc" class="ac-input ac-textarea" placeholder="Descreva o problema com detalhes..."></textarea></div>
+        <div class="ac-fg">
+          <label class="ac-label">Imagem (opcional)</label>
+          <label class="ac-file-label">
+            <i class="ti ti-upload"></i> <span id="at-file-text">Clique para selecionar uma imagem</span>
+            <input type="file" id="at-img" accept="image/*" onchange="acMostrarArquivo('at-file-text',this)"/>
+          </label>
+        </div>
+        <button class="ac-submit-btn" onclick="enviarAssistencia()"><i class="ti ti-send"></i> Abrir Chamado</button>
+      </div>
+    </div>
+
+    <!-- VIEW SUPRIMENTOS -->
+    <div id="ac-view-suprim" class="ac-view">
+      <div class="ac-view-header">
+        <button class="ac-back-btn" onclick="acMostrarView('dash')"><i class="ti ti-arrow-left"></i> Voltar</button>
+        <div>
+          <h2 class="ac-pg-title" style="margin-bottom:2px;">Solicitar Suprimentos</h2>
+          <p class="ac-pg-sub">Solicite toners, cartuchos e insumos de impressão</p>
+        </div>
+      </div>
+
+      <div class="ac-form-card">
+        <div class="ac-fg">
+          <label class="ac-label">Número de série ou código do equipamento *</label>
+          <div class="ac-search-row">
+            <input type="text" id="sp-serial" class="ac-input" placeholder="Ex: SRV12345 ou EQ-001"/>
+            <button class="ac-search-btn" onclick="buscarEquipAC('sp')"><i class="ti ti-search"></i> Buscar</button>
+          </div>
+          <div id="sp-equip-info" class="ac-equip-info" style="display:none;"></div>
+        </div>
+
+        <div class="ac-form-2col">
+          <div class="ac-fg"><label class="ac-label">Solicitante *</label><input type="text" id="sp-nome" class="ac-input" placeholder="Nome completo"/></div>
+          <div class="ac-fg"><label class="ac-label">Telefone</label><input type="tel" id="sp-tel" class="ac-input" placeholder="(14) 9 0000-0000"/></div>
+        </div>
+        <div class="ac-fg"><label class="ac-label">E-mail</label><input type="email" id="sp-email" class="ac-input" placeholder="seu@email.com"/></div>
+
+        <div class="ac-form-2col">
+          <div class="ac-fg">
+            <label class="ac-label">Insumo *</label>
+            <select id="sp-insumo" class="ac-input"><option value="">Busque o equipamento primeiro</option></select>
+          </div>
+          <div class="ac-fg"><label class="ac-label">Quantidade *</label><input type="number" id="sp-qtd" class="ac-input" min="1" value="1"/></div>
+        </div>
+
+        <div class="ac-fg">
+          <label class="ac-label">Contador atual *</label>
+          <input type="number" id="sp-contador" class="ac-input" placeholder="Informe a leitura do contador" oninput="validarContador()"/>
+          <div id="sp-contador-erro" class="ac-counter-error" style="display:none;"></div>
+        </div>
+
+        <button class="ac-submit-btn" onclick="enviarSuprimento()"><i class="ti ti-send"></i> Abrir Chamado</button>
+      </div>
+    </div>
+
   </div>
-</div>
-<div class="ac-body">
-  <h1 id="ac-empresa" style="font-family:'Syne',sans-serif;font-size:26px;font-weight:700;color:#1A3F80;margin-bottom:4px;">Minha Área</h1>
-  <p style="font-size:14px;color:#8896AB;margin-bottom:28px;">Bem-vindo ao portal de atendimento Teffe</p>
-  <div class="ac-cards">
-    <div class="ac-card"><div style="font-size:28px;margin-bottom:8px;">🖨️</div><div class="ac-card-num" id="n-equip">–</div><div class="ac-card-label">Equipamentos</div></div>
-    <div class="ac-card"><div style="font-size:28px;margin-bottom:8px;">🎫</div><div class="ac-card-num" id="n-cham">–</div><div class="ac-card-label">Chamados abertos</div></div>
-    <div class="ac-card"><div style="font-size:28px;margin-bottom:8px;">📄</div><div class="ac-card-num" id="n-cont">–</div><div class="ac-card-label">Contratos ativos</div></div>
-    <div class="ac-card"><div style="font-size:28px;margin-bottom:8px;">📞</div><div class="ac-card-num">0800</div><div class="ac-card-label">Suporte Teffe</div></div>
+
+  <!-- MODAL SUCESSO -->
+  <div id="ac-chamado-ok" class="ac-modal-bg">
+    <div class="ac-modal-box">
+      <i class="ti ti-circle-check" style="font-size:58px;color:#2d8a40;display:block;margin-bottom:16px;"></i>
+      <h3>Chamado aberto com sucesso!</h3>
+      <p>É bom ter você com a Teffe!<br/>Nossa equipe entrará em contato em breve.</p>
+      <button onclick="acFecharSucesso()">Fechar</button>
+    </div>
   </div>
-  <div class="ac-section">
-    <div class="ac-section-header"><h2>🎫 Chamados</h2><button class="btn-novo" onclick="document.getElementById('ncModal').classList.add('open')">+ Novo Chamado</button></div>
-    <div id="lista-cham"><div class="ac-empty">Carregando...</div></div>
-  </div>
-  <div class="ac-section">
-    <div class="ac-section-header"><h2>🖨️ Equipamentos</h2></div>
-    <div id="lista-equip"><div class="ac-empty">Carregando...</div></div>
-  </div>
-  <div class="ac-section">
-    <div class="ac-section-header"><h2>📄 Contratos</h2></div>
-    <div id="lista-cont"><div class="ac-empty">Carregando...</div></div>
-  </div>
-</div>
-</div>
-<div class="nc-bg" id="ncModal">
-<div class="nc-modal">
-  <h3>Novo Chamado</h3>
-  <label>Título *</label><input id="nc-titulo" type="text" placeholder="Descreva o problema"/>
-  <label>Equipamento</label><select id="nc-equip"><option value="">Selecione</option></select>
-  <label>Prioridade</label><select id="nc-prior"><option value="normal">Normal</option><option value="urgente">Urgente</option></select>
-  <label>Descrição</label><textarea id="nc-desc" rows="3" placeholder="Mais detalhes..."></textarea>
-  <div class="nc-btns">
-    <button class="nc-cancel" onclick="document.getElementById('ncModal').classList.remove('open')">Cancelar</button>
-    <button class="nc-send" onclick="enviarChamado()">Enviar →</button>
-  </div>
-</div>
+
 </div>
 <script src="js/supabase.js"></script>
 </body>
