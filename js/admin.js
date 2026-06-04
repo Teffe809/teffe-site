@@ -193,25 +193,30 @@ async function admCriarTecnico(){
   btn.disabled=true;btn.textContent='Criando...';erroEl.style.display='none';
   let userId=null;
   const srkOk=typeof ADMIN_SRK!=='undefined'&&ADMIN_SRK&&ADMIN_SRK!=='COLE_SUA_SERVICE_ROLE_KEY_AQUI';
+  console.log('[admCriarTecnico] srkOk:', srkOk, '| email:', email, '| nome:', nome);
   if(srkOk){
+    console.log('[admCriarTecnico] Chamando Admin API /auth/v1/admin/users...');
     const r=await fetch(ADMIN_URL+'/auth/v1/admin/users',{
       method:'POST',
       headers:{'apikey':ADMIN_SRK,'Authorization':'Bearer '+ADMIN_SRK,'Content-Type':'application/json'},
       body:JSON.stringify({email,password:senha,email_confirm:true,user_metadata:{role:'tecnico',nome}})
     });
     const authUser=await r.json().catch(()=>null);
+    console.log('[admCriarTecnico] Admin API status:', r.status, '| resposta completa:', JSON.stringify(authUser));
     if(!r.ok){
       erroEl.style.display='block';
       erroEl.textContent='Erro ao criar login: '+(authUser&&authUser.message?authUser.message:'verifique a service role key.');
       btn.disabled=false;btn.textContent='Criar Técnico';return;
     }
     if(authUser&&authUser.id) userId=authUser.id;
+    console.log('[admCriarTecnico] userId obtido do Auth:', userId);
   }
-  // INSERT com JWT do usuário logado para que o RLS reconheça auth.uid()
+  console.log('[admCriarTecnico] Iniciando INSERT em tecnicos | payload:', JSON.stringify({nome,email,telefone:tel||null,matricula:mat||null,user_id:userId}));
   const {ok,data:errD}=await admHttpUser('/rest/v1/tecnicos',{
     method:'POST',headers:{'Prefer':'return=minimal'},
     body:JSON.stringify({nome,email,telefone:tel||null,matricula:mat||null,user_id:userId})
   });
+  console.log('[admCriarTecnico] INSERT resultado | ok:', ok, '| resposta:', JSON.stringify(errD));
   btn.disabled=false;btn.textContent='Criar Técnico';
   if(!ok){erroEl.style.display='block';erroEl.textContent=errD&&errD.message?errD.message:'Erro ao cadastrar técnico.';return;}
   ['adm-tec-nome','adm-tec-email','adm-tec-tel','adm-tec-mat','adm-tec-senha'].forEach(id=>document.getElementById(id).value='');
