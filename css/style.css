@@ -855,6 +855,16 @@ footer{background:#0E2248;padding:60px 48px 28px;}
 .ac-modal-box p{font-size:14px;font-weight:300;color:#4A5568;line-height:1.7;margin-bottom:24px;}
 .ac-modal-box button{background:#1A3F80;color:#fff;border:none;padding:12px 32px;border-radius:9px;font-size:14px;font-weight:600;cursor:pointer;}
 .badge-assist{background:#EBF4FF;color:#1A3F80;}
+.ac-row-click{cursor:pointer;transition:background .12s;}
+.ac-row-click:hover td{background:#F5F7FA;}
+.ac-det-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:#1A3F80;margin-bottom:22px;}
+.ac-det-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.ac-det-item{display:flex;flex-direction:column;gap:5px;}
+.ac-det-full{grid-column:1/-1;}
+.ac-det-lbl{font-size:11px;font-weight:700;color:#8896AB;text-transform:uppercase;letter-spacing:.6px;}
+.ac-det-val{font-size:14px;color:#1A3F80;font-weight:400;line-height:1.5;}
+.ac-det-resolucao{background:#F0FFF4;border:1px solid #C6F6D5;border-radius:10px;padding:14px 16px;margin-top:4px;}
+.ac-det-resolucao .ac-det-val{color:#276749;}
 .badge-suprim{background:#FFF3E0;color:#E07820;}
 
 /* Flip cards — Quem Somos */

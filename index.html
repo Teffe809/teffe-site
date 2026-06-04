@@ -2010,6 +2010,15 @@
 
   </div>
 
+  <!-- MODAL DETALHES DO CHAMADO -->
+  <div id="ac-detalhe-modal" class="ac-modal-bg" onclick="if(event.target===this)acFecharDetalhe()">
+    <div class="ac-modal-box" style="max-width:540px;text-align:left;padding:36px 40px;position:relative;">
+      <button onclick="acFecharDetalhe()" class="modal-x">✕</button>
+      <div id="ac-detalhe-conteudo"></div>
+      <button onclick="acFecharDetalhe()" class="ac-submit-btn" style="margin-top:24px;">Fechar</button>
+    </div>
+  </div>
+
   <!-- MODAL SUCESSO -->
   <div id="ac-chamado-ok" class="ac-modal-bg">
     <div class="ac-modal-box">

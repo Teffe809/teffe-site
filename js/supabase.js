@@ -1,6 +1,6 @@
 const SURL='https://hlfjcpgrxiktgctozilk.supabase.co';
 const SKEY='sb_publishable_-Iu8PbqhLeZAXSBcczr2mQ_lzlGr4_g';
-let _tok=null,_uid=null,_cid=null,_atEquipId=null,_spEquipId=null,_spUltimoContador=null;
+let _tok=null,_uid=null,_cid=null,_atEquipId=null,_spEquipId=null,_spUltimoContador=null,_chamadosCache={};
 
 // ── TIMER DE INATIVIDADE (5 min) ──
 const INATIVIDADE_MS=5*60*1000;
@@ -109,11 +109,13 @@ async function carregarChamados(){
   const chamados=(rCh.data||[]).map(r=>({...r,_tipo:'assistencia'}));
   const suprimentos=(rSp.data||[]).map(r=>({...r,titulo:'Suprimento #'+r.numero,_tipo:'suprimento'}));
   const todos=[...chamados,...suprimentos].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
+  _chamadosCache={};
+  todos.forEach(r=>{_chamadosCache[r.id]=r;});
   document.getElementById('n-cham').textContent=todos.filter(r=>r.status==='aberto').length;
   document.getElementById('n-encerrado').textContent=todos.filter(r=>r.status==='encerrado').length;
   if(!todos.length){el.innerHTML='<div class="ac-empty">Nenhum chamado ainda.</div>';return;}
   el.innerHTML='<table class="ac-table"><thead><tr><th>#</th><th>Tipo</th><th>Descrição</th><th>Status</th><th>Data</th></tr></thead><tbody>'+
-    todos.map(r=>`<tr>
+    todos.map(r=>`<tr class="ac-row-click" onclick="abrirDetalhesChamado('${r.id}')">
       <td><b>#${r.numero||r.id.slice(0,6)}</b></td>
       <td><span class="badge ${r._tipo==='suprimento'?'badge-suprim':'badge-assist'}">${r._tipo==='suprimento'?'Suprimentos':'Assistência'}</span></td>
       <td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r._tipo==='suprimento'?'Solicitação de Suprimentos':(r.descricao||r.titulo||'–')}</td>
@@ -121,6 +123,32 @@ async function carregarChamados(){
       <td>${new Date(r.created_at).toLocaleDateString('pt-BR')}</td>
     </tr>`).join('')+
     '</tbody></table>';
+}
+
+function abrirDetalhesChamado(id){
+  const c=_chamadosCache[id];
+  if(!c) return;
+  const tipo=c._tipo==='suprimento'?'Suprimentos':'Assistência Técnica';
+  const badgeTipo=`<span class="badge ${c._tipo==='suprimento'?'badge-suprim':'badge-assist'}">${tipo}</span>`;
+  const badgeStatus=`<span class="badge badge-${c.status}">${c.status}</span>`;
+  const data=new Date(c.created_at).toLocaleString('pt-BR');
+  const encerrado=c.status==='encerrado'||c.status==='concluido';
+  document.getElementById('ac-detalhe-conteudo').innerHTML=`
+    <div class="ac-det-title">Chamado #${c.numero||c.id.slice(0,6)}</div>
+    <div class="ac-det-grid">
+      <div class="ac-det-item"><span class="ac-det-lbl">Data de abertura</span><span class="ac-det-val">${data}</span></div>
+      <div class="ac-det-item"><span class="ac-det-lbl">Status</span><span>${badgeStatus}</span></div>
+      <div class="ac-det-item"><span class="ac-det-lbl">Tipo</span><span>${badgeTipo}</span></div>
+      ${c.solicitante_nome?`<div class="ac-det-item"><span class="ac-det-lbl">Solicitante</span><span class="ac-det-val">${c.solicitante_nome}</span></div>`:''}
+      ${c.solicitante_telefone?`<div class="ac-det-item"><span class="ac-det-lbl">Telefone</span><span class="ac-det-val">${c.solicitante_telefone}</span></div>`:''}
+      ${c.descricao||c.titulo?`<div class="ac-det-item ac-det-full"><span class="ac-det-lbl">Descrição</span><span class="ac-det-val">${c.descricao||c.titulo}</span></div>`:''}
+      ${encerrado&&c.resolucao?`<div class="ac-det-item ac-det-full ac-det-resolucao"><span class="ac-det-lbl">Resolução do Técnico</span><span class="ac-det-val">${c.resolucao}</span></div>`:''}
+    </div>`;
+  document.getElementById('ac-detalhe-modal').classList.add('open');
+}
+
+function acFecharDetalhe(){
+  document.getElementById('ac-detalhe-modal').classList.remove('open');
 }
 
 // ── EQUIPAMENTOS ──
