@@ -123,12 +123,15 @@ async function carregarContratos(){
 
 // ── BUSCAR EQUIPAMENTO POR SERIAL / CÓDIGO ──
 async function buscarEquipAC(prefix){
-  const val=document.getElementById(prefix+'-serial').value.trim();
+  const raw=document.getElementById(prefix+'-serial').value.trim().toUpperCase();
   const infoEl=document.getElementById(prefix+'-equip-info');
-  if(!val){alert('Informe o serial ou código do equipamento.');return;}
+  if(!raw){alert('Informe o serial ou código do equipamento.');return;}
   if(!_cid){alert('Sessão inválida. Faça login novamente.');return;}
-  const enc=encodeURIComponent(val);
-  const {data}=await sf('/rest/v1/equipamentos?cliente_id=eq.'+_cid+'&or=(serial.eq.'+enc+',codigo.eq.'+enc+')&limit=1&select=*');
+  // Se o cliente digitar "TEFFE-AWI3", extrai só os 4 chars finais para buscar no campo codigo
+  const codigo=raw.startsWith('TEFFE-')?raw.slice(6):raw;
+  const encSerial=encodeURIComponent(raw);
+  const encCodigo=encodeURIComponent(codigo);
+  const {data}=await sf('/rest/v1/equipamentos?cliente_id=eq.'+_cid+'&or=(serial.eq.'+encSerial+',codigo.eq.'+encCodigo+')&limit=1&select=*');
   if(!data||!data.length){
     infoEl.style.display='block';
     infoEl.className='ac-equip-info ac-equip-not-found';
