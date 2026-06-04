@@ -232,20 +232,26 @@ async function admCarregarClientes(){
   const {data}=await admHttp('/rest/v1/clientes?order=empresa&select=*');
   const el=document.getElementById('adm-lista-clientes');
   if(!data||!data.length){el.innerHTML='<div class="ac-empty">Nenhum cliente cadastrado.</div>';return;}
-  el.innerHTML='<table class="ac-table"><thead><tr><th>Empresa</th><th>Contato</th><th>Técnico responsável</th></tr></thead><tbody>'+
+  el.innerHTML='<table class="ac-table"><thead><tr><th>Empresa</th><th>Contato</th><th>Técnico responsável</th><th></th></tr></thead><tbody>'+
     data.map(c=>`<tr>
       <td><b>${c.empresa||'–'}</b></td>
       <td>${c.nome||'–'}</td>
       <td>
-        <select class="adm-sel-inline" onchange="admAtribuirTecnico('${c.id}',this.value)">
+        <select id="sel-cli-${c.id}" class="adm-sel-inline">
           <option value="">Sem técnico</option>
-          ${_admTecs.map(t=>`<option value="${t.id}"${t.id===c.tecnico_id?' selected':''}>${t.nome}</option>`).join('')}
+          ${_admTecs.map(t=>`<option value="${t.id}"${t.id===c.tecnico_responsavel_id?' selected':''}>${t.nome}</option>`).join('')}
         </select>
+      </td>
+      <td style="white-space:nowrap;">
+        <button class="adm-btn adm-btn-sm" onclick="admAtribuirTecnico('${c.id}')">Salvar</button>
+        <span id="msg-cli-${c.id}" style="display:none;color:#2d8a40;font-size:13px;font-weight:600;margin-left:8px;">Vinculado!</span>
       </td>
     </tr>`).join('')+'</tbody></table>';
 }
 
-async function admAtribuirTecnico(clienteId,tecnicoId){
+async function admAtribuirTecnico(clienteId){
+  const sel=document.getElementById('sel-cli-'+clienteId);
+  const tecnicoId=sel?sel.value:'';
   const resultado=await admHttp('/rest/v1/clientes?id=eq.'+clienteId,{
     method:'PATCH',headers:{'Prefer':'return=minimal'},
     body:JSON.stringify({tecnico_responsavel_id:tecnicoId||null})
@@ -253,6 +259,12 @@ async function admAtribuirTecnico(clienteId,tecnicoId){
   if(!resultado.ok){
     console.error('Erro vínculo:',resultado.data);
     alert('Erro ao salvar vínculo.');
+    return;
+  }
+  const msg=document.getElementById('msg-cli-'+clienteId);
+  if(msg){
+    msg.style.display='inline';
+    setTimeout(()=>{msg.style.display='none';},2000);
   }
 }
 
