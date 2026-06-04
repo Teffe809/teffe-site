@@ -164,7 +164,10 @@ function openModal(e){
     document.getElementById('modal').classList.add('open');
   }
 }
-function closeModal(){document.getElementById('modal').classList.remove('open');}
+function closeModal(){
+  document.getElementById('modal').classList.remove('open');
+  document.getElementById('login-inatividade').style.display='none';
+}
 document.getElementById('modal').addEventListener('click',function(e){if(e.target===this)closeModal();});
 
 // ── MODAL ORÇAMENTO ──

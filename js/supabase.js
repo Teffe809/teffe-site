@@ -2,6 +2,28 @@ const SURL='https://hlfjcpgrxiktgctozilk.supabase.co';
 const SKEY='sb_publishable_-Iu8PbqhLeZAXSBcczr2mQ_lzlGr4_g';
 let _tok=null,_uid=null,_cid=null,_atEquipId=null,_spEquipId=null,_spUltimoContador=null;
 
+// ── TIMER DE INATIVIDADE (5 min) ──
+const INATIVIDADE_MS=5*60*1000;
+let _timerInatividade=null;
+const _EVENTOS_ATIVIDADE=['mousemove','click','keydown','touchstart','scroll'];
+
+function _resetarInatividade(){
+  clearTimeout(_timerInatividade);
+  _timerInatividade=setTimeout(_logoutPorInatividade,INATIVIDADE_MS);
+}
+function _iniciarInatividade(){
+  _EVENTOS_ATIVIDADE.forEach(ev=>document.addEventListener(ev,_resetarInatividade,{passive:true}));
+  _resetarInatividade();
+}
+function _pararInatividade(){
+  clearTimeout(_timerInatividade);
+  _timerInatividade=null;
+  _EVENTOS_ATIVIDADE.forEach(ev=>document.removeEventListener(ev,_resetarInatividade));
+}
+function _logoutPorInatividade(){
+  fazerLogout(true);
+}
+
 async function sf(path,opts){
   const h={'apikey':SKEY,'Content-Type':'application/json'};
   if(_tok) h['Authorization']='Bearer '+_tok;
@@ -26,20 +48,27 @@ async function fazerLogin(){
   _tok=d.access_token;_uid=d.user.id;
   localStorage.setItem('tt',_tok);localStorage.setItem('tu',_uid);
   document.getElementById('modal').classList.remove('open');
+  document.getElementById('login-inatividade').style.display='none';
   carregarArea();
 }
 
-async function fazerLogout(){
+async function fazerLogout(inatividade=false){
+  _pararInatividade();
   _tok=null;_uid=null;_cid=null;
   localStorage.removeItem('tt');localStorage.removeItem('tu');
   document.getElementById('area-cliente').style.display='none';
-  history.replaceState(null,'',location.pathname); // Remove hash da URL
+  history.replaceState(null,'',location.pathname);
+  if(inatividade){
+    document.getElementById('login-inatividade').style.display='flex';
+    document.getElementById('modal').classList.add('open');
+  }
 }
 
 // ── CARREGAR ÁREA ──
 async function carregarArea(){
   document.getElementById('area-cliente').style.display='block';
   history.pushState(null,'','#cliente');
+  _iniciarInatividade();
   const {data:cl}=await sf('/rest/v1/clientes?user_id=eq.'+_uid+'&limit=1&select=*');
   const c=cl&&cl[0];
   _cid=c?c.id:null;
