@@ -40,7 +40,12 @@ async function admVerificarEAbrir(){
   const token=session.access_token;
   _admUid=uid;
   const perfil=await admVerificarRole(uid,token);
-  if(!perfil||perfil.role!=='admin'){admAcessoNegado();return;}
+  if(!perfil||perfil.role!=='admin'){
+    // Sessão ativa mas sem role admin (ex: sessão do técnico após signUp) — limpa e mostra login
+    await _supabase.auth.signOut();
+    admMostrarLogin();
+    return;
+  }
   _admNome=perfil.nome||'Admin';
   document.getElementById('admin-panel').style.display='block';
   document.getElementById('adm-nome-display').textContent=_admNome;
@@ -243,12 +248,8 @@ async function admAtribuirTecnico(clienteId,tecnicoId){
     method:'PATCH',headers:{'Prefer':'return=minimal'},
     body:JSON.stringify({tecnico_responsavel_id:tecnicoId||null})
   });
-  console.log('resultado completo:',resultado);
-  const {status,data:errD}=resultado;
-  if([200,201,204].includes(status)){
-    console.log('Técnico vinculado com sucesso!');
-  } else {
-    console.error('Erro vínculo:',errD);
+  if(!resultado.ok){
+    console.error('Erro vínculo:',resultado.data);
     alert('Erro ao salvar vínculo.');
   }
 }
