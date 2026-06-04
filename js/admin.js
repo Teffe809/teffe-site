@@ -315,7 +315,7 @@ function admAbrirDetalhe(jsonStr){
     ${encerrado&&c.resolucao?`<div class="adm-det-section"><div class="adm-det-label">Resolução do Técnico</div><div class="adm-det-text adm-det-resolucao">${c.resolucao.replace(/\n/g,'<br>')}</div></div>`:''}
     ${c.data_fechamento?`<div class="adm-det-row" style="margin-top:12px;"><span class="adm-det-label">Data de fechamento</span><span class="adm-det-val">${fmtD(c.data_fechamento)}</span></div>`:''}
   `;
-  document.getElementById('adm-detalhe-btn-os').onclick=()=>imprimirOS(c);
+  document.getElementById('adm-detalhe-btn-os').onclick=()=>admImprimirOS(c);
   document.getElementById('adm-detalhe-bg').classList.add('open');
 }
 
@@ -323,26 +323,28 @@ function admFecharDetalhe(){
   document.getElementById('adm-detalhe-bg').classList.remove('open');
 }
 
-// ── IMPRIMIR OS ──
-function imprimirOS(c){
+// ── IMPRIMIR OS (admin) ──
+function admImprimirOS(c){
   const fmt=v=>v?new Date(v).toLocaleString('pt-BR'):'–';
   const fmtD=v=>v?new Date(v).toLocaleDateString('pt-BR'):'–';
   const statusLabels={aberto:'Aberto',andamento:'Em andamento',encerrado:'Encerrado',concluido:'Concluído',resolvido:'Resolvido'};
   const prioLabels={baixa:'Baixa',normal:'Normal',alta:'Alta',urgente:'Urgente'};
   const encerrado=['encerrado','concluido','resolvido'].includes(c.status);
   const num=c.numero||c.id.slice(0,6);
+  const resolucaoEscapada=(c.resolucao||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const descEscapada=(c.descricao||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
   const rows=[
     ['Número',`#${num}`],
     ['Data/Hora de Abertura',fmt(c.created_at)],
     ['Status',statusLabels[c.status]||c.status],
-    c.tipo_chamado&&['Tipo de Chamado',c.tipo_chamado],
+    ['Tipo de Chamado','Assistência Técnica'],
     c.solicitante_nome&&['Solicitante',c.solicitante_nome],
     c.solicitante_telefone&&['Telefone do Solicitante',c.solicitante_telefone],
     c.solicitante_email&&['E-mail do Solicitante',c.solicitante_email],
     c.prioridade&&['Prioridade',prioLabels[c.prioridade]||c.prioridade],
     c.tecnico&&['Técnico Responsável',c.tecnico],
-    encerrado&&c.data_fechamento&&['Data de Fechamento',fmtD(c.data_fechamento)],
+    c.data_fechamento&&['Data de Fechamento',fmtD(c.data_fechamento)],
   ].filter(Boolean);
 
   const rowsHTML=rows.map(([l,v])=>`<tr><th>${l}</th><td>${v}</td></tr>`).join('');
@@ -356,15 +358,17 @@ function imprimirOS(c){
   *{box-sizing:border-box;margin:0;padding:0;}
   body{font-family:Arial,sans-serif;font-size:13px;color:#222;background:#fff;padding:32px;}
   .os-header{display:flex;align-items:center;gap:20px;border-bottom:3px solid #E07820;padding-bottom:16px;margin-bottom:20px;}
-  .os-header img{height:54px;}
+  .os-header img{height:50px;display:block;}
+  .os-header-text{margin-left:4px;}
   .os-header-text h1{font-size:18px;font-weight:900;color:#1A3F80;}
   .os-header-text p{font-size:12px;color:#555;margin-top:2px;}
   table.os-table{width:100%;border-collapse:collapse;margin-bottom:18px;}
-  table.os-table th{width:200px;text-align:left;background:#f0f4fa;padding:7px 10px;font-weight:700;border:1px solid #dde3ee;color:#1A3F80;}
+  table.os-table th{width:210px;text-align:left;background:#f0f4fa;padding:7px 10px;font-weight:700;border:1px solid #dde3ee;color:#1A3F80;vertical-align:top;}
   table.os-table td{padding:7px 10px;border:1px solid #dde3ee;}
   .os-section{margin-bottom:16px;}
-  .os-section-title{font-size:12px;font-weight:700;color:#E07820;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;border-bottom:1px solid #f0d0a0;padding-bottom:4px;}
+  .os-section-title{font-size:11px;font-weight:700;color:#E07820;text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;border-bottom:1px solid #f0d0a0;padding-bottom:4px;}
   .os-text-block{border:1px solid #dde3ee;border-radius:4px;padding:10px 12px;min-height:60px;line-height:1.6;background:#fafbfd;white-space:pre-wrap;}
+  .os-resolucao{width:100%;min-height:100px;border:1px solid #bbb;border-radius:4px;padding:10px 12px;font-family:Arial,sans-serif;font-size:13px;line-height:1.6;resize:vertical;background:#fafbfd;color:#222;}
   .os-assinaturas{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:40px;}
   .os-assinatura{border-top:1px solid #888;padding-top:8px;text-align:center;font-size:12px;color:#555;}
   .os-footer{text-align:center;font-size:11px;color:#888;border-top:1px solid #dde3ee;padding-top:12px;margin-top:32px;}
@@ -375,49 +379,45 @@ function imprimirOS(c){
   @media print{
     .os-btns{display:none!important;}
     body{padding:16px;}
+    .os-resolucao{border:1px solid #888;background:#fff;resize:none;}
     @page{size:A4;margin:18mm 16mm;}
   }
 </style>
 </head>
 <body>
-<div class="os-btns no-print">
+<div class="os-btns">
   <button class="os-btn os-btn-close" onclick="window.close()">Fechar</button>
   <button class="os-btn os-btn-print" onclick="window.print()">Imprimir</button>
 </div>
 <div class="os-header">
-  <img src="https://teffe.com.br/assets/images/logo-teffe.png" alt="Teffe Tecnologia" onerror="this.style.display='none'"/>
+  <img src="https://teffe.com.br/assets/images/logo-teffe.png" alt="Teffe Tecnologia"/>
   <div class="os-header-text">
     <h1>ORDEM DE SERVIÇO Nº ${num}</h1>
     <p>Teffe Tecnologia — Suporte e Assistência Técnica</p>
   </div>
 </div>
-
 <div class="os-section">
   <div class="os-section-title">Dados do Chamado</div>
   <table class="os-table">${rowsHTML}</table>
 </div>
-
-${c.descricao?`<div class="os-section">
+${descEscapada?`<div class="os-section">
   <div class="os-section-title">Descrição do Problema</div>
-  <div class="os-text-block">${(c.descricao||'').replace(/</g,'&lt;')}</div>
+  <div class="os-text-block">${descEscapada}</div>
 </div>`:''}
-
-${encerrado&&c.resolucao?`<div class="os-section">
-  <div class="os-section-title">Resolução do Técnico</div>
-  <div class="os-text-block">${(c.resolucao||'').replace(/</g,'&lt;')}</div>
-</div>`:''}
-
+<div class="os-section">
+  <div class="os-section-title">Solução / Resolução do Técnico</div>
+  <textarea class="os-resolucao" placeholder="Descreva a solução aplicada...">${resolucaoEscapada}</textarea>
+</div>
 <div class="os-assinaturas">
   <div class="os-assinatura">Assinatura do Técnico</div>
   <div class="os-assinatura">Assinatura do Cliente</div>
 </div>
-
 <div class="os-footer">Teffe Tecnologia — teffe.com.br — (14) 99828-9248</div>
 </body>
 <script>window.onload=function(){window.print();}<\/script>
 </html>`;
 
-  const w=window.open('','_blank','width=860,height=700');
+  const w=window.open('','_blank','width=860,height=760');
   if(w){w.document.open();w.document.write(html);w.document.close();}
 }
 
