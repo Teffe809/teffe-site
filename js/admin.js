@@ -1,14 +1,14 @@
 'use strict';
 const ADMIN_URL='https://hlfjcpgrxiktgctozilk.supabase.co';
 const ADMIN_ANON='sb_publishable_-Iu8PbqhLeZAXSBcczr2mQ_lzlGr4_g';
-// Substituir pela service_role key: Supabase > Settings > API > service_role secret
-const ADMIN_SRK='COLE_SUA_SERVICE_ROLE_KEY_AQUI';
+// ADMIN_SRK é carregado de js/admin-keys.js (arquivo no .gitignore, nunca commitar)
+// Se typeof ADMIN_SRK === 'undefined', o painel funcionará sem criar logins no Auth.
 
 let _admTok=null,_admNome='',_admTecs=[];
 
 // ── HTTP ──
 async function admHttp(path,opts){
-  const srk=ADMIN_SRK&&ADMIN_SRK!=='COLE_SUA_SERVICE_ROLE_KEY_AQUI';
+  const srk=typeof ADMIN_SRK!=='undefined'&&ADMIN_SRK&&ADMIN_SRK!=='COLE_SUA_SERVICE_ROLE_KEY_AQUI';
   const key=srk?ADMIN_SRK:ADMIN_ANON;
   const token=srk?ADMIN_SRK:(_admTok||ADMIN_ANON);
   const h={'apikey':key,'Content-Type':'application/json','Authorization':'Bearer '+token};
@@ -132,7 +132,7 @@ async function admCriarTecnico(){
   if(!senha){erroEl.style.display='block';erroEl.textContent='Defina uma senha temporária para o técnico.';return;}
   btn.disabled=true;btn.textContent='Criando...';erroEl.style.display='none';
   let userId=null;
-  const srkOk=ADMIN_SRK&&ADMIN_SRK!=='COLE_SUA_SERVICE_ROLE_KEY_AQUI';
+  const srkOk=typeof ADMIN_SRK!=='undefined'&&ADMIN_SRK&&ADMIN_SRK!=='COLE_SUA_SERVICE_ROLE_KEY_AQUI';
   if(srkOk){
     const r=await fetch(ADMIN_URL+'/auth/v1/admin/users',{
       method:'POST',
