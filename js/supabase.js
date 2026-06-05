@@ -725,7 +725,7 @@ async function tecEnAtendimento(){
   const c=_tecChamadoAtual;if(!c) return;
   const {ok}=await sfTec('/rest/v1/chamados?id=eq.'+c.id,{method:'PATCH',
     headers:{'Prefer':'return=minimal'},
-    body:JSON.stringify({status_tecnico:'em_atendimento',data_atendimento_inicio:new Date().toISOString(),status:'andamento'})});
+    body:JSON.stringify({status_tecnico:'em_atendimento',data_atendimento_inicio:new Date().toISOString()})});
   if(!ok){alert('Erro ao atualizar status.');return;}
   c.status_tecnico='em_atendimento';
   tecFecharDetalhe();await tecCarregarChamados();
