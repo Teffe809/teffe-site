@@ -892,30 +892,30 @@ function tecFormatarSLA(c){
   return {texto:`SLA: ${h}h ${String(m).padStart(2,'0')}m restantes`,atrasado:false};
 }
 
-// ── E-MAIL (deslocamento) ──
+// ── E-MAIL (deslocamento) via Supabase Edge Function ──
 async function tecEnviarEmailDeslocamento(c){
-  console.log('[Resend] solicitante_email:', c.solicitante_email);
+  console.log('[Email] solicitante_email:', c.solicitante_email);
   if(!c.solicitante_email){
-    console.warn('[Resend] Abortado: solicitante_email vazio ou nulo no chamado.');
+    console.warn('[Email] Abortado: solicitante_email vazio ou nulo no chamado.');
     return;
   }
   try{
-    console.log('[Resend] Disparando fetch...');
-    const r=await fetch('https://api.resend.com/emails',{method:'POST',
-      headers:{'Authorization':'Bearer re_6wWMHw6G_JKmjCqire1xwrVdQQoYwgJ5W','Content-Type':'application/json'},
+    console.log('[Email] Chamando Edge Function enviar-email...');
+    const r=await fetch(SURL+'/functions/v1/enviar-email',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+_tecTok},
       body:JSON.stringify({
-        from:'contato@teffe.com.br',
         to:c.solicitante_email,
         subject:'Teffe — Técnico a caminho',
-        html:`<p>Olá ${c.solicitante_nome||''},</p><p>O técnico <b>${_tecNome}</b> está em deslocamento para atender o seu chamado <b>#${c.numero||c.id.slice(0,6).toUpperCase()}</b>. Em breve chegará ao local.</p><p>Atenciosamente,<br>Teffe Tecnologia.</p>`
+        html:`<p>Olá <strong>${c.solicitante_nome||''}</strong>,</p><p>O técnico <strong>${_tecNome}</strong> está em deslocamento para atender o seu chamado <strong>#${c.numero||c.id.slice(0,6).toUpperCase()}</strong>.</p><p>Em breve chegará ao local.</p><p>Atenciosamente,<br>Teffe Tecnologia</p>`
       })
     });
     const body=await r.json().catch(()=>null);
-    console.log('[Resend] HTTP',r.status,body);
-    if(!r.ok) console.error('[Resend] Falha ao enviar email:',body);
-    else console.log('[Resend] Email enviado com sucesso!');
+    console.log('[Email] HTTP',r.status,body);
+    if(!r.ok) console.error('[Email] Falha ao enviar email:',body);
+    else console.log('[Email] Email enviado com sucesso!');
   }catch(e){
-    console.error('[Resend] Erro na chamada fetch (possível CORS ou rede):', e);
+    console.error('[Email] Erro na chamada:', e);
   }
 }
 
