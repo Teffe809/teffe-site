@@ -98,9 +98,11 @@ async function enviarCurriculo(){
       _htmlTabela('Candidatura — Trabalhe Conosco', linhas)
     );
 
-    document.querySelector('#page-trabalhe .ep-body > div:last-of-type').style.display='none';
-    document.getElementById('tc-success').style.display='block';
-    document.getElementById('tc-success').scrollIntoView({behavior:'smooth'});
+    if(btn){ btn.textContent='Enviar candidatura →'; btn.disabled=false; }
+    window._tcFile=null;
+    document.getElementById('tc-file-label').innerHTML='Clique para selecionar ou arraste o arquivo aqui';
+    document.querySelectorAll('#page-trabalhe input,#page-trabalhe select,#page-trabalhe textarea').forEach(function(el){el.value='';});
+    document.getElementById('tcSuccessModal').classList.add('open');
   } catch(err) {
     if(btn){ btn.textContent='Enviar candidatura →'; btn.disabled=false; }
     alert('Erro ao enviar. Por favor tente novamente ou entre em contato pelo WhatsApp.');
