@@ -894,9 +894,14 @@ function tecFormatarSLA(c){
 
 // ── E-MAIL (deslocamento) ──
 async function tecEnviarEmailDeslocamento(c){
-  if(!c.solicitante_email) return;
+  console.log('[Resend] solicitante_email:', c.solicitante_email);
+  if(!c.solicitante_email){
+    console.warn('[Resend] Abortado: solicitante_email vazio ou nulo no chamado.');
+    return;
+  }
   try{
-    await fetch('https://api.resend.com/emails',{method:'POST',
+    console.log('[Resend] Disparando fetch...');
+    const r=await fetch('https://api.resend.com/emails',{method:'POST',
       headers:{'Authorization':'Bearer re_6wWMHw6G_JKmjCqire1xwrVdQQoYwgJ5W','Content-Type':'application/json'},
       body:JSON.stringify({
         from:'contato@teffe.com.br',
@@ -905,7 +910,13 @@ async function tecEnviarEmailDeslocamento(c){
         html:`<p>Olá ${c.solicitante_nome||''},</p><p>O técnico <b>${_tecNome}</b> está em deslocamento para atender o seu chamado <b>#${c.numero||c.id.slice(0,6).toUpperCase()}</b>. Em breve chegará ao local.</p><p>Atenciosamente,<br>Teffe Tecnologia.</p>`
       })
     });
-  }catch(e){console.warn('Email não enviado:',e);}
+    const body=await r.json().catch(()=>null);
+    console.log('[Resend] HTTP',r.status,body);
+    if(!r.ok) console.error('[Resend] Falha ao enviar email:',body);
+    else console.log('[Resend] Email enviado com sucesso!');
+  }catch(e){
+    console.error('[Resend] Erro na chamada fetch (possível CORS ou rede):', e);
+  }
 }
 
 // ── ROTEAMENTO ──
