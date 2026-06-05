@@ -1,6 +1,34 @@
 ﻿
 
 
+// ── EMAIL VIA EDGE FUNCTION ──
+const _EDGE_EMAIL_URL = 'https://hlfjcpgrxiktgctozilk.supabase.co/functions/v1/enviar-email';
+
+function _htmlTabela(titulo, linhas) {
+  const rows = linhas.map(function([k, v]){
+    return '<tr>' +
+      '<td style="background:#f0f4fa;padding:8px 12px;font-weight:700;color:#1A3F80;width:170px;vertical-align:top;border-bottom:1px solid #EEF1F7">' + k + '</td>' +
+      '<td style="padding:8px 12px;border-bottom:1px solid #EEF1F7">' + v + '</td>' +
+    '</tr>';
+  }).join('');
+  return '<div style="font-family:Arial,sans-serif;color:#222;max-width:640px">' +
+    '<p style="font-size:15px;font-weight:700;color:#1A3F80;margin-bottom:12px">' + titulo + '</p>' +
+    '<table style="border-collapse:collapse;width:100%;border:1px solid #EEF1F7;border-radius:8px;overflow:hidden">' + rows + '</table>' +
+  '</div>';
+}
+
+async function _enviarEmail(to, subject, html) {
+  const r = await fetch(_EDGE_EMAIL_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ to: to, subject: subject, html: html })
+  });
+  if (!r.ok) {
+    const err = await r.json().catch(function(){ return {}; });
+    throw new Error('HTTP ' + r.status + ': ' + JSON.stringify(err));
+  }
+}
+
 // ── PÁGINAS INSTITUCIONAIS ──
 function openInstPage(e, id){
   if(e) e.preventDefault();
@@ -42,11 +70,41 @@ async function enviarCurriculo(){
   const msg   = document.getElementById('tc-msg').value.trim();
   if(!nome||!email||!tel||!area){ alert('Preencha todos os campos obrigatórios (*)'); return; }
   if(!window._tcFile){ alert('Por favor anexe seu currículo.'); return; }
-  // Simula envio (Formspree não suporta file upload no plano gratuito)
-  // Para envio real com arquivo, será necessário EmailJS ou backend
-  document.querySelector('#page-trabalhe .ep-body > div:last-of-type').style.display='none';
-  document.getElementById('tc-success').style.display='block';
-  document.getElementById('tc-success').scrollIntoView({behavior:'smooth'});
+
+  const btn = document.querySelector('#page-trabalhe .btn-enviar');
+  if(btn){ btn.textContent='Enviando...'; btn.disabled=true; }
+
+  try {
+    const file = window._tcFile;
+    const safeNome = file.name.replace(/[^a-zA-Z0-9._-]/g,'_');
+    const path = 'curriculos/' + Date.now() + '_' + safeNome;
+    const uploadRes = await fetch(SURL + '/storage/v1/object/chamados/' + path, {
+      method: 'POST',
+      headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY, 'Content-Type': file.type, 'x-upsert': 'true' },
+      body: file
+    });
+    const curriculoUrl = uploadRes.ok ? SURL + '/storage/v1/object/public/chamados/' + path : '';
+
+    const areaEl = document.getElementById('tc-area');
+    const areaLabel = areaEl.options[areaEl.selectedIndex]?.text || area;
+    const linhas = [
+      ['Nome', nome], ['E-mail', email], ['Telefone', tel], ['Área de interesse', areaLabel],
+      ...(msg ? [['Mensagem', msg.replace(/\n/g,'<br>')]] : []),
+      ...(curriculoUrl ? [['Currículo', `<a href="${curriculoUrl}" style="color:#1A3F80">Baixar currículo</a>`]] : [['Currículo', 'Falha no upload do arquivo']])
+    ];
+    await _enviarEmail(
+      'contato@teffe.com.br',
+      'Teffe — Currículo — ' + nome,
+      _htmlTabela('Candidatura — Trabalhe Conosco', linhas)
+    );
+
+    document.querySelector('#page-trabalhe .ep-body > div:last-of-type').style.display='none';
+    document.getElementById('tc-success').style.display='block';
+    document.getElementById('tc-success').scrollIntoView({behavior:'smooth'});
+  } catch(err) {
+    if(btn){ btn.textContent='Enviar candidatura →'; btn.disabled=false; }
+    alert('Erro ao enviar. Por favor tente novamente ou entre em contato pelo WhatsApp.');
+  }
 }
 
 // ── PÁGINAS DE SEGMENTO ──
@@ -204,13 +262,15 @@ async function enviarContato(){
   const tel   = document.getElementById('mc-tel').value.trim();
   const msg   = document.getElementById('mc-msg').value.trim();
   if(!nome||!email||!tel||!msg){alert('Por favor preencha todos os campos obrigatórios (*)');return;}
-  const corpo = `Novo contato pelo site da Teffe\n\nNome: ${nome}\nTelefone: ${tel}\nE-mail: ${email}\nMensagem: ${msg}`;
   try {
-    await fetch('https://formspree.io/f/xyzknqvp',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','Accept':'application/json'},
-      body:JSON.stringify({_replyto:email,_subject:'Novo contato Teffe – '+nome,message:corpo,nome,email,tel})
-    });
+    await _enviarEmail(
+      'contato@teffe.com.br',
+      'Teffe — Contato — ' + nome,
+      _htmlTabela('Formulário de Contato', [
+        ['Nome', nome], ['E-mail', email], ['Telefone', tel],
+        ['Mensagem', msg.replace(/\n/g,'<br>')]
+      ])
+    );
     document.querySelectorAll('#contatoModal input,#contatoModal textarea').forEach(function(el){el.value='';});
     closeContatoModal();
     document.getElementById('ctaSuccessModal').classList.add('open');
@@ -238,33 +298,27 @@ async function enviarOrca(){
     return;
   }
 
-  const corpo = `
-Novo contato pelo site da Teffe
-
-Nome: ${nome} ${sobre}
-Empresa: ${empresa}
-CNPJ: ${cnpj}
-Telefone: ${tel}
-E-mail: ${email}
-Solução de interesse: ${solucao}
-Quantidade de equipamentos: ${qtd}
-Volume de impressão: ${volume}
-Departamento: ${depto}
-Cargo: ${cargo}
-Mensagem: ${msg}
-  `.trim();
-
   try {
-    const res = await fetch('https://formspree.io/f/xyzknqvp', {
-      method:'POST',
-      headers:{'Content-Type':'application/json','Accept':'application/json'},
-      body: JSON.stringify({
-        _replyto: email,
-        _subject: 'Novo contato Teffe – ' + solucao,
-        message: corpo,
-        nome, empresa, email, tel, solucao
-      })
-    });
+    const solucaoEl = document.getElementById('of-solucao');
+    const solucaoLabel = solucaoEl.options[solucaoEl.selectedIndex]?.text || solucao;
+    const linhas = [
+      ['Nome', nome + (sobre ? ' ' + sobre : '')],
+      ['Empresa', empresa],
+      ...(cnpj ? [['CNPJ', cnpj]] : []),
+      ['Telefone', tel],
+      ['E-mail', email],
+      ['Solução de interesse', solucaoLabel],
+      ['Qtd. equipamentos', qtd],
+      ...(volume ? [['Volume de impressão', volume]] : []),
+      ...(depto  ? [['Departamento', depto]] : []),
+      ...(cargo  ? [['Cargo', cargo]] : []),
+      ...(msg    ? [['Mensagem', msg.replace(/\n/g,'<br>')]] : [])
+    ];
+    await _enviarEmail(
+      'contato@teffe.com.br',
+      'Teffe — Orçamento — ' + nome + ' (' + solucaoLabel + ')',
+      _htmlTabela('Solicitação de Orçamento', linhas)
+    );
     document.querySelectorAll('#orcaForm input, #orcaForm select, #orcaForm textarea').forEach(function(el){ el.value=''; });
     document.getElementById('orcaForm').style.display='none';
     document.getElementById('orcaSuccess').style.display='block';
