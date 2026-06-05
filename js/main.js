@@ -77,15 +77,20 @@ async function enviarCurriculo(){
   try {
     const file = window._tcFile;
     const safeNome = file.name.replace(/[^a-zA-Z0-9._-]/g,'_');
-    const path = 'curriculos/' + Date.now() + '_' + safeNome;
-    const uploadRes = await fetch(SURL + '/storage/v1/object/chamados/' + path, {
+    const storagePath = 'curriculos/' + Date.now() + '_' + safeNome;
+    const storageUrl = 'https://hlfjcpgrxiktgctozilk.supabase.co/storage/v1/object/chamados/' + storagePath;
+    const mimeType = file.type || 'application/octet-stream';
+    const fileBuffer = await file.arrayBuffer();
+    console.log('[Upload] URL:', storageUrl);
+    console.log('[Upload] Content-Type:', mimeType, '| Size:', fileBuffer.byteLength);
+    const uploadRes = await fetch(storageUrl, {
       method: 'POST',
-      headers: { 'apikey': SKEY, 'Content-Type': file.type || 'application/octet-stream' },
-      body: file
+      headers: { 'apikey': 'sb_publishable_-Iu8PbqhLeZAXSBcczr2mQ_lzlGr4_g', 'Content-Type': mimeType },
+      body: fileBuffer
     });
-    const uploadData = await uploadRes.clone().json().catch(() => null);
-    console.log('[Upload currículo]', uploadRes.status, uploadData);
-    const curriculoUrl = uploadRes.ok ? SURL + '/storage/v1/object/public/chamados/' + path : '';
+    const uploadBody = await uploadRes.text().catch(() => '');
+    console.log('[Upload] Response:', uploadRes.status, uploadBody);
+    const curriculoUrl = uploadRes.ok ? 'https://hlfjcpgrxiktgctozilk.supabase.co/storage/v1/object/public/chamados/' + storagePath : '';
 
     const areaEl = document.getElementById('tc-area');
     const areaLabel = areaEl.options[areaEl.selectedIndex]?.text || area;
