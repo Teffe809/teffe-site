@@ -80,7 +80,7 @@ async function enviarCurriculo(){
     const path = 'curriculos/' + Date.now() + '_' + safeNome;
     const uploadRes = await fetch(SURL + '/storage/v1/object/chamados/' + path, {
       method: 'POST',
-      headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY, 'Content-Type': file.type, 'x-upsert': 'true' },
+      headers: { 'Authorization': 'Bearer ' + SKEY, 'Content-Type': file.type || 'application/octet-stream' },
       body: file
     });
     const curriculoUrl = uploadRes.ok ? SURL + '/storage/v1/object/public/chamados/' + path : '';
