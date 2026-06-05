@@ -80,9 +80,11 @@ async function enviarCurriculo(){
     const path = 'curriculos/' + Date.now() + '_' + safeNome;
     const uploadRes = await fetch(SURL + '/storage/v1/object/chamados/' + path, {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + SKEY, 'Content-Type': file.type || 'application/octet-stream' },
+      headers: { 'apikey': SKEY, 'Content-Type': file.type || 'application/octet-stream' },
       body: file
     });
+    const uploadData = await uploadRes.clone().json().catch(() => null);
+    console.log('[Upload currículo]', uploadRes.status, uploadData);
     const curriculoUrl = uploadRes.ok ? SURL + '/storage/v1/object/public/chamados/' + path : '';
 
     const areaEl = document.getElementById('tc-area');
