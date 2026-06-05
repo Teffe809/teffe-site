@@ -539,7 +539,7 @@ let _tecChamadoAtual=null,_tecChamadosData={},_tecPecasCatalogo=null;
 const TEC_SLA_MINUTOS=480;
 
 async function sfTec(path,opts){
-  const h={'apikey':SKEY,'Content-Type':'application/json','Prefer':'return=representation'};
+  const h={'apikey':SKEY,'Content-Type':'application/json'};
   if(_tecTok) h['Authorization']='Bearer '+_tecTok;
   const r=await fetch(SURL+path,{...opts,headers:{...h,...(opts&&opts.headers||{})}});
   let data=null;try{data=await r.json();}catch(e){}
