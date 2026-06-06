@@ -28,21 +28,31 @@
   color: #fff;
 }
 
-/* Ping — aro roxo que expande e some em loop */
+/* Shimmer — luz branca diagonal que desliza em loop */
+.mia-btn {
+  overflow: hidden;
+}
 .mia-btn::before {
   content: '';
   position: absolute;
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  border: 2.5px solid #7C3AED;
-  animation: miaPing 2s ease-out infinite;
+  top: -20%;
+  left: -75%;
+  width: 50%;
+  height: 140%;
+  background: linear-gradient(
+    120deg,
+    rgba(255,255,255,0)   0%,
+    rgba(255,255,255,.35) 50%,
+    rgba(255,255,255,0)   100%
+  );
+  transform: skewX(-20deg);
+  animation: miaShimmer 2.8s ease-in-out infinite;
   pointer-events: none;
 }
-@keyframes miaPing {
-  0%   { transform: scale(1);   opacity: .7; }
-  80%  { transform: scale(1.7); opacity: 0;  }
-  100% { transform: scale(1.7); opacity: 0;  }
+@keyframes miaShimmer {
+  0%   { left: -75%; }
+  60%  { left: 130%; }
+  100% { left: 130%; }
 }
 .mia-tooltip {
   position: absolute;
