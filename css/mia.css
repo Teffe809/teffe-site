@@ -8,24 +8,41 @@
   bottom: 28px;
   left: 28px;
   z-index: 5000;
-  width: 58px;
-  height: 58px;
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
   background: #4C1D95;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 4px 20px rgba(26,63,128,.45);
+  box-shadow: 0 4px 20px rgba(76,29,149,.45);
   transition: all .25s;
 }
 .mia-btn:hover {
   transform: scale(1.1);
-  box-shadow: 0 6px 28px rgba(26,63,128,.6);
+  box-shadow: 0 6px 28px rgba(76,29,149,.6);
 }
 .mia-btn i {
-  font-size: 26px;
+  font-size: 28px;
   color: #fff;
+}
+
+/* Ping — aro roxo que expande e some em loop */
+.mia-btn::before {
+  content: '';
+  position: absolute;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 2.5px solid #7C3AED;
+  animation: miaPing 2s ease-out infinite;
+  pointer-events: none;
+}
+@keyframes miaPing {
+  0%   { transform: scale(1);   opacity: .7; }
+  80%  { transform: scale(1.7); opacity: 0;  }
+  100% { transform: scale(1.7); opacity: 0;  }
 }
 .mia-tooltip {
   position: absolute;
