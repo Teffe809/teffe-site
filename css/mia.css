@@ -1,0 +1,289 @@
+/* ═══════════════════════════════════════════════
+   MIA — Assistente Virtual Teffe
+═══════════════════════════════════════════════ */
+
+/* ── Botão flutuante ── */
+.mia-btn {
+  position: fixed;
+  bottom: 28px;
+  left: 28px;
+  z-index: 5000;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: #1A3F80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(26,63,128,.45);
+  transition: all .25s;
+}
+.mia-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 28px rgba(26,63,128,.6);
+}
+.mia-btn i {
+  font-size: 26px;
+  color: #fff;
+}
+.mia-tooltip {
+  position: absolute;
+  left: 70px;
+  bottom: 50%;
+  transform: translateY(50%);
+  background: #fff;
+  color: #1A3F80;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 6px 13px;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0,0,0,.13);
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .2s;
+}
+.mia-btn:hover .mia-tooltip { opacity: 1; }
+
+.mia-btn-pulse {
+  animation: miaBtnPulse 3s infinite;
+}
+@keyframes miaBtnPulse {
+  0%,100% { box-shadow: 0 4px 20px rgba(26,63,128,.45); }
+  50%      { box-shadow: 0 4px 32px rgba(26,63,128,.7); }
+}
+
+/* ── Janela do chat ── */
+.mia-chat {
+  position: fixed;
+  bottom: 100px;
+  left: 28px;
+  z-index: 5000;
+  width: 340px;
+  height: 500px;
+  background: #fff;
+  border-radius: 20px;
+  box-shadow: 0 8px 48px rgba(26,63,128,.2);
+  display: none;
+  flex-direction: column;
+  overflow: hidden;
+}
+.mia-chat.open {
+  display: flex;
+  animation: miaIn .3s ease;
+}
+@keyframes miaIn {
+  from { opacity: 0; transform: translateY(20px) scale(.96); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ── Header ── */
+.mia-header {
+  background: #1A3F80;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+.mia-header-left {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+.mia-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #E07820;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Syne', sans-serif;
+  font-size: 17px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+  border: 2px solid rgba(255,255,255,.25);
+}
+.mia-header-name {
+  font-family: 'Syne', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.2;
+}
+.mia-header-sub {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 300;
+  color: rgba(255,255,255,.6);
+  margin-top: 2px;
+}
+.mia-online-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #4ade80;
+  animation: pulse 2s infinite;
+  flex-shrink: 0;
+}
+.mia-close {
+  background: rgba(255,255,255,.12);
+  border: none;
+  color: rgba(255,255,255,.85);
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  transition: background .2s;
+  flex-shrink: 0;
+}
+.mia-close:hover { background: rgba(255,255,255,.25); }
+
+/* ── Área de mensagens ── */
+.mia-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #F5F7FA;
+}
+.mia-messages::-webkit-scrollbar { width: 4px; }
+.mia-messages::-webkit-scrollbar-track { background: transparent; }
+.mia-messages::-webkit-scrollbar-thumb { background: #CBD5E0; border-radius: 4px; }
+
+.mia-msg {
+  display: flex;
+  gap: 7px;
+  align-items: flex-end;
+  max-width: 88%;
+}
+.mia-msg-bot  { align-self: flex-start; }
+.mia-msg-user { align-self: flex-end; flex-direction: row-reverse; }
+
+.mia-msg-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #1A3F80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Syne', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+.mia-msg-bubble {
+  padding: 9px 13px;
+  border-radius: 16px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13.5px;
+  font-weight: 300;
+  line-height: 1.55;
+}
+.mia-msg-bot .mia-msg-bubble {
+  background: #fff;
+  color: #1A3F80;
+  border-bottom-left-radius: 4px;
+  box-shadow: 0 2px 8px rgba(26,63,128,.07);
+}
+.mia-msg-user .mia-msg-bubble {
+  background: #1A3F80;
+  color: #fff;
+  border-bottom-right-radius: 4px;
+}
+
+/* Typing indicator */
+.mia-typing .mia-msg-bubble {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 13px 16px;
+}
+.mia-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #8896AB;
+  animation: miaDot 1.2s infinite;
+}
+.mia-dot:nth-child(2) { animation-delay: .2s; }
+.mia-dot:nth-child(3) { animation-delay: .4s; }
+@keyframes miaDot {
+  0%,60%,100% { transform: translateY(0); opacity: .4; }
+  30%          { transform: translateY(-5px); opacity: 1; }
+}
+
+/* ── Input ── */
+.mia-input-area {
+  display: flex;
+  gap: 8px;
+  padding: 10px 12px;
+  background: #fff;
+  border-top: 1px solid #EEF1F7;
+  flex-shrink: 0;
+}
+.mia-input-area input {
+  flex: 1;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13.5px;
+  font-weight: 300;
+  color: #1A3F80;
+  background: #F5F7FA;
+  border: 1.5px solid transparent;
+  border-radius: 10px;
+  padding: 9px 12px;
+  outline: none;
+  transition: border-color .2s;
+}
+.mia-input-area input:focus {
+  border-color: #2563C4;
+  background: #fff;
+}
+.mia-input-area input::placeholder { color: #8896AB; }
+.mia-input-area input:disabled { opacity: .5; cursor: not-allowed; }
+
+.mia-send {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: #E07820;
+  border: none;
+  color: #fff;
+  font-size: 17px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .2s, transform .15s;
+  flex-shrink: 0;
+}
+.mia-send:hover  { background: #F28C30; transform: scale(1.06); }
+.mia-send:active { transform: scale(.96); }
+.mia-send:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+
+/* ── Responsivo ── */
+@media (max-width: 480px) {
+  .mia-chat {
+    left: 10px;
+    right: 10px;
+    width: auto;
+    bottom: 88px;
+    height: 460px;
+  }
+  .mia-btn { bottom: 20px; left: 20px; }
+}

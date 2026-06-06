@@ -9,6 +9,7 @@
 <link rel="stylesheet" href="css/admin.css"/>
 <link rel="stylesheet" href="css/tecnico.css"/>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css"/>
+<link rel="stylesheet" href="css/mia.css"/>
 </head>
 <body>
 
@@ -2283,5 +2284,37 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="js/admin-keys.js"></script>
 <script src="js/admin.js"></script>
+
+<!-- MIA — Assistente Virtual -->
+<div id="mia-btn" class="mia-btn" onclick="miaToggle()">
+  <i class="ti ti-message-circle"></i>
+  <span class="mia-tooltip">Falar com a Mia</span>
+</div>
+
+<div id="mia-chat" class="mia-chat">
+  <div class="mia-header">
+    <div class="mia-header-left">
+      <div class="mia-avatar">M</div>
+      <div>
+        <div class="mia-header-name">Mia</div>
+        <div class="mia-header-sub">
+          <span class="mia-online-dot"></span>
+          Assistente Teffe
+        </div>
+      </div>
+    </div>
+    <button class="mia-close" onclick="miaToggle()"><i class="ti ti-x"></i></button>
+  </div>
+  <div class="mia-messages" id="mia-messages"></div>
+  <div class="mia-input-area">
+    <input type="text" id="mia-input" placeholder="Digite seu nome..." disabled
+           onkeydown="if(event.key==='Enter' && !this.disabled) miaSend()"/>
+    <button class="mia-send" id="mia-send-btn" onclick="miaSend()" disabled>
+      <i class="ti ti-send"></i>
+    </button>
+  </div>
+</div>
+
+<script src="js/mia.js"></script>
 </body>
 </html>
