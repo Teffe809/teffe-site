@@ -1,13 +1,59 @@
 /* ═══════════════════════════════════════════════
    MIA — Assistente Virtual Teffe
-   Fase 1: estrutura visual + fluxo de abertura
-   Fase 2: integração Claude API (system prompt)
+   Integração Claude API — claude-sonnet-4-20250514
 ═══════════════════════════════════════════════ */
 
-var _miaAberto   = false;
-var _miaIniciado = false;
-var _miaEtapa    = 'inicio';  // inicio | aguardando-nome | conversa
-var _miaNome     = '';
+var _MIA_KEY = 'COLE_SUA_CHAVE_ANTHROPIC_AQUI'; // sk-ant-...
+
+/* ── System prompt ── */
+var _MIA_SYSTEM = [
+  'Você é a Mia, assistente inteligente da Teffe Tecnologia. Sua personalidade é humana, calorosa, natural e elegante — nunca pareça um robô ou formulário. Sempre use o nome do visitante durante a conversa.',
+  '',
+  'Siga este fluxo:',
+  'Quando o visitante informar o nome, agradeça e pergunte: "O que sua empresa mais precisa nesse momento?"',
+  'Com base na resposta, direcione para um dos caminhos abaixo:',
+  '',
+  'CAMINHO 1 — OUTSOURCING DE IMPRESSÃO:',
+  'Pergunte se tem impressoras próprias ou contrato de locação/manutenção.',
+  '- Se tiver próprias: reconheça que está buscando solução para os problemas que impressoras sem suporte apresentam; pergunte quantas impressoras e volume de impressão (diga que se não souber o volume não tem problema).',
+  '- Se já tiver contrato: diga que acredita que está buscando uma nova alternativa e que a Teffe é sem sombra de dúvida a melhor opção; peça para descrever como é o contrato atual e o que está incluso.',
+  '- Se quiser entender melhor: explique que com o outsourcing da Teffe não há investimento inicial, equipamentos novos instalados, todo suporte de instalação, manutenção, insumos e peças inclusos — e pergunte se gostaria que a Teffe monte uma solução para sua necessidade.',
+  '',
+  'CAMINHO 2 — LOCAÇÃO DE NOTEBOOK:',
+  'Pergunte se tem notebooks próprios ou já tem contrato de locação/manutenção.',
+  '- Se tiver próprios: reconheça que está buscando solução para os desafios que equipamentos sem suporte apresentam; pergunte quantos notebooks utiliza e como está sendo a experiência.',
+  '- Se já tiver contrato: diga que acredita que está buscando uma nova alternativa e que a Teffe é a melhor opção; peça para descrever o contrato atual.',
+  '- Se quiser entender melhor: explique que com a locação da Teffe não há investimento inicial, equipamentos novos, manutenção e suporte inclusos, sem surpresa no orçamento — e pergunte se gostaria que a Teffe monte uma solução.',
+  '',
+  'CAMINHO 3 — LOCAÇÃO DE DESKTOP:',
+  'Mesmo fluxo do notebook, adaptado para desktop. Destaque performance e estabilidade para operação do dia a dia.',
+  '',
+  'CAMINHO 4 — TEFFE IA:',
+  'Pergunte como funciona o atendimento ao cliente da empresa hoje. Mencione que você mesma é um exemplo do que o Teffe IA pode fazer. Explique que o Teffe IA atende no WhatsApp, Instagram e site ao mesmo tempo, 24h por dia, de forma natural e humanizada. Pergunte se gostaria que a Teffe apresente uma solução para o atendimento.',
+  '',
+  'CAMINHO 5 — NÃO SABE:',
+  'Pergunte qual é o maior desafio do dia a dia da empresa e direcione para o caminho certo com base na resposta.',
+  '',
+  'REGRAS IMPORTANTES:',
+  '- Sempre ouça primeiro, nunca presuma a necessidade.',
+  '- Use o nome do visitante durante a conversa.',
+  '- Nunca use Sr./Sra./Srta. — apenas o nome.',
+  '- Respostas curtas e naturais — como uma conversa humana.',
+  '- Nunca mencione valores ou preços.',
+  '- Quando tiver os dados necessários, diga: "Agora que já tenho o que preciso, estarei encaminhando para nossa equipe comercial — eles vão montar uma proposta personalizada de acordo com a sua necessidade."',
+  '- Em seguida pergunte: "Você prefere contato pelo WhatsApp, e-mail ou ligação?"',
+  '- Após o visitante escolher, diga: "Anotado! Pode deixar que nossa equipe comercial vai entrar em contato. Existe algo mais que possa te ajudar neste momento?"',
+  '- Se não houver mais nada, despeça com: "Foi um prazer falar com você, [Nome]! Tenha um excelente [período]!" usando o período correto do dia.',
+  '- Nunca use "em breve" — passe confiança e firmeza.',
+  '- O cliente está sempre no comando — nunca pressione.'
+].join('\n');
+
+/* ── Estado ── */
+var _miaAberto    = false;
+var _miaIniciado  = false;
+var _miaEtapa     = 'inicio';  // inicio | aguardando-nome | conversa
+var _miaNome      = '';
+var _miaHistorico = []; // [{role, content}] enviado à Claude API
 
 /* ── Toggle abrir/fechar ── */
 function miaToggle() {
@@ -31,21 +77,24 @@ function miaToggle() {
   }
 }
 
-/* ── Sequência de boas-vindas ── */
+/* ── Sequência de boas-vindas (gerida localmente, sem chamar a API) ── */
 function _miaBoasVindas() {
   _miaEtapa = 'inicio';
   _miaInputEnabled(false);
 
+  var msg1 = 'Olá! Eu sou a Mia, assistente inteligente da Teffe. Vamos descobrir juntos o que podemos fazer para sua empresa crescer mais? 😊';
+  var msg2 = 'Antes de começar, como posso te chamar?';
+
   _miaShowTyping();
   setTimeout(function() {
     _miaRemoveTyping();
-    _miaAddMsg('bot', 'Olá! Eu sou a <strong>Mia</strong>, assistente inteligente da Teffe. Vamos descobrir juntos o que podemos fazer para sua empresa crescer mais? 😊');
+    _miaAddMsg('bot', msg1.replace('Mia', '<strong>Mia</strong>'));
 
     setTimeout(function() {
       _miaShowTyping();
       setTimeout(function() {
         _miaRemoveTyping();
-        _miaAddMsg('bot', 'Antes de começar, como posso te chamar?');
+        _miaAddMsg('bot', msg2);
         _miaEtapa = 'aguardando-nome';
         _miaInputEnabled(true);
         var inp = document.getElementById('mia-input');
@@ -72,6 +121,15 @@ function miaSend() {
     var inp = document.getElementById('mia-input');
     if (inp) inp.placeholder = 'Digite sua mensagem...';
 
+    var respostaNome = 'Prazer, ' + _miaNome + '! O que sua empresa mais precisa nesse momento?';
+
+    // Semeia o histórico com a troca de nomes para a API ter contexto
+    _miaHistorico = [
+      { role: 'assistant', content: 'Olá! Eu sou a Mia, assistente inteligente da Teffe. Vamos descobrir juntos o que podemos fazer para sua empresa crescer mais?' },
+      { role: 'user',      content: texto },
+      { role: 'assistant', content: respostaNome }
+    ];
+
     _miaShowTyping();
     setTimeout(function() {
       _miaRemoveTyping();
@@ -88,15 +146,71 @@ function miaSend() {
   }
 }
 
-/* ── Resposta da IA — placeholder substituído na Fase 2 ── */
-function _miaResponder(msg) {
+/* ── Chamada à Claude API ── */
+async function _miaResponder(msg) {
+  _miaHistorico.push({ role: 'user', content: msg });
   _miaInputEnabled(false);
   _miaShowTyping();
-  setTimeout(function() {
+
+  // Injeta período do dia no system prompt
+  var system = _MIA_SYSTEM + '\n\nPeríodo atual do dia: ' + _miaPeriodo() + '.';
+
+  try {
+    var res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': _MIA_KEY,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: system,
+        messages: _miaHistorico
+      })
+    });
+
+    var data = await res.json();
     _miaRemoveTyping();
-    _miaAddMsg('bot', 'Entendido! Em breve a integração com a IA estará ativa. 😊');
+
+    if (!res.ok) {
+      console.error('[Mia] API error:', data);
+      _miaAddMsg('bot', 'Desculpe, tive um problema técnico. Pode tentar novamente? 🙏');
+      _miaHistorico.pop(); // remove a mensagem do user que não foi respondida
+      _miaInputEnabled(true);
+      return;
+    }
+
+    var resposta = data.content && data.content[0] && data.content[0].text || '';
+    _miaHistorico.push({ role: 'assistant', content: resposta });
+    _miaAddMsg('bot', _miaFormatMsg(resposta));
     _miaInputEnabled(true);
-  }, 1200);
+
+  } catch(e) {
+    console.error('[Mia] fetch error:', e);
+    _miaRemoveTyping();
+    _miaAddMsg('bot', 'Parece que tive um problema de conexão. Pode tentar novamente? 🙏');
+    _miaHistorico.pop();
+    _miaInputEnabled(true);
+  }
+}
+
+/* ── Formata texto da API para HTML ── */
+function _miaFormatMsg(text) {
+  return text
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\n/g, '<br>');
+}
+
+/* ── Retorna período do dia ── */
+function _miaPeriodo() {
+  var h = new Date().getHours();
+  if (h >= 5  && h < 12) return 'manhã';
+  if (h >= 12 && h < 18) return 'tarde';
+  return 'noite';
 }
 
 /* ── Helpers de UI ── */
