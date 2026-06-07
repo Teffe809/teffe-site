@@ -3,7 +3,8 @@
    Proxy via Supabase Edge Function mia-chat
 ═══════════════════════════════════════════════ */
 
-var _MIA_EDGE = 'https://hlfjcpgrxiktgctozilk.supabase.co/functions/v1/mia-chat';
+var _MIA_EDGE      = 'https://hlfjcpgrxiktgctozilk.supabase.co/functions/v1/mia-chat';
+var _MIA_EDGE_LEAD = 'https://hlfjcpgrxiktgctozilk.supabase.co/functions/v1/mia-salvar-lead';
 
 /* ── Estado ── */
 var _miaAberto    = false;
@@ -127,9 +128,17 @@ async function _miaResponder(msg) {
       return;
     }
 
-    var resposta = data.content && data.content[0] && data.content[0].text || '';
+    var resposta = data.text || '';
     _miaHistorico.push({ role: 'assistant', content: resposta });
     _miaExibirBlocos(_miaQuebrarBlocos(resposta));
+
+    if (data.salvar_lead) {
+      fetch(_MIA_EDGE_LEAD, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nome: _miaNome, historico: _miaHistorico })
+      }).catch(function(e) { console.error('[Mia] lead save error:', e); });
+    }
 
   } catch(e) {
     console.error('[Mia] fetch error:', e);

@@ -39,7 +39,8 @@ const SYSTEM = [
   '- Nunca mencione valores ou preços.',
   '- Quando tiver os dados necessários, diga: "Agora que já tenho o que preciso, estarei encaminhando para nossa equipe comercial — eles vão montar uma proposta personalizada de acordo com a sua necessidade."',
   '- Em seguida pergunte: "Você prefere contato pelo WhatsApp, e-mail ou ligação?"',
-  '- Após o visitante escolher, diga: "Anotado! Pode deixar que nossa equipe comercial vai entrar em contato. Existe algo mais que possa te ajudar neste momento?"',
+  '- Quando o visitante informar a forma de contato preferida, peça imediatamente o dado de contato: se WhatsApp, peça o número do WhatsApp; se e-mail, peça o endereço de e-mail; se ligação, peça o número de telefone.',
+  '- Após receber o dado de contato (número, e-mail ou telefone), responda com "Anotado! Pode deixar que nossa equipe comercial vai entrar em contato. Existe algo mais que possa te ajudar neste momento?" e OBRIGATORIAMENTE inicie esta resposta com o marcador exato [LEAD_PRONTO] antes de qualquer texto. Exemplo: "[LEAD_PRONTO]Anotado! Pode deixar..."',
   '- Se não houver mais nada, despeça com: "Foi um prazer falar com você, [Nome]! Tenha um excelente [período]!" usando o período correto do dia.',
   '- Nunca use "em breve" — passe confiança e firmeza.',
   '- O cliente está sempre no comando — nunca pressione.',
@@ -54,7 +55,7 @@ Deno.serve(async (req: Request) => {
     const { messages } = await req.json();
 
     // Período do dia em horário de Brasília (UTC-3)
-    const h = (new Date().getUTCHours() + 21) % 24; // +21 = -3 mod 24
+    const h = (new Date().getUTCHours() + 21) % 24;
     const periodo = h >= 5 && h < 12 ? 'manhã' : h >= 12 && h < 18 ? 'tarde' : 'noite';
 
     const system = SYSTEM + '\n\nPeríodo atual do dia: ' + periodo + '.';
@@ -84,10 +85,21 @@ Deno.serve(async (req: Request) => {
 
     const data = await res.json();
 
-    return new Response(JSON.stringify(data), {
+    if (!res.ok) {
+      return new Response(JSON.stringify(data), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: res.status,
+      });
+    }
+
+    const raw = data.content?.[0]?.text ?? '';
+    const salvar_lead = raw.startsWith('[LEAD_PRONTO]');
+    const text = salvar_lead ? raw.replace('[LEAD_PRONTO]', '').trim() : raw;
+
+    return new Response(JSON.stringify({ text, salvar_lead }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: res.status,
     });
+
   } catch (err) {
     return new Response(JSON.stringify({ error: String(err) }), {
       status: 500,
