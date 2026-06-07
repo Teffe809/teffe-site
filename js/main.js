@@ -34,11 +34,12 @@ function openInstPage(e, id){
   if(e) e.preventDefault();
   closeAllPages();
   var pg = document.getElementById('page-' + id);
-  if(pg){ pg.classList.add('open'); pg.scrollTop = 0; }
+  if(pg){ pg.classList.add('open'); pg.scrollTop = 0; document.body.style.overflow='hidden'; }
 }
 function closeInstPage(id){
   var pg = document.getElementById('page-' + id);
   if(pg) pg.classList.remove('open');
+  document.body.style.overflow='';
 }
 
 // ── UPLOAD CURRÍCULO ──
@@ -121,27 +122,30 @@ function openSegPage(e, id){
   if(e) e.preventDefault();
   closeAllPages();
   var pg = document.getElementById('page-' + id);
-  if(pg){ pg.classList.add('open'); pg.scrollTop = 0; }
+  if(pg){ pg.classList.add('open'); pg.scrollTop = 0; document.body.style.overflow='hidden'; }
 }
 function closeSegPage(id){
   var pg = document.getElementById('page-' + id);
   if(pg) pg.classList.remove('open');
+  document.body.style.overflow='';
 }
 
 // ── PÁGINAS DE EQUIPAMENTOS ──
 
 function closeAllPages(){
   document.querySelectorAll('.equip-page').forEach(function(p){ p.classList.remove('open'); });
+  document.body.style.overflow='';
 }
 function openEquipPage(e, id){
   if(e) e.preventDefault();
   closeAllPages();
   var pg = document.getElementById('page-' + id);
-  if(pg){ pg.classList.add('open'); pg.scrollTop = 0; }
+  if(pg){ pg.classList.add('open'); pg.scrollTop = 0; document.body.style.overflow='hidden'; }
 }
 function closeEquipPage(id){
   var pg = document.getElementById('page-' + id);
   if(pg) pg.classList.remove('open');
+  document.body.style.overflow='';
 }
 
 
