@@ -117,9 +117,9 @@ async function _miaResponder(msg) {
     });
 
     var data = await res.json();
-    _miaRemoveTyping();
 
     if (!res.ok) {
+      _miaRemoveTyping();
       console.error('[Mia] API error:', data);
       _miaAddMsg('bot', 'Desculpe, tive um problema técnico. Pode tentar novamente? 🙏');
       _miaHistorico.pop(); // remove a mensagem do user que não foi respondida
@@ -129,8 +129,7 @@ async function _miaResponder(msg) {
 
     var resposta = data.content && data.content[0] && data.content[0].text || '';
     _miaHistorico.push({ role: 'assistant', content: resposta });
-    _miaAddMsg('bot', _miaFormatMsg(resposta));
-    _miaInputEnabled(true);
+    _miaExibirBlocos(_miaQuebrarBlocos(resposta));
 
   } catch(e) {
     console.error('[Mia] fetch error:', e);
@@ -139,6 +138,73 @@ async function _miaResponder(msg) {
     _miaHistorico.pop();
     _miaInputEnabled(true);
   }
+}
+
+/* ── Divide resposta em blocos para exibição gradual ── */
+function _miaQuebrarBlocos(texto) {
+  var partes = texto.split(/\n\n+/);
+  var blocos = [];
+
+  partes.forEach(function(parte) {
+    parte = parte.trim();
+    if (!parte) return;
+
+    if (parte.length <= 300) {
+      blocos.push(parte);
+      return;
+    }
+
+    // Parágrafo longo: divide nas fronteiras de frases
+    var frases = parte.split(/(?<=[.!?])\s+/);
+    var atual = '';
+    frases.forEach(function(f) {
+      if (atual && (atual + ' ' + f).length > 300) {
+        blocos.push(atual.trim());
+        atual = f;
+      } else {
+        atual = atual ? atual + ' ' + f : f;
+      }
+    });
+    if (atual.trim()) blocos.push(atual.trim());
+  });
+
+  return blocos.filter(Boolean);
+}
+
+/* ── Exibe blocos um a um com pausa de leitura entre eles ── */
+function _miaExibirBlocos(blocos) {
+  _miaRemoveTyping();
+
+  if (!blocos.length) {
+    _miaInputEnabled(true);
+    return;
+  }
+
+  _miaAddMsg('bot', _miaFormatMsg(blocos[0]));
+
+  if (blocos.length === 1) {
+    _miaInputEnabled(true);
+    return;
+  }
+
+  var i = 1;
+  function _proximo() {
+    if (i >= blocos.length) {
+      _miaInputEnabled(true);
+      return;
+    }
+    var readTime = Math.min(4000, Math.max(1500, blocos[i - 1].length * 50));
+    setTimeout(function() {
+      _miaShowTyping();
+      setTimeout(function() {
+        _miaRemoveTyping();
+        _miaAddMsg('bot', _miaFormatMsg(blocos[i]));
+        i++;
+        _proximo();
+      }, 800);
+    }, readTime);
+  }
+  _proximo();
 }
 
 /* ── Formata texto da API para HTML ── */
