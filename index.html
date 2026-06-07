@@ -42,6 +42,8 @@
         <a href="#" onclick="openOrca(event,'Outsourcing de Impressão')">Outsourcing de Impressão</a>
         <a href="#" onclick="openOrca(event,'Locação de Notebooks')">Locação de Notebooks</a>
         <a href="#" onclick="openOrca(event,'Locação de Computadores')">Locação de Computadores</a>
+        <div class="sep"></div>
+        <a href="#teffe-ia" onclick="irParaTeffe(event)" style="color:var(--azul);font-weight:600;">✦ Teffe IA</a>
       </div>
     </div>
     <div class="nav-item">
@@ -104,6 +106,7 @@
       <a href="#" onclick="closeMobileAndOpen(event,'equip','laser')">Outsourcing de Impressão</a>
       <a href="#" onclick="closeMobileAndOpen(event,'equip','notebook')">Locação de Notebooks</a>
       <a href="#" onclick="closeMobileAndOpen(event,'equip','desktop')">Locação de Computadores</a>
+      <a href="#teffe-ia" onclick="closeMobileMenu();document.getElementById('teffe-ia').scrollIntoView({behavior:'smooth'})" style="font-weight:600;">✦ Teffe IA</a>
     </div>
   </div>
 
@@ -176,6 +179,46 @@
   </div>
   <div class="hero-right">
     <img src="assets/images/hero-impressoras.jpg" alt="Outsourcing de impressão Teffe" class="hero-img"/>
+  </div>
+</section>
+
+<!-- TEFFE IA -->
+<section id="teffe-ia" class="teffe-ia-section">
+  <div class="teffe-ia-inner">
+
+    <div class="section-label">Teffe IA</div>
+    <h2 class="sec-title">Inteligência que trabalha por você</h2>
+    <p class="sec-sub">Enquanto você foca no que importa, o Teffe IA cuida de tudo.</p>
+
+    <div class="tia-text">
+      <p>Imagine ter um assistente que nunca dorme, nunca falta e nunca deixa um cliente sem resposta. O Teffe IA atende, negocia, anota pedidos, confirma pagamentos e mantém tudo organizado — com a naturalidade de uma conversa humana e a precisão de um sistema profissional.</p>
+      <p>Seus clientes são recebidos com atenção imediata, conduzidos por todo o processo de compra e encantados em cada etapa. Tudo isso acontece automaticamente, enquanto você usa o seu tempo para crescer.</p>
+    </div>
+
+    <div class="tia-grid">
+      <div class="tia-card">
+        <div class="tia-icon"><i class="ti ti-message-circle"></i></div>
+        <h3>Atendimento 24h</h3>
+        <p>Seu cliente é atendido na hora, qualquer dia, qualquer horário. Sem espera, sem ausência.</p>
+      </div>
+      <div class="tia-card">
+        <div class="tia-icon"><i class="ti ti-shopping-cart"></i></div>
+        <h3>Vendas Automáticas</h3>
+        <p>Do primeiro contato ao pagamento confirmado, o Teffe IA conduz tudo com naturalidade e eficiência.</p>
+      </div>
+      <div class="tia-card">
+        <div class="tia-icon"><i class="ti ti-chart-line"></i></div>
+        <h3>Você no Controle</h3>
+        <p>Acompanhe pedidos, clientes e faturamento em tempo real. Você decide, o Teffe IA executa.</p>
+      </div>
+    </div>
+
+    <div class="tia-closing">Menos operação. Mais crescimento.</div>
+
+    <div class="tia-cta">
+      <a href="#" onclick="openContatoModal(event)" class="btn-primary">Quero o Teffe IA na minha empresa →</a>
+    </div>
+
   </div>
 </section>
 
@@ -2286,9 +2329,8 @@
 <script src="js/admin.js"></script>
 
 <!-- MIA — Assistente Virtual -->
-<div id="mia-btn" class="mia-btn" onclick="miaToggle()">
+<div id="mia-btn" class="mia-btn" onclick="miaToggle()" title="Fale com a Mia">
   <i class="ti ti-message-circle"></i>
-  <span class="mia-tooltip">Falar com a Mia</span>
 </div>
 
 <div id="mia-chat" class="mia-chat">
@@ -2316,5 +2358,15 @@
 </div>
 
 <script src="js/mia.js"></script>
+<script>
+document.querySelector('.mia-btn').addEventListener('mouseenter', function() {
+  this.setAttribute('title', 'Fale com a Mia');
+});
+function irParaTeffe(e) {
+  e.preventDefault();
+  document.querySelectorAll('.dropdown.show').forEach(function(d){ d.classList.remove('show'); });
+  document.getElementById('teffe-ia').scrollIntoView({behavior:'smooth'});
+}
+</script>
 </body>
 </html>

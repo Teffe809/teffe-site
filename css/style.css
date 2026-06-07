@@ -875,3 +875,26 @@ footer{background:#0E2248;padding:60px 48px 28px;}
 .flip-card-front{background:transparent;}
 .flip-card-back{transform:rotateY(180deg);background:linear-gradient(135deg,var(--azul) 0%,var(--azul2) 100%);padding:16px;}
 .flip-card-back-text{font-size:12.5px;color:rgba(255,255,255,.9);font-weight:300;line-height:1.5;text-align:center;font-family:var(--font-b);}
+
+/* ── TEFFE IA ── */
+.teffe-ia-section{background:var(--gray-bg);padding:80px 48px;scroll-margin-top:92px;}
+.teffe-ia-inner{max-width:1100px;margin:0 auto;text-align:center;}
+.tia-text{max-width:760px;margin:0 auto 52px;text-align:center;}
+.tia-text p{font-size:15px;color:var(--gray-text);font-weight:300;line-height:1.8;margin-bottom:14px;}
+.tia-text p:last-child{margin-bottom:0;}
+.tia-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-bottom:52px;}
+.tia-card{background:#fff;border-radius:16px;padding:32px 28px;border:1px solid var(--gray-light);box-shadow:0 4px 20px rgba(26,63,128,.07);transition:all .25s;text-align:center;}
+.tia-card:hover{transform:translateY(-6px);box-shadow:0 16px 40px rgba(26,63,128,.13);border-color:transparent;}
+.tia-icon{width:60px;height:60px;border-radius:14px;background:rgba(26,63,128,.08);display:flex;align-items:center;justify-content:center;margin:0 auto 18px;transition:background .25s;}
+.tia-icon i{font-size:26px;color:var(--azul);transition:color .25s;}
+.tia-card:hover .tia-icon{background:rgba(224,120,32,.1);}
+.tia-card:hover .tia-icon i{color:var(--gold);}
+.tia-card h3{font-family:var(--font-h);font-size:17px;font-weight:700;color:var(--azul);margin-bottom:10px;}
+.tia-card p{font-size:13.5px;color:var(--gray-text);font-weight:300;line-height:1.7;}
+.tia-closing{font-family:var(--font-h);font-size:clamp(22px,3vw,36px);font-weight:700;color:var(--azul);margin-bottom:36px;}
+.tia-closing::after{content:'';display:block;width:60px;height:3px;background:var(--gold);margin:14px auto 0;border-radius:2px;}
+.tia-cta{text-align:center;}
+@media(max-width:768px){
+  .tia-grid{grid-template-columns:1fr;}
+  .teffe-ia-section{padding:52px 24px;}
+}
