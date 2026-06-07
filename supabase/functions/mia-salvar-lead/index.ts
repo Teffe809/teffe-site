@@ -31,8 +31,8 @@ Deno.serve(async (req: Request) => {
       },
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
-        max_tokens: 400,
-        system: 'Você extrai dados de conversas de vendas e retorna SOMENTE JSON válido, sem texto adicional, sem markdown. Campos obrigatórios: {"nome": string, "necessidade": "outsourcing impressão" | "locação notebook" | "locação desktop" | "teffe ia" | "outro", "contato": "WhatsApp" | "e-mail" | "ligação", "valor_contato": string, "detalhes": string}. detalhes deve resumir as informações coletadas (quantidade, situação atual, volume etc.).',
+        max_tokens: 500,
+        system: 'Você extrai dados de conversas de vendas e retorna SOMENTE JSON válido, sem texto adicional, sem markdown. Campos: {"nome": string, "empresa": string (nome da empresa se mencionada, senão ""), "cidade": string (se mencionada, senão ""), "necessidade": "outsourcing impressão" | "locação notebook" | "locação desktop" | "teffe ia" | "outro", "contato_tipo": "WhatsApp" | "e-mail" | "ligação", "valor_contato": string, "detalhes": string}. detalhes deve resumir as informações coletadas (quantidade, situação atual, volume etc.).',
         messages: [
           { role: 'user', content: 'Extraia os dados do lead desta conversa:\n\n' + historicoTexto },
         ],
@@ -40,36 +40,69 @@ Deno.serve(async (req: Request) => {
     });
 
     const extractData = await extractRes.json();
-    let lead = { nome: nome || '', necessidade: '', contato: '', valor_contato: '', detalhes: '' };
+    let lead = {
+      nome: nome || '', empresa: '', cidade: '',
+      necessidade: '', contato_tipo: '', valor_contato: '', detalhes: '',
+    };
 
     try {
       const parsed = JSON.parse(extractData.content?.[0]?.text ?? '{}');
       lead = {
         nome:          parsed.nome          || nome || '',
+        empresa:       parsed.empresa       || '',
+        cidade:        parsed.cidade        || '',
         necessidade:   parsed.necessidade   || '',
-        contato:       parsed.contato       || '',
+        contato_tipo:  parsed.contato_tipo  || '',
         valor_contato: parsed.valor_contato || '',
         detalhes:      parsed.detalhes      || '',
       };
     } catch (_) { /* keep defaults */ }
 
-    // Salva na tabela mia_leads
+    const dbHeaders = {
+      'Content-Type': 'application/json',
+      'apikey': serviceKey,
+      'Authorization': 'Bearer ' + serviceKey,
+      'Prefer': 'return=minimal',
+    };
+
+    // 1. Salva na tabela mia_leads
     await fetch(supabaseUrl + '/rest/v1/mia_leads', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': serviceKey,
-        'Authorization': 'Bearer ' + serviceKey,
-        'Prefer': 'return=minimal',
-      },
+      headers: dbHeaders,
       body: JSON.stringify({
         nome:          lead.nome,
-        contato:       lead.contato,
+        contato:       lead.contato_tipo,
         valor_contato: lead.valor_contato,
         necessidade:   lead.necessidade,
         detalhes:      lead.detalhes,
         historico:     historicoTexto,
         status:        'novo',
+      }),
+    });
+
+    // 2. Cria prospecto no CRM
+    const telefone = (lead.contato_tipo === 'WhatsApp' || lead.contato_tipo === 'ligação')
+      ? lead.valor_contato : null;
+    const email = lead.contato_tipo === 'e-mail' ? lead.valor_contato : null;
+    const obsTexto = [
+      lead.detalhes,
+      '--- Resumo da conversa via Mia ---',
+      historicoTexto.slice(0, 2000) + (historicoTexto.length > 2000 ? '\n[...]' : ''),
+    ].join('\n\n');
+
+    await fetch(supabaseUrl + '/rest/v1/prospectos', {
+      method: 'POST',
+      headers: dbHeaders,
+      body: JSON.stringify({
+        contato:    lead.nome,
+        empresa:    lead.empresa || lead.nome,
+        telefone:   telefone,
+        email:      email,
+        cidade:     lead.cidade  || null,
+        origem:     'Mia — Site Teffe',
+        interesse:  lead.necessidade,
+        observacao: obsTexto,
+        status:     'novo',
       }),
     });
 
@@ -86,8 +119,12 @@ Deno.serve(async (req: Request) => {
             <td style="padding:12px 16px;border-bottom:1px solid #e2e8f0">${lead.nome}</td>
           </tr>
           <tr>
-            <td style="padding:12px 16px;background:#f8fafc;font-weight:600;color:#1A3F80;border-bottom:1px solid #e2e8f0">Contato</td>
-            <td style="padding:12px 16px;border-bottom:1px solid #e2e8f0">${lead.contato}</td>
+            <td style="padding:12px 16px;background:#f8fafc;font-weight:600;color:#1A3F80;border-bottom:1px solid #e2e8f0">Empresa</td>
+            <td style="padding:12px 16px;border-bottom:1px solid #e2e8f0">${lead.empresa || '—'}</td>
+          </tr>
+          <tr>
+            <td style="padding:12px 16px;background:#f8fafc;font-weight:600;color:#1A3F80;border-bottom:1px solid #e2e8f0">Contato preferido</td>
+            <td style="padding:12px 16px;border-bottom:1px solid #e2e8f0">${lead.contato_tipo}</td>
           </tr>
           <tr>
             <td style="padding:12px 16px;background:#f8fafc;font-weight:600;color:#1A3F80;border-bottom:1px solid #e2e8f0">Dado de contato</td>
@@ -119,7 +156,7 @@ Deno.serve(async (req: Request) => {
       body: JSON.stringify({
         from: 'Mia Teffe <contato@teffe.com.br>',
         to: 'contato@teffe.com.br',
-        subject: '🤖 Novo Lead Mia — ' + lead.nome + ' | ' + lead.necessidade,
+        subject: '🤖 Novo Lead Mia — ' + lead.nome + (lead.empresa ? ' (' + lead.empresa + ')' : '') + ' | ' + lead.necessidade,
         html: emailHtml,
       }),
     });
