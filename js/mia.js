@@ -12,6 +12,7 @@ var _miaIniciado  = false;
 var _miaEtapa     = 'inicio';  // inicio | aguardando-nome | conversa
 var _miaNome      = '';
 var _miaHistorico = []; // [{role, content}] enviado à Claude API
+var _miaLeadSalvo = false; // garante envio único por sessão
 
 /* ── Toggle abrir/fechar ── */
 function miaToggle() {
@@ -132,7 +133,8 @@ async function _miaResponder(msg) {
     _miaHistorico.push({ role: 'assistant', content: resposta });
     _miaExibirBlocos(_miaQuebrarBlocos(resposta));
 
-    if (data.salvar_lead) {
+    if (data.salvar_lead && !_miaLeadSalvo) {
+      _miaLeadSalvo = true;
       fetch(_MIA_EDGE_LEAD, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

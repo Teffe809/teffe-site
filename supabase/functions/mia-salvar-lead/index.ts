@@ -80,7 +80,7 @@ Deno.serve(async (req: Request) => {
       }),
     });
 
-    // 2. Cria prospecto no CRM
+    // 2. Cria prospecto no CRM (com proteção contra duplicatas nos últimos 5 min)
     const telefone = (lead.contato_tipo === 'WhatsApp' || lead.contato_tipo === 'ligação')
       ? lead.valor_contato : null;
     const email = lead.contato_tipo === 'e-mail' ? lead.valor_contato : null;
@@ -90,21 +90,31 @@ Deno.serve(async (req: Request) => {
       historicoTexto.slice(0, 2000) + (historicoTexto.length > 2000 ? '\n[...]' : ''),
     ].join('\n\n');
 
-    await fetch(supabaseUrl + '/rest/v1/prospectos', {
-      method: 'POST',
-      headers: dbHeaders,
-      body: JSON.stringify({
-        contato:    lead.nome,
-        empresa:    lead.empresa || lead.nome,
-        telefone:   telefone,
-        email:      email,
-        cidade:     lead.cidade  || null,
-        origem:     'Mia — Site Teffe',
-        interesse:  lead.necessidade,
-        observacao: obsTexto,
-        status:     'novo',
-      }),
-    });
+    const cincoMinAtras = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+    const dupRes = await fetch(
+      supabaseUrl + '/rest/v1/prospectos?contato=eq.' + encodeURIComponent(lead.nome)
+        + '&created_at=gt.' + cincoMinAtras + '&select=id&limit=1',
+      { headers: dbHeaders }
+    );
+    const dupRows = await dupRes.json();
+
+    if (!Array.isArray(dupRows) || dupRows.length === 0) {
+      await fetch(supabaseUrl + '/rest/v1/prospectos', {
+        method: 'POST',
+        headers: dbHeaders,
+        body: JSON.stringify({
+          contato:    lead.nome,
+          empresa:    lead.empresa || lead.nome,
+          telefone:   telefone,
+          email:      email,
+          cidade:     lead.cidade  || null,
+          origem:     'Mia — Site Teffe',
+          interesse:  lead.necessidade,
+          observacao: obsTexto,
+          status:     'novo',
+        }),
+      });
+    }
 
     // Envia email de notificação para a equipe
     const now = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
