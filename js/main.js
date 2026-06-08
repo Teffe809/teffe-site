@@ -17,11 +17,13 @@ function _htmlTabela(titulo, linhas) {
   '</div>';
 }
 
-async function _enviarEmail(to, subject, html) {
+async function _enviarEmail(to, subject, html, lead) {
+  const body = { to: to, subject: subject, html: html };
+  if (lead) body.lead = lead;
   const r = await fetch(_EDGE_EMAIL_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ to: to, subject: subject, html: html })
+    body: JSON.stringify(body)
   });
   if (!r.ok) {
     const err = await r.json().catch(function(){ return {}; });
@@ -282,7 +284,8 @@ async function enviarContato(){
       _htmlTabela('Formulário de Contato', [
         ['Nome', nome], ['E-mail', email], ['Telefone', tel],
         ['Mensagem', msg.replace(/\n/g,'<br>')]
-      ])
+      ]),
+      { nome: nome, email: email, telefone: tel, observacao: msg }
     );
     document.querySelectorAll('#contatoModal input,#contatoModal textarea').forEach(function(el){el.value='';});
     closeContatoModal();
