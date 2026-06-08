@@ -11,7 +11,10 @@
   width: 64px;
   height: 64px;
   border-radius: 50%;
-  background: #4C1D95 url('../assets/images/mia-avatar.png') center top / cover no-repeat;
+  background-color: #4C1D95;
+  background-image: url('../assets/images/mia-avatar.png');
+  background-size: cover;
+  background-position: center top;
   cursor: pointer;
   box-shadow: 0 4px 20px rgba(76,29,149,.45);
   transition: box-shadow .25s;
@@ -20,6 +23,9 @@
 /* Sem transform no hover — transform criaria containing block e quebraria o ::before fixed */
 .mia-btn:hover {
   box-shadow: 0 6px 32px rgba(76,29,149,.7);
+}
+.mia-btn i {
+  display: none;
 }
 
 /* Tooltip via ::before (position: fixed funciona pois pai não tem transform) */
