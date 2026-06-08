@@ -285,7 +285,7 @@ async function enviarContato(){
         ['Nome', nome], ['E-mail', email], ['Telefone', tel],
         ['Mensagem', msg.replace(/\n/g,'<br>')]
       ]),
-      { nome: nome, email: email, telefone: tel, observacao: msg }
+      { nome: nome, email: email, telefone: tel, observacao: msg, origem: 'Formulário Site' }
     );
     document.querySelectorAll('#contatoModal input,#contatoModal textarea').forEach(function(el){el.value='';});
     closeContatoModal();
@@ -333,7 +333,11 @@ async function enviarOrca(){
     await _enviarEmail(
       'contato@teffe.com.br',
       'Teffe — Orçamento — ' + nome + ' (' + solucaoLabel + ')',
-      _htmlTabela('Solicitação de Orçamento', linhas)
+      _htmlTabela('Solicitação de Orçamento', linhas),
+      { nome: nome + (sobre ? ' ' + sobre : ''), email, telefone: tel, empresa,
+        interesse: solucaoLabel,
+        observacao: 'Solução: ' + solucaoLabel + (msg ? '\n\n' + msg : ''),
+        origem: 'Formulário Orçamento — Site' }
     );
     document.querySelectorAll('#orcaForm input, #orcaForm select, #orcaForm textarea').forEach(function(el){ el.value=''; });
     document.getElementById('orcaForm').style.display='none';
@@ -348,9 +352,44 @@ function setTab(btn,id){
   btn.classList.add('active');
   document.getElementById('tab-'+id).classList.add('active');
 }
-function enviar(){
-  document.querySelectorAll('.cta-form input, .cta-form select, .cta-form textarea').forEach(function(el){ el.value=''; });
-  document.getElementById('ctaSuccessModal').classList.add('open');
+async function enviar(){
+  const nome    = document.getElementById('cta-nome').value.trim();
+  const sobre   = document.getElementById('cta-sobrenome').value.trim();
+  const empresa = document.getElementById('cta-empresa').value.trim();
+  const tel     = document.getElementById('cta-tel').value.trim();
+  const email   = document.getElementById('cta-email').value.trim();
+  const solucaoEl = document.getElementById('cta-solucao');
+  const solucao = solucaoEl.options[solucaoEl.selectedIndex]?.text || '';
+  const msg     = document.getElementById('cta-msg').value.trim();
+
+  if(!nome||!empresa||!tel||!email||!solucao){
+    alert('Por favor preencha todos os campos obrigatórios (*)');
+    return;
+  }
+
+  try {
+    const nomeCompleto = nome + (sobre ? ' ' + sobre : '');
+    await _enviarEmail(
+      'contato@teffe.com.br',
+      'Teffe — CTA — ' + nomeCompleto + ' (' + solucao + ')',
+      _htmlTabela('Solicitação — CTA Principal', [
+        ['Nome',              nomeCompleto],
+        ['Empresa',           empresa],
+        ['Telefone',          tel],
+        ['E-mail',            email],
+        ['Como podemos ajudar', solucao],
+        ...(msg ? [['Mensagem', msg.replace(/\n/g,'<br>')]] : [])
+      ]),
+      { nome: nomeCompleto, email, telefone: tel, empresa,
+        interesse: solucao,
+        observacao: solucao + (msg ? '\n\n' + msg : ''),
+        origem: 'CTA Principal — Site' }
+    );
+    document.querySelectorAll('.cta-form input, .cta-form select, .cta-form textarea').forEach(function(el){ el.value=''; });
+    document.getElementById('ctaSuccessModal').classList.add('open');
+  } catch(err){
+    alert('Erro ao enviar. Por favor tente novamente ou entre em contato pelo WhatsApp.');
+  }
 }
 function closeCTASuccess(){
   document.getElementById('ctaSuccessModal').classList.remove('open');
