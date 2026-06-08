@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Política de Privacidade – Teffe Tecnologia</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,300&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="css/style.css"/>
+<link rel="stylesheet" href="css/admin.css"/>
+<link rel="stylesheet" href="css/tecnico.css"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css"/>
+<link rel="stylesheet" href="css/mia.css"/>
+<style>
+  .pp-hero {
+    background: linear-gradient(150deg, #1A3F80 0%, #2060B8 55%, #2D75D0 100%);
+    padding: 152px 80px 72px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .pp-hero .ep-badge {
+    background: rgba(255,255,255,.12);
+    border: 1px solid rgba(255,255,255,.25);
+    color: rgba(255,255,255,.9);
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 6px 16px;
+    border-radius: 20px;
+    margin-bottom: 20px;
+    display: inline-block;
+  }
+  .pp-hero h1 {
+    font-family: var(--font-h);
+    font-size: 42px;
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 14px;
+    line-height: 1.15;
+  }
+  .pp-hero h1 span { color: var(--gold); }
+  .pp-hero p {
+    font-size: 15px;
+    font-weight: 300;
+    color: rgba(255,255,255,.75);
+    max-width: 620px;
+    line-height: 1.75;
+  }
+  .pp-body {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 64px 40px 80px;
+  }
+  .pp-toc {
+    background: var(--gray-bg);
+    border-radius: 14px;
+    padding: 32px 36px;
+    margin-bottom: 56px;
+    border-left: 4px solid var(--azul2);
+  }
+  .pp-toc h3 {
+    font-family: var(--font-h);
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--azul);
+    margin-bottom: 16px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .pp-toc ol {
+    padding-left: 20px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px 32px;
+  }
+  .pp-toc li a {
+    color: var(--azul2);
+    font-size: 13.5px;
+    font-weight: 400;
+    text-decoration: none;
+    line-height: 2;
+    transition: color .15s;
+  }
+  .pp-toc li a:hover { color: var(--gold); text-decoration: underline; }
+
+  .pp-section {
+    margin-bottom: 52px;
+    scroll-margin-top: 110px;
+  }
+  .pp-section-label {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 8px;
+  }
+  .pp-section h2 {
+    font-family: var(--font-h);
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--azul);
+    margin-bottom: 16px;
+    line-height: 1.3;
+  }
+  .pp-section p {
+    font-size: 14.5px;
+    font-weight: 300;
+    color: var(--gray-text);
+    line-height: 1.85;
+    margin-bottom: 14px;
+  }
+  .pp-section ul, .pp-section ol {
+    padding-left: 20px;
+    margin-bottom: 14px;
+  }
+  .pp-section li {
+    font-size: 14.5px;
+    font-weight: 300;
+    color: var(--gray-text);
+    line-height: 1.85;
+    margin-bottom: 4px;
+  }
+  .pp-section li strong {
+    color: var(--azul);
+    font-weight: 600;
+  }
+  .pp-divider {
+    border: none;
+    border-top: 1px solid var(--gray-light);
+    margin: 0 0 52px;
+  }
+  .pp-highlight {
+    background: var(--gray-bg);
+    border-radius: 12px;
+    padding: 24px 28px;
+    margin-bottom: 14px;
+  }
+  .pp-highlight p { margin-bottom: 0; }
+
+  .pp-rights-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 8px;
+  }
+  .pp-right-card {
+    background: #fff;
+    border: 1px solid var(--gray-light);
+    border-radius: 12px;
+    padding: 20px 22px;
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+  }
+  .pp-right-card .pp-right-icon {
+    width: 38px;
+    height: 38px;
+    background: var(--gray-bg);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .pp-right-card .pp-right-icon i {
+    font-size: 20px;
+    color: var(--azul2);
+  }
+  .pp-right-card h5 {
+    font-family: var(--font-h);
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--azul);
+    margin-bottom: 4px;
+  }
+  .pp-right-card p {
+    font-size: 13px;
+    font-weight: 300;
+    color: var(--gray-text);
+    line-height: 1.6;
+    margin: 0;
+  }
+
+  .pp-contact-box {
+    background: linear-gradient(135deg, var(--azul) 0%, #2563C4 100%);
+    border-radius: 16px;
+    padding: 36px 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    margin-top: 8px;
+  }
+  .pp-contact-box h4 {
+    font-family: var(--font-h);
+    font-size: 18px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 8px;
+  }
+  .pp-contact-box p {
+    font-size: 14px;
+    font-weight: 300;
+    color: rgba(255,255,255,.75);
+    margin: 0;
+    line-height: 1.6;
+  }
+  .pp-contact-box a {
+    color: var(--gold);
+    font-weight: 600;
+    text-decoration: none;
+  }
+  .pp-contact-box a:hover { text-decoration: underline; }
+  .pp-contact-btn {
+    background: var(--gold);
+    color: #fff;
+    font-family: var(--font-b);
+    font-size: 14px;
+    font-weight: 600;
+    padding: 12px 26px;
+    border-radius: 8px;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: all .2s;
+  }
+  .pp-contact-btn:hover { background: #F28C30; transform: translateY(-1px); }
+
+  .pp-vigencia {
+    background: var(--gray-bg);
+    border-radius: 12px;
+    padding: 18px 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 8px;
+  }
+  .pp-vigencia i { font-size: 22px; color: var(--azul2); flex-shrink: 0; }
+  .pp-vigencia span {
+    font-size: 13.5px;
+    color: var(--gray-text);
+    font-weight: 300;
+    line-height: 1.6;
+  }
+  .pp-vigencia strong { color: var(--azul); font-weight: 600; }
+
+  @media (max-width: 768px) {
+    .pp-hero { padding: 120px 24px 48px; }
+    .pp-hero h1 { font-size: 28px; }
+    .pp-body { padding: 40px 20px 60px; }
+    .pp-toc ol { grid-template-columns: 1fr; }
+    .pp-rights-grid { grid-template-columns: 1fr; }
+    .pp-contact-box { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar">
+  <a href="index.html" class="nav-logo">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 580 175" style="height:48px;width:auto;background:#fff;">
+  <rect width="580" height="175" fill="#ffffff"/>
+  <polygon points="95,31 140,57 140,109 95,135 50,109 50,57" fill="none" stroke="#E07820" stroke-width="5" stroke-linejoin="round"/>
+  <polygon points="95,37 135,60 135,106 95,129 55,106 55,60" fill="#ffffff"/>
+  <polygon points="95,43 130,63 130,103 95,123 60,103 60,63" fill="#1A2E5A"/>
+  <rect x="78" y="62" width="34" height="6" rx="2.5" fill="#E07820"/>
+  <rect x="91" y="62" width="7" height="30" rx="2.5" fill="#E07820"/>
+  <line x1="140" y1="57" x2="163" y2="44" stroke="#E07820" stroke-width="1.8"/><circle cx="166" cy="42" r="3.8" fill="#E07820"/>
+  <line x1="140" y1="109" x2="163" y2="122" stroke="#E07820" stroke-width="1.8"/><circle cx="166" cy="124" r="3.8" fill="#E07820"/>
+  <line x1="95" y1="135" x2="95" y2="158" stroke="#E07820" stroke-width="1.8"/><circle cx="95" cy="161" r="3.8" fill="#E07820"/>
+  <line x1="50" y1="109" x2="27" y2="122" stroke="#E07820" stroke-width="1.8"/><circle cx="24" cy="124" r="3.8" fill="#E07820"/>
+  <line x1="50" y1="57" x2="27" y2="44" stroke="#E07820" stroke-width="1.8"/><circle cx="24" cy="42" r="3.8" fill="#E07820"/>
+  <text font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="76" x="200" y="103">
+    <tspan fill="#1A2E5A">TE</tspan><tspan fill="#E07820">FFE</tspan>
+  </text>
+  <rect x="200" y="111" width="310" height="3" rx="1.5" fill="#E07820"/>
+  <text x="202" y="139" font-family="Arial, sans-serif" font-weight="700" font-size="15" fill="#E07820" letter-spacing="6">TECNOLOGIA</text>
+</svg>
+  </a>
+  <nav class="nav-menu">
+    <div class="nav-item"><a href="index.html">Soluções</a></div>
+    <div class="nav-item"><a href="index.html">Equipamentos</a></div>
+    <div class="nav-item"><a href="index.html">Para sua empresa</a></div>
+    <div class="nav-item"><a href="index.html">Institucional</a></div>
+    <div class="nav-item"><a href="index.html">Contato</a></div>
+  </nav>
+  <div class="nav-actions">
+    <a href="index.html" class="btn-cliente">Já sou cliente</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="pp-hero">
+  <div class="ep-badge"><i class="ti ti-shield-lock" style="margin-right:6px;"></i> LGPD — Lei nº 13.709/2018</div>
+  <h1>Política de <span>Privacidade</span></h1>
+  <p>Transparência sobre como coletamos, usamos e protegemos seus dados pessoais. Seu direito à privacidade é uma prioridade para a Teffe.</p>
+</div>
+
+<!-- CONTEÚDO -->
+<div class="pp-body">
+
+  <!-- Índice -->
+  <div class="pp-toc">
+    <h3>Nesta página</h3>
+    <ol>
+      <li><a href="#quem-somos">Quem somos</a></li>
+      <li><a href="#dados-coletados">Dados que coletamos</a></li>
+      <li><a href="#como-coletamos">Como coletamos</a></li>
+      <li><a href="#finalidade">Para que usamos os dados</a></li>
+      <li><a href="#compartilhamento">Com quem compartilhamos</a></li>
+      <li><a href="#direitos">Seus direitos como titular</a></li>
+      <li><a href="#retencao">Tempo de retenção</a></li>
+      <li><a href="#cookies">Cookies e rastreamento</a></li>
+      <li><a href="#seguranca">Segurança dos dados</a></li>
+      <li><a href="#contato">Contato e DPO</a></li>
+    </ol>
+  </div>
+
+  <!-- 1. Quem somos -->
+  <div class="pp-section" id="quem-somos">
+    <span class="pp-section-label">Art. 5º, VI — LGPD</span>
+    <h2>1. Quem somos — o Controlador de Dados</h2>
+    <p>A <strong>Teffe Tecnologia</strong> é a empresa responsável pelo tratamento dos seus dados pessoais (Controlador, nos termos da LGPD). Nosso propósito é oferecer soluções em outsourcing de impressão, locação de TI e inteligência artificial para empresas, sempre com transparência e respeito à privacidade de todos com quem nos relacionamos.</p>
+    <div class="pp-highlight">
+      <p><strong>Razão social:</strong> Teffe Tecnologia<br/>
+      <strong>E-mail de contato:</strong> <a href="mailto:contato@teffe.com.br" style="color:var(--azul2);">contato@teffe.com.br</a><br/>
+      <strong>Telefone:</strong> (14) 99828-9248</p>
+    </div>
+  </div>
+  <hr class="pp-divider"/>
+
+  <!-- 2. Dados coletados -->
+  <div class="pp-section" id="dados-coletados">
+    <span class="pp-section-label">Art. 5º, I — LGPD</span>
+    <h2>2. Quais dados pessoais coletamos</h2>
+    <p>Coletamos apenas os dados necessários para prestar nossos serviços e manter contato com você. Os dados tratados pela Teffe incluem:</p>
+    <ul>
+      <li><strong>Dados de identificação:</strong> nome, sobrenome e cargo.</li>
+      <li><strong>Dados de contato:</strong> endereço de e-mail e número de WhatsApp/telefone.</li>
+      <li><strong>Dados profissionais:</strong> nome da empresa, segmento de atuação e necessidades declaradas.</li>
+      <li><strong>Dados de navegação:</strong> endereço IP, tipo de navegador, páginas visitadas, tempo de sessão e origem do acesso (coletados automaticamente via cookies e ferramentas de análise).</li>
+      <li><strong>Dados de comunicação:</strong> histórico de conversas realizadas com o assistente virtual Mia (Teffe IA), incluindo dúvidas e solicitações registradas.</li>
+      <li><strong>Currículo e dados profissionais adicionais:</strong> somente quando você se candidata a uma vaga de emprego (área de interesse, apresentação pessoal e currículo anexo).</li>
+    </ul>
+    <p>Não coletamos dados sensíveis (como origem racial, opiniões políticas, dados de saúde ou biometria) e não tratamos dados de crianças ou adolescentes.</p>
+  </div>
+  <hr class="pp-divider"/>
+
+  <!-- 3. Como coletamos -->
+  <div class="pp-section" id="como-coletamos">
+    <span class="pp-section-label">Art. 7º — LGPD</span>
+    <h2>3. Como coletamos seus dados</h2>
+    <p>Seus dados são coletados por meio dos seguintes canais:</p>
+    <ul>
+      <li><strong>Formulários do site:</strong> ao preencher o formulário "Quero minha solução", o modal de contato ou o formulário de candidatura em "Trabalhe conosco".</li>
+      <li><strong>Chat da Mia (Teffe IA):</strong> ao interagir com nosso assistente virtual no site, WhatsApp ou Instagram. As conversas podem ser armazenadas para melhoria do serviço e acompanhamento comercial.</li>
+      <li><strong>Cookies e tecnologias similares:</strong> ao navegar pelo site, coletamos automaticamente dados de uso por meio de cookies funcionais e de análise. Veja a seção de cookies para mais detalhes.</li>
+      <li><strong>Comunicações diretas:</strong> ao nos contatar por e-mail, telefone ou WhatsApp de forma espontânea.</li>
+    </ul>
+  </div>
+  <hr class="pp-divider"/>
+
+  <!-- 4. Finalidade -->
+  <div class="pp-section" id="finalidade">
+    <span class="pp-section-label">Art. 6º e Art. 7º — LGPD</span>
+    <h2>4. Para que usamos seus dados</h2>
+    <p>Utilizamos seus dados pessoais para as seguintes finalidades, todas legítimas e proporcionais:</p>
+    <ul>
+      <li><strong>Responder solicitações e orçamentos:</strong> entrar em contato com você após o envio de formulários ou mensagens.</li>
+      <li><strong>Qualificação comercial:</strong> entender suas necessidades para oferecer a solução mais adequada à sua empresa.</li>
+      <li><strong>Atendimento via Teffe IA:</strong> fornecer respostas automatizadas e personalizadas por meio do assistente virtual Mia, com base nas informações fornecidas na conversa.</li>
+      <li><strong>Análise e melhoria do site:</strong> entender como os visitantes utilizam o site para aprimorar a experiência e o conteúdo.</li>
+      <li><strong>Envio de comunicações comerciais:</strong> com seu consentimento, enviar novidades, ofertas e informações relevantes sobre os serviços da Teffe.</li>
+      <li><strong>Processo seletivo:</strong> avaliar candidaturas recebidas via formulário de "Trabalhe conosco".</li>
+      <li><strong>Cumprimento de obrigações legais:</strong> atender exigências regulatórias ou responder a solicitações de autoridades competentes quando aplicável.</li>
+    </ul>
+    <p>Não utilizamos seus dados para tomada de decisões automatizadas que produzam efeitos jurídicos ou impactos significativos sobre você.</p>
+  </div>
+  <hr class="pp-divider"/>
+
+  <!-- 5. Compartilhamento -->
+  <div class="pp-section" id="compartilhamento">
+    <span class="pp-section-label">Art. 5º, XVI — LGPD</span>
+    <h2>5. Com quem compartilhamos seus dados</h2>
+    <p>A Teffe preza pela confidencialidade das suas informações. Seus dados <strong>não são vendidos, alugados ou cedidos</strong> a terceiros para fins publicitários ou comerciais externos.</p>
+    <p>O acesso às suas informações é restrito a:</p>
+    <ul>
+      <li><strong>Equipe comercial interna:</strong> os profissionais do time de vendas da Teffe que precisam das informações para retornar seu contato e apresentar soluções personalizadas.</li>
+      <li><strong>Plataformas de tecnologia essenciais ao serviço:</strong> como serviços de e-mail, CRM e a infraestrutura do assistente Mia — todos sob contrato de confidencialidade e adequados à LGPD.</li>
+      <li><strong>Autoridades competentes:</strong> quando exigido por lei, ordem judicial ou para proteção de direitos da Teffe.</li>
+    </ul>
+    <div class="pp-highlight">
+      <p><i class="ti ti-lock" style="color:var(--azul2);margin-right:6px;"></i> Nenhum colaborador da Teffe além do time comercial interno possui acesso aos dados de clientes e prospects.</p>
+    </div>
+  </div>
+  <hr class="pp-divider"/>
+
+  <!-- 6. Direitos do titular -->
+  <div class="pp-section" id="direitos">
+    <span class="pp-section-label">Art. 18 — LGPD</span>
+    <h2>6. Seus direitos como titular de dados</h2>
+    <p>A Lei Geral de Proteção de Dados (Lei nº 13.709/2018) garante a você os seguintes direitos, que podem ser exercidos a qualquer momento mediante solicitação:</p>
+    <div class="pp-rights-grid">
+      <div class="pp-right-card">
+        <div class="pp-right-icon"><i class="ti ti-eye"></i></div>
+        <div>
+          <h5>Acesso</h5>
+          <p>Confirmar se tratamos seus dados e obter uma cópia das informações que possuímos sobre você.</p>
+        </div>
+      </div>
+      <div class="pp-right-card">
+        <div class="pp-right-icon"><i class="ti ti-pencil"></i></div>
+        <div>
+          <h5>Correção</h5>
+          <p>Solicitar a atualização ou retificação de dados incompletos, inexatos ou desatualizados.</p>
+        </div>
+      </div>
+      <div class="pp-right-card">
+        <div class="pp-right-icon"><i class="ti ti-trash"></i></div>
+        <div>
+          <h5>Exclusão</h5>
+          <p>Pedir a eliminação dos seus dados pessoais tratados com base no seu consentimento.</p>
+        </div>
+      </div>
+      <div class="pp-right-card">
+        <div class="pp-right-icon"><i class="ti ti-ban"></i></div>
+        <div>
+          <h5>Oposição e revogação</h5>
+          <p>Revogar o consentimento a qualquer momento ou se opor ao uso dos dados para comunicações de marketing.</p>
+        </div>
+      </div>
+      <div class="pp-right-card">
+        <div class="pp-right-icon"><i class="ti ti-package-export"></i></div>
+        <div>
+          <h5>Portabilidade</h5>
+          <p>Receber seus dados em formato estruturado e de uso comum para transferência a outro fornecedor.</p>
+        </div>
+      </div>
+      <div class="pp-right-card">
+        <div class="pp-right-icon"><i class="ti ti-info-circle"></i></div>
+        <div>
+          <h5>Informação sobre compartilhamento</h5>
+          <p>Saber com quais entidades públicas e privadas os seus dados foram compartilhados.</p>
+        </div>
+      </div>
+    </div>
+    <p style="margin-top:20px;">Para exercer qualquer desses direitos, entre em contato pelo e-mail <a href="mailto:contato@teffe.com.br" style="color:var(--azul2);font-weight:600;">contato@teffe.com.br</a>. Responderemos no prazo de até 15 dias úteis.</p>
+  </div>
+  <hr class="pp-divider"/>
+
+  <!-- 7. Retenção -->
+  <div class="pp-section" id="retencao">
+    <span class="pp-section-label">Art. 15 e Art. 16 — LGPD</span>
+    <h2>7. Por quanto tempo guardamos seus dados</h2>
+    <p>Mantemos seus dados pessoais apenas pelo período necessário para cumprir as finalidades para as quais foram coletados ou conforme exigido por lei:</p>
+    <ul>
+      <li><strong>Dados de formulários de contato/orçamento:</strong> até 2 anos após o último contato ou encerramento da negociação.</li>
+      <li><strong>Dados de contratos ativos:</strong> durante toda a vigência do contrato e por até 5 anos após o encerramento, para atendimento de obrigações legais e fiscais.</li>
+      <li><strong>Histórico de conversas com a Mia (Teffe IA):</strong> até 12 meses, para fins de melhoria do serviço e acompanhamento comercial.</li>
+      <li><strong>Dados de candidatos (Trabalhe conosco):</strong> até 12 meses após o envio da candidatura, para eventuais oportunidades futuras.</li>
+      <li><strong>Dados de navegação (cookies):</strong> conforme as configurações específicas de cada cookie, variando de sessão única a até 24 meses.</li>
+    </ul>
+    <p>Após o término do prazo, os dados são eliminados de forma segura ou anonimizados, conforme aplicável.</p>
+  </div>
+  <hr class="pp-divider"/>
+
+  <!-- 8. Cookies -->
+  <div class="pp-section" id="cookies">
+    <span class="pp-section-label">Boas práticas de privacidade</span>
+    <h2>8. Cookies e tecnologias de rastreamento</h2>
+    <p>Nosso site utiliza cookies para garantir o funcionamento adequado, analisar o desempenho e melhorar a experiência de navegação. Os tipos de cookies utilizados são:</p>
+    <ul>
+      <li><strong>Cookies essenciais:</strong> necessários para o funcionamento básico do site. Não podem ser desativados.</li>
+      <li><strong>Cookies de análise:</strong> coletam informações anônimas sobre como os visitantes utilizam o site (páginas mais acessadas, tempo de permanência, origem do tráfego).</li>
+      <li><strong>Cookies de funcionalidade:</strong> memorizam preferências do usuário para melhorar a experiência de navegação.</li>
+    </ul>
+    <p>Você pode configurar seu navegador para recusar cookies ou ser avisado antes de aceitá-los. Contudo, a desativação de cookies essenciais pode prejudicar o funcionamento de algumas funcionalidades do site.</p>
+  </div>
+  <hr class="pp-divider"/>
+
+  <!-- 9. Segurança -->
+  <div class="pp-section" id="seguranca">
+    <span class="pp-section-label">Art. 46 — LGPD</span>
+    <h2>9. Como protegemos seus dados</h2>
+    <p>A Teffe adota medidas técnicas e organizacionais adequadas para proteger seus dados pessoais contra acesso não autorizado, perda, alteração ou destruição, incluindo:</p>
+    <ul>
+      <li>Transmissão de dados por conexão criptografada (HTTPS/TLS).</li>
+      <li>Acesso restrito aos dados, limitado a colaboradores com necessidade justificada.</li>
+      <li>Uso de plataformas e fornecedores com políticas de segurança compatíveis com a LGPD.</li>
+      <li>Revisão periódica dos processos e sistemas de tratamento de dados.</li>
+    </ul>
+    <p>Em caso de incidente de segurança que possa acarretar risco ou dano relevante a você, a Teffe comunicará o fato à Autoridade Nacional de Proteção de Dados (ANPD) e aos titulares afetados dentro dos prazos legais.</p>
+  </div>
+  <hr class="pp-divider"/>
+
+  <!-- 10. Contato -->
+  <div class="pp-section" id="contato">
+    <span class="pp-section-label">Art. 41 — LGPD</span>
+    <h2>10. Contato e Encarregado de Dados (DPO)</h2>
+    <p>Para exercer seus direitos, tirar dúvidas sobre esta política ou reportar qualquer questão relacionada ao tratamento dos seus dados pessoais, entre em contato com nosso responsável pela proteção de dados:</p>
+    <div class="pp-contact-box">
+      <div>
+        <h4>Encarregado de Proteção de Dados — Teffe Tecnologia</h4>
+        <p>E-mail: <a href="mailto:contato@teffe.com.br">contato@teffe.com.br</a><br/>
+        Telefone: (14) 99828-9248<br/>
+        Horário de atendimento: segunda a sexta, das 8h às 18h</p>
+      </div>
+      <a href="mailto:contato@teffe.com.br" class="pp-contact-btn">Enviar e-mail →</a>
+    </div>
+  </div>
+  <hr class="pp-divider"/>
+
+  <!-- Vigência -->
+  <div class="pp-section">
+    <h2>Vigência e atualizações desta Política</h2>
+    <p>Esta Política de Privacidade pode ser atualizada periodicamente para refletir mudanças na legislação, nos nossos serviços ou nas práticas de tratamento de dados. A versão mais recente estará sempre disponível nesta página.</p>
+    <div class="pp-vigencia">
+      <i class="ti ti-calendar-check"></i>
+      <span><strong>Data de vigência desta versão: junho de 2026.</strong><br/>
+      Última atualização: junho de 2026. Versão 1.0.</span>
+    </div>
+  </div>
+
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-top">
+      <div class="footer-brand">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 580 175" style="height:44px;width:auto;">
+  <polygon points="95,31 140,57 140,109 95,135 50,109 50,57" fill="none" stroke="#E07820" stroke-width="5" stroke-linejoin="round"/>
+  <polygon points="95,37 135,60 135,106 95,129 55,106 55,60" fill="#0E2248"/>
+  <polygon points="95,43 130,63 130,103 95,123 60,103 60,63" fill="#1A2E5A"/>
+  <rect x="78" y="62" width="34" height="6" rx="2.5" fill="#E07820"/>
+  <rect x="91" y="62" width="7" height="30" rx="2.5" fill="#E07820"/>
+  <line x1="140" y1="57" x2="163" y2="44" stroke="#E07820" stroke-width="1.8"/><circle cx="166" cy="42" r="3.8" fill="#E07820"/>
+  <line x1="140" y1="109" x2="163" y2="122" stroke="#E07820" stroke-width="1.8"/><circle cx="166" cy="124" r="3.8" fill="#E07820"/>
+  <line x1="95" y1="135" x2="95" y2="158" stroke="#E07820" stroke-width="1.8"/><circle cx="95" cy="161" r="3.8" fill="#E07820"/>
+  <line x1="50" y1="109" x2="27" y2="122" stroke="#E07820" stroke-width="1.8"/><circle cx="24" cy="124" r="3.8" fill="#E07820"/>
+  <line x1="50" y1="57" x2="27" y2="44" stroke="#E07820" stroke-width="1.8"/><circle cx="24" cy="42" r="3.8" fill="#E07820"/>
+  <text font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="76" x="200" y="103">
+    <tspan fill="#ffffff">TE</tspan><tspan fill="#E07820">FFE</tspan>
+  </text>
+  <rect x="200" y="111" width="310" height="3" rx="1.5" fill="#E07820"/>
+  <text x="202" y="139" font-family="Arial, sans-serif" font-weight="700" font-size="15" fill="#E07820" letter-spacing="6">TECNOLOGIA</text>
+</svg>
+        </div>
+        <p>Outsourcing de impressão e TI para empresas que querem crescer sem preocupação com infraestrutura tecnológica.</p>
+        <div class="footer-slogan">Tecnologia que você pode confiar.</div>
+      </div>
+      <div class="footer-col"><h4>Soluções</h4><ul>
+        <li><a href="index.html">Teffe IA</a></li>
+        <li><a href="index.html">Impressora Laser</a></li>
+        <li><a href="index.html">Jato de Tinta</a></li>
+        <li><a href="index.html">Plotter</a></li>
+        <li><a href="index.html">Etiquetas</a></li>
+        <li><a href="index.html">Notebook</a></li>
+        <li><a href="index.html">Desktop</a></li>
+      </ul></div>
+      <div class="footer-col"><h4>Institucional</h4><ul>
+        <li><a href="index.html">Quem somos</a></li>
+        <li><a href="index.html">Trabalhe conosco</a></li>
+        <li><a href="index.html">Teffe EcoTech</a></li>
+        <li><a href="index.html">Área do Cliente</a></li>
+        <li><a href="politica-de-privacidade.html" style="color:var(--gold);">Política de Privacidade</a></li>
+      </ul></div>
+      <div class="footer-col"><h4>Contato</h4><ul>
+        <li><span>(14) 99828-9248</span></li>
+        <li><span>contato@teffe.com.br</span></li>
+      </ul></div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 <a href="index.html">Teffe</a>. Todos os direitos reservados.</span>
+      <span>Tecnologia que você pode confiar.</span>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
