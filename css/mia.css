@@ -11,25 +11,15 @@
   width: 64px;
   height: 64px;
   border-radius: 50%;
-  background: #4C1D95;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  background: #4C1D95 url('../assets/images/mia-avatar.png') center top / cover no-repeat;
   cursor: pointer;
   box-shadow: 0 4px 20px rgba(76,29,149,.45);
-  transition: box-shadow .25s, background .25s;
+  transition: box-shadow .25s;
   overflow: hidden;
 }
 /* Sem transform no hover — transform criaria containing block e quebraria o ::before fixed */
 .mia-btn:hover {
-  background: #5d24b5;
   box-shadow: 0 6px 32px rgba(76,29,149,.7);
-}
-.mia-btn i {
-  font-size: 28px;
-  color: #fff;
-  position: relative;
-  z-index: 1;
 }
 
 /* Tooltip via ::before (position: fixed funciona pois pai não tem transform) */
@@ -124,19 +114,13 @@
   gap: 11px;
 }
 .mia-avatar {
-  width: 38px;
-  height: 38px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
-  background: #E07820;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: 'Syne', sans-serif;
-  font-size: 17px;
-  font-weight: 700;
-  color: #fff;
+  overflow: hidden;
+  object-fit: cover;
+  object-position: center top;
   flex-shrink: 0;
-  border: 2px solid rgba(255,255,255,.25);
 }
 .mia-header-name {
   font-family: 'Syne', sans-serif;
@@ -204,17 +188,12 @@
 .mia-msg-user { align-self: flex-end; flex-direction: row-reverse; }
 
 .mia-msg-avatar {
-  width: 26px;
-  height: 26px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
-  background: #1A3F80;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: 'Syne', sans-serif;
-  font-size: 11px;
-  font-weight: 700;
-  color: #fff;
+  overflow: hidden;
+  object-fit: cover;
+  object-position: center top;
   flex-shrink: 0;
 }
 .mia-msg-bubble {

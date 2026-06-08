@@ -232,9 +232,10 @@ function _miaAddMsg(quem, html) {
   row.className = 'mia-msg mia-msg-' + quem;
 
   if (quem === 'bot') {
-    var av = document.createElement('div');
+    var av = document.createElement('img');
+    av.src = 'assets/images/mia-avatar.png';
+    av.alt = 'Mia';
     av.className = 'mia-msg-avatar';
-    av.textContent = 'M';
     row.appendChild(av);
   }
 
@@ -254,9 +255,10 @@ function _miaShowTyping() {
   row.className = 'mia-msg mia-msg-bot mia-typing';
   row.id = 'mia-typing';
 
-  var av = document.createElement('div');
+  var av = document.createElement('img');
+  av.src = 'assets/images/mia-avatar.png';
+  av.alt = 'Mia';
   av.className = 'mia-msg-avatar';
-  av.textContent = 'M';
 
   var bubble = document.createElement('div');
   bubble.className = 'mia-msg-bubble';
