@@ -201,6 +201,24 @@ let _rsToken=null;
   document.getElementById('rs-conf').addEventListener('keydown',function(e){
     if(e.key==='Enter') rsConfirmar();
   });
+
+  // Ícone de olho nos campos de senha
+  document.querySelectorAll('input[type="password"]').forEach(function(inp){
+    var wrap=document.createElement('div');
+    wrap.className='pwd-wrap';
+    inp.parentNode.insertBefore(wrap,inp);
+    wrap.appendChild(inp);
+    inp.style.paddingRight='42px';
+    var btn=document.createElement('button');
+    btn.type='button';btn.className='pwd-eye';btn.tabIndex=-1;
+    btn.innerHTML='<i class="ti ti-eye"></i>';
+    btn.addEventListener('click',function(){
+      var show=inp.type==='password';
+      inp.type=show?'text':'password';
+      btn.innerHTML=show?'<i class="ti ti-eye-off"></i>':'<i class="ti ti-eye"></i>';
+    });
+    wrap.appendChild(btn);
+  });
 })();
 
 function rsShow(id){

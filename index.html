@@ -2068,9 +2068,18 @@
       <div class="ac-form-card">
         <div class="ac-fg">
           <label class="ac-label">Número de série ou código do equipamento *</label>
-          <div class="ac-search-row">
-            <input type="text" id="at-serial" class="ac-input" placeholder="Ex: SRV12345 ou EQ-001"/>
-            <button class="ac-search-btn" onclick="buscarEquipAC('at')"><i class="ti ti-search"></i> Buscar</button>
+          <div class="ac-equip-ac" id="at-equip-ac">
+            <input type="text" id="at-serial" class="ac-input"
+              placeholder="Selecione ou digite o serial/código..."
+              oninput="equipAcFiltrar('at')"
+              onfocus="equipAcAbrir('at')"
+              onblur="equipAcBlur('at')"
+              autocomplete="off"/>
+            <button type="button" class="ac-equip-ac-btn"
+              onmousedown="event.preventDefault();equipAcToggle('at')" tabindex="-1">
+              <i class="ti ti-chevron-down" id="at-ac-arrow"></i>
+            </button>
+            <div class="ac-equip-ac-list" id="at-ac-list"></div>
           </div>
           <div id="at-equip-info" class="ac-equip-info" style="display:none;"></div>
         </div>
@@ -2105,9 +2114,18 @@
       <div class="ac-form-card">
         <div class="ac-fg">
           <label class="ac-label">Número de série ou código do equipamento *</label>
-          <div class="ac-search-row">
-            <input type="text" id="sp-serial" class="ac-input" placeholder="Ex: SRV12345 ou EQ-001"/>
-            <button class="ac-search-btn" onclick="buscarEquipAC('sp')"><i class="ti ti-search"></i> Buscar</button>
+          <div class="ac-equip-ac" id="sp-equip-ac">
+            <input type="text" id="sp-serial" class="ac-input"
+              placeholder="Selecione ou digite o serial/código..."
+              oninput="equipAcFiltrar('sp')"
+              onfocus="equipAcAbrir('sp')"
+              onblur="equipAcBlur('sp')"
+              autocomplete="off"/>
+            <button type="button" class="ac-equip-ac-btn"
+              onmousedown="event.preventDefault();equipAcToggle('sp')" tabindex="-1">
+              <i class="ti ti-chevron-down" id="sp-ac-arrow"></i>
+            </button>
+            <div class="ac-equip-ac-list" id="sp-ac-list"></div>
           </div>
           <div id="sp-equip-info" class="ac-equip-info" style="display:none;"></div>
         </div>

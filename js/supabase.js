@@ -1,6 +1,7 @@
 const SURL='https://hlfjcpgrxiktgctozilk.supabase.co';
 const SKEY='sb_publishable_-Iu8PbqhLeZAXSBcczr2mQ_lzlGr4_g';
 let _tok=null,_uid=null,_cid=null,_atEquipId=null,_spEquipId=null,_spUltimoContador=null,_chamadosCache={};
+let _equipsAC=[];
 
 // ── TIMER DE INATIVIDADE (5 min) ──
 const INATIVIDADE_MS=5*60*1000;
@@ -382,8 +383,9 @@ ${isAssistencia?`<div class="os-section">
 // ── EQUIPAMENTOS ──
 async function carregarEquips(){
   const el=document.getElementById('lista-equip');
-  if(!_cid){el.innerHTML='<div class="ac-empty">Nenhum equipamento.</div>';document.getElementById('n-equip').textContent='0';return;}
+  if(!_cid){el.innerHTML='<div class="ac-empty">Nenhum equipamento.</div>';document.getElementById('n-equip').textContent='0';_equipsAC=[];return;}
   const {data:rows}=await sf('/rest/v1/equipamentos?cliente_id=eq.'+_cid+'&select=*');
+  _equipsAC=rows||[];
   document.getElementById('n-equip').textContent=rows?rows.length:0;
   if(!rows||!rows.length){el.innerHTML='<div class="ac-empty">Nenhum equipamento.</div>';return;}
   el.innerHTML='<table class="ac-table"><thead><tr><th>Modelo</th><th>Marca</th><th>Série</th><th>Código</th><th>Local</th><th>Status</th></tr></thead><tbody>'+
@@ -602,9 +604,125 @@ function acMostrarArquivo(textId,input){
   if(input.files&&input.files[0]) document.getElementById(textId).textContent=input.files[0].name;
 }
 
-window.addEventListener('DOMContentLoaded',()=>{
+// ── ÍCONE DE OLHO EM CAMPOS DE SENHA ──
+function initPasswordToggles(){
+  document.querySelectorAll('input[type="password"]').forEach(function(inp){
+    if(inp.dataset.pwdInit) return;
+    inp.dataset.pwdInit='1';
+    const wrap=document.createElement('div');
+    wrap.className='pwd-wrap';
+    inp.parentNode.insertBefore(wrap,inp);
+    wrap.appendChild(inp);
+    inp.style.paddingRight='42px';
+    const btn=document.createElement('button');
+    btn.type='button';btn.className='pwd-eye';btn.tabIndex=-1;
+    btn.setAttribute('aria-label','Mostrar/ocultar senha');
+    btn.innerHTML='<i class="ti ti-eye"></i>';
+    btn.addEventListener('click',function(){
+      const show=inp.type==='password';
+      inp.type=show?'text':'password';
+      btn.innerHTML=show?'<i class="ti ti-eye-off"></i>':'<i class="ti ti-eye"></i>';
+    });
+    wrap.appendChild(btn);
+  });
+}
+
+// ── AUTOCOMPLETE DE EQUIPAMENTOS ──
+function equipAcRenderList(p,equips){
+  const list=document.getElementById(p+'-ac-list');
+  if(!list) return;
+  if(!equips||!equips.length){
+    list.innerHTML='<div class="ac-equip-ac-empty">Nenhum equipamento encontrado.</div>';
+    return;
+  }
+  list.innerHTML=equips.map(function(e){
+    const nome=[e.marca,e.modelo].filter(Boolean).join(' ')||'Equipamento';
+    const sub=[e.codigo&&'Cód: '+e.codigo,e.serial&&'Série: '+e.serial].filter(Boolean).join(' · ');
+    return '<div class="ac-equip-ac-item" data-id="'+e.id+'" data-p="'+p+'">'+
+      '<span class="ac-equip-ac-nome">'+nome+'</span>'+
+      (sub?'<span class="ac-equip-ac-sub">'+sub+'</span>':'')+
+      '</div>';
+  }).join('');
+  list.querySelectorAll('.ac-equip-ac-item').forEach(function(item){
+    item.addEventListener('mousedown',function(e){
+      e.preventDefault();
+      const eq=_equipsAC.find(function(x){return x.id===item.dataset.id;});
+      if(eq) equipAcSelecionar(item.dataset.p,eq);
+    });
+  });
+}
+function equipAcAbrir(p){
+  const list=document.getElementById(p+'-ac-list');
+  if(!list) return;
+  const q=document.getElementById(p+'-serial').value.trim().toLowerCase();
+  const filtrados=q?_equipsAC.filter(function(e){
+    return (e.serial&&e.serial.toLowerCase().includes(q))||
+           (e.codigo&&e.codigo.toLowerCase().includes(q))||
+           (e.modelo&&e.modelo.toLowerCase().includes(q))||
+           (e.marca&&e.marca.toLowerCase().includes(q));
+  }):_equipsAC;
+  equipAcRenderList(p,filtrados);
+  list.style.display='block';
+  const arrow=document.getElementById(p+'-ac-arrow');
+  if(arrow) arrow.className='ti ti-chevron-up';
+}
+function equipAcFiltrar(p){
+  // Limpa seleção anterior se o usuário voltou a digitar
+  if(p==='at'){_atEquipId=null;}else{_spEquipId=null;}
+  const infoEl=document.getElementById(p+'-equip-info');
+  if(infoEl) infoEl.style.display='none';
+  equipAcAbrir(p);
+}
+function equipAcToggle(p){
+  const list=document.getElementById(p+'-ac-list');
+  if(!list) return;
+  if(list.style.display==='block'){
+    list.style.display='none';
+    const arrow=document.getElementById(p+'-ac-arrow');
+    if(arrow) arrow.className='ti ti-chevron-down';
+  } else {
+    document.getElementById(p+'-serial').focus();
+    equipAcAbrir(p);
+  }
+}
+function equipAcBlur(p){
+  setTimeout(function(){
+    const list=document.getElementById(p+'-ac-list');
+    if(list) list.style.display='none';
+    const arrow=document.getElementById(p+'-ac-arrow');
+    if(arrow) arrow.className='ti ti-chevron-down';
+    // Fallback: se digitou algo manualmente sem selecionar do dropdown, tenta buscar
+    const val=(document.getElementById(p+'-serial').value||'').trim();
+    const jaEncontrado=p==='at'?!!_atEquipId:!!_spEquipId;
+    if(val&&!jaEncontrado) buscarEquipAC(p);
+  },160);
+}
+function equipAcSelecionar(p,eq){
+  const label=[eq.marca,eq.modelo].filter(Boolean).join(' ')||eq.serial||eq.codigo||'Equipamento';
+  document.getElementById(p+'-serial').value=eq.serial||eq.codigo||label;
+  const list=document.getElementById(p+'-ac-list');
+  if(list) list.style.display='none';
+  const arrow=document.getElementById(p+'-ac-arrow');
+  if(arrow) arrow.className='ti ti-chevron-down';
+  if(p==='at') _atEquipId=eq.id;
+  else{_spEquipId=eq.id;carregarInsumos(eq.modelo);}
+  const infoEl=document.getElementById(p+'-equip-info');
+  if(infoEl){
+    infoEl.style.display='block';
+    infoEl.className='ac-equip-info ac-equip-found';
+    infoEl.innerHTML='<div class="ac-equip-found-grid">'+
+      '<div><span class="ac-equip-lbl">Modelo</span><span class="ac-equip-val">'+(eq.modelo||'–')+'</span></div>'+
+      '<div><span class="ac-equip-lbl">Marca</span><span class="ac-equip-val">'+(eq.marca||'–')+'</span></div>'+
+      '<div><span class="ac-equip-lbl">Série</span><span class="ac-equip-val">'+(eq.serial||'–')+'</span></div>'+
+      '<div><span class="ac-equip-lbl">TEFFE</span><span class="ac-equip-val">'+(eq.codigo||'–')+'</span></div>'+
+      '</div>';
+  }
+}
+
+window.addEventListener('DOMContentLoaded',function(){
   const t=localStorage.getItem('tt'),u=localStorage.getItem('tu');
   if(t&&u){_tok=t;_uid=u;} // Restaura tokens mas NÃO abre área do cliente automaticamente
+  initPasswordToggles();
 });
 
 // ═══════════════════════════════════════════════════
