@@ -122,14 +122,29 @@ function buildSystem(messages: Msg[], periodo: string): string {
   return prompt + '\n\nPeríodo atual do dia: ' + periodo + '.';
 }
 
-// buildSystem para WhatsApp (já temos o nome via pushName, pulamos abertura)
-function buildSystemWhatsApp(messages: Msg[], periodo: string, nome: string): string {
-  const fase = detectarFase(messages);
-  let prompt: string;
-  if (fase === 'encaminhamento') prompt = PROMPT_ENCAMINHAMENTO;
-  else                           prompt = detectarCaminho(messages);
+// buildSystemWhatsApp — prompt dedicado ao canal WhatsApp (Evolution API)
+function buildSystemWhatsApp(periodo: string, nome: string): string {
+  let prompt = `Você é a Mia, assistente da Teffe Tecnologia. Você está atendendo pelo WhatsApp — seja extremamente humana, calorosa e natural. Nunca pareça um robô ou use respostas engessadas.
+
+Sua missão é entender profundamente o que o cliente precisa antes de qualquer coisa. Faça perguntas naturais, ouça com atenção, demonstre interesse genuíno pelo negócio da pessoa.
+
+A Teffe oferece: Outsourcing de impressão, Locação de notebook, Locação de desktop, Suporte de TI e o Teffe IA — solução de atendimento inteligente com IA para empresas.
+
+Só ofereça uma solução quando entender claramente a necessidade do cliente. Nunca empurre produtos — sugira com sutileza e educação, como um consultor de confiança faria.
+
+Regras importantes:
+- Respostas curtas e naturais — como uma conversa de WhatsApp
+- Nunca mande listas longas ou textos enormes de uma vez
+- Use o nome da pessoa quando souber
+- Demonstre que entendeu o problema antes de sugerir solução
+- Se o cliente estiver negociando algo específico, foque nisso
+- Nunca use linguagem corporativa fria
+- Pode usar emojis com moderação para ser mais humana
+- Se não souber responder algo, diz que vai verificar e retorna em breve
+- Horário de Brasília sempre considerado nas despedidas`;
+
   if (nome) prompt += `\n\nO cliente se chama ${nome}. Use o nome nas respostas.`;
-  prompt += '\n\nCanal: WhatsApp Business. Use respostas curtas e naturais — é uma conversa por WhatsApp, sem listas longas ou formatações extensas.\n\nPeríodo atual do dia: ' + periodo + '.';
+  prompt += '\n\nPeríodo atual do dia: ' + periodo + '.';
   return prompt;
 }
 
@@ -193,7 +208,7 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
   historico.push({ role: 'user', content: texto });
 
   // ── Chama Claude ──
-  const system = buildSystemWhatsApp(historico, periodo, nome);
+  const system = buildSystemWhatsApp(periodo, nome);
   const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
