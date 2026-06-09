@@ -3,13 +3,16 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'content-type',
 };
 
+const EVOLUTION_URL      = 'https://evolution-api-production-baf4.up.railway.app';
+const EVOLUTION_INSTANCE = 'teffe-mia';
+
 // ── Base de personalidade ──────────────────────────────────────────────────
 const BASE = 'Você é a Mia, assistente inteligente da Teffe Tecnologia. Personalidade humana, calorosa, natural e elegante — nunca pareça um robô. Respostas curtas e naturais, como uma conversa humana. Nunca mencione valores ou preços. Nunca use Sr./Sra./Srta. — apenas o nome. O cliente está sempre no comando, nunca pressione.';
 
-// ── Modo Suporte (cliente logado) ──────────────────────────────────────────
+// ── Modo Suporte (cliente logado na Área do Cliente) ──────────────────────
 const PROMPT_SUPORTE = 'Você é a Mia, assistente de suporte da Teffe. O cliente já está logado na área dele. NUNCA ofereça produtos ou serviços — ele já é cliente. Sua função é ajudar com qualquer dúvida relacionada à conta dele: contratos, boletos, chamados, suprimentos e equipamentos. Seja cordial, natural e humanizada — responda como um atendente de suporte experiente, não como um robô. Use o nome do cliente quando possível. Nunca tente vender nada.';
 
-// ── Fase 1: Abertura ───────────────────────────────────────────────────────
+// ── Fase 1: Abertura (site — ainda não sabemos o nome) ─────────────────────
 const PROMPT_ABERTURA = BASE + `
 
 Sua missão agora: descobrir o nome do visitante e, em seguida, perguntar o que a empresa mais precisa nesse momento.
@@ -80,7 +83,7 @@ Você já coletou as informações do visitante. Siga exatamente esta sequência
 4. Se não houver mais nada: despeça com "Foi um prazer falar com você, [Nome]! Tenha um excelente [período]!" usando o período correto do dia.
 Nunca use "em breve".`;
 
-// ── Detecção de fase ───────────────────────────────────────────────────────
+// ── Detecção de fase e caminho ─────────────────────────────────────────────
 type Msg = { role: string; content: string };
 
 function detectarFase(messages: Msg[]): 'abertura' | 'atendimento' | 'encaminhamento' {
@@ -109,6 +112,7 @@ function detectarCaminho(messages: Msg[]): string {
   return CAMINHO_5;
 }
 
+// buildSystem para o site (inclui fase de abertura para coletar o nome)
 function buildSystem(messages: Msg[], periodo: string): string {
   const fase = detectarFase(messages);
   let prompt: string;
@@ -118,16 +122,164 @@ function buildSystem(messages: Msg[], periodo: string): string {
   return prompt + '\n\nPeríodo atual do dia: ' + periodo + '.';
 }
 
-// ── Handler ────────────────────────────────────────────────────────────────
+// buildSystem para WhatsApp (já temos o nome via pushName, pulamos abertura)
+function buildSystemWhatsApp(messages: Msg[], periodo: string, nome: string): string {
+  const fase = detectarFase(messages);
+  let prompt: string;
+  if (fase === 'encaminhamento') prompt = PROMPT_ENCAMINHAMENTO;
+  else                           prompt = detectarCaminho(messages);
+  if (nome) prompt += `\n\nO cliente se chama ${nome}. Use o nome nas respostas.`;
+  prompt += '\n\nCanal: WhatsApp Business. Use respostas curtas e naturais — é uma conversa por WhatsApp, sem listas longas ou formatações extensas.\n\nPeríodo atual do dia: ' + periodo + '.';
+  return prompt;
+}
+
+// ── Handler WhatsApp (webhook Evolution API) ───────────────────────────────
+async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> {
+  // Só processa eventos de mensagem recebida
+  if (body.event !== 'messages.upsert') {
+    return new Response('OK', { status: 200 });
+  }
+
+  const data = (body.data ?? {}) as Record<string, unknown>;
+  const key  = (data.key ?? {}) as Record<string, unknown>;
+
+  // Ignora mensagens enviadas por nós mesmos
+  if (key.fromMe) return new Response('OK', { status: 200 });
+
+  const remoteJid = String(key.remoteJid ?? '');
+
+  // Ignora grupos
+  if (remoteJid.endsWith('@g.us')) return new Response('OK', { status: 200 });
+
+  // Extrai número limpo (somente dígitos)
+  const telefone = remoteJid.replace('@s.whatsapp.net', '').replace(/\D/g, '');
+  if (!telefone) return new Response('OK', { status: 200 });
+
+  // Extrai texto da mensagem (suporta texto simples e extendedTextMessage)
+  const msgObj = (data.message ?? {}) as Record<string, unknown>;
+  const texto  = String(
+    msgObj.conversation ??
+    ((msgObj.extendedTextMessage as Record<string, unknown>)?.text) ??
+    ((msgObj.imageMessage as Record<string, unknown>)?.caption) ??
+    ''
+  ).trim();
+
+  if (!texto) return new Response('OK', { status: 200 });
+
+  const nome = String(data.pushName ?? '');
+
+  const h      = (new Date().getUTCHours() + 21) % 24; // UTC-3
+  const periodo = h >= 5 && h < 12 ? 'manhã' : h >= 12 && h < 18 ? 'tarde' : 'noite';
+
+  const supabaseUrl  = Deno.env.get('SUPABASE_URL') ?? '';
+  const serviceKey   = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+  const apiKey       = Deno.env.get('ANTHROPIC_API_KEY') ?? '';
+  const evolutionKey = Deno.env.get('EVOLUTION_API_KEY') ?? '';
+
+  // ── Carrega histórico da conversa ──
+  let historico: Msg[] = [];
+  try {
+    const histRes = await fetch(
+      `${supabaseUrl}/rest/v1/mia_conversas_whatsapp?telefone=eq.${encodeURIComponent(telefone)}&select=historico`,
+      { headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` } }
+    );
+    if (histRes.ok) {
+      const rows = await histRes.json() as Array<{ historico: Msg[] }>;
+      if (rows.length > 0) historico = rows[0].historico ?? [];
+    }
+  } catch (_) { /* começa do zero se o banco falhar */ }
+
+  // Adiciona mensagem do usuário
+  historico.push({ role: 'user', content: texto });
+
+  // ── Chama Claude ──
+  const system = buildSystemWhatsApp(historico, periodo, nome);
+  const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 600,
+      system,
+      messages: historico,
+    }),
+  });
+
+  const claudeData = await claudeRes.json() as { content?: Array<{ text: string }> };
+  const raw        = claudeData.content?.[0]?.text ?? '';
+  const isLead     = raw.startsWith('[LEAD_PRONTO]');
+  const resposta   = isLead ? raw.replace('[LEAD_PRONTO]', '').trim() : raw;
+
+  if (!resposta) return new Response('OK', { status: 200 });
+
+  // Adiciona resposta ao histórico
+  historico.push({ role: 'assistant', content: resposta });
+
+  // Mantém histórico em no máximo 40 mensagens
+  if (historico.length > 40) historico = historico.slice(-40);
+
+  // ── Salva histórico no Supabase (upsert) ──
+  fetch(
+    `${supabaseUrl}/rest/v1/mia_conversas_whatsapp?on_conflict=telefone`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: serviceKey,
+        Authorization: `Bearer ${serviceKey}`,
+        Prefer: 'resolution=merge-duplicates',
+      },
+      body: JSON.stringify({ telefone, historico, updated_at: new Date().toISOString() }),
+    }
+  ).catch(console.error);
+
+  // ── Envia resposta via Evolution API ──
+  fetch(`${EVOLUTION_URL}/message/sendText/${EVOLUTION_INSTANCE}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      apikey: evolutionKey,
+    },
+    body: JSON.stringify({ number: telefone, text: resposta }),
+  }).catch(console.error);
+
+  // ── Salva lead se identificado ──
+  if (isLead) {
+    fetch(`${supabaseUrl}/functions/v1/mia-salvar-lead`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${serviceKey}`,
+      },
+      body: JSON.stringify({ nome, historico, canal: 'whatsapp', telefone }),
+    }).catch(console.error);
+  }
+
+  return new Response('OK', { status: 200 });
+}
+
+// ── Handler principal ──────────────────────────────────────────────────────
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { messages, modo, cliente_nome } = await req.json();
+    const body = await req.json();
 
-    const h = (new Date().getUTCHours() + 21) % 24; // UTC-3 Brasília
+    // Detecta webhook do Evolution API pela presença de `event` + `instance`
+    if (body.event && body.instance === EVOLUTION_INSTANCE) {
+      return await handleWhatsApp(body as Record<string, unknown>);
+    }
+
+    // ── Fluxo normal do site ──
+    const { messages, modo, cliente_nome } = body;
+
+    const h      = (new Date().getUTCHours() + 21) % 24; // UTC-3
     const periodo = h >= 5 && h < 12 ? 'manhã' : h >= 12 && h < 18 ? 'tarde' : 'noite';
 
     const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
@@ -171,10 +323,9 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const raw = data.content?.[0]?.text ?? '';
-    // salvar_lead só faz sentido no modo vendas
+    const raw        = data.content?.[0]?.text ?? '';
     const salvar_lead = modo !== 'suporte' && raw.startsWith('[LEAD_PRONTO]');
-    const text = salvar_lead ? raw.replace('[LEAD_PRONTO]', '').trim() : raw;
+    const text       = salvar_lead ? raw.replace('[LEAD_PRONTO]', '').trim() : raw;
 
     return new Response(JSON.stringify({ text, salvar_lead }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
