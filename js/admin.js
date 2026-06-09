@@ -39,7 +39,8 @@ async function admVerificarRole(uid,token){
 
 function admMostrarLogin(){
   console.log('ADMIN: mostrando login');
-  document.documentElement.classList.add('no-scroll');
+  document.documentElement.classList.add('no-scroll','mia-oculta');
+  if(typeof miaFecharChat==='function') miaFecharChat();
   document.getElementById('admin-panel').style.display='block';
   document.getElementById('adm-login-bg').classList.add('open');
   history.replaceState(null,'','#admin');
@@ -48,7 +49,7 @@ function admMostrarLogin(){
 function admAcessoNegado(){
   _admUid=null;_admNome='';_admTecs=[];
   _supabase.auth.signOut();
-  document.documentElement.classList.remove('no-scroll');
+  document.documentElement.classList.remove('no-scroll','mia-oculta');
   document.getElementById('admin-panel').style.display='none';
   document.getElementById('adm-login-bg').classList.remove('open');
   history.replaceState(null,'','#cliente');
@@ -105,7 +106,7 @@ async function admFazerLogin(){
 function admFazerLogout(){
   _admUid=null;_admNome='';_admTecs=[];
   _supabase.auth.signOut();
-  document.documentElement.classList.remove('no-scroll');
+  document.documentElement.classList.remove('no-scroll','mia-oculta');
   localStorage.clear();
   window.location.href='https://teffe.com.br';
 }

@@ -3,8 +3,11 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'content-type',
 };
 
-// ── Base de personalidade reutilizada em todos os prompts ──────────────────
+// ── Base de personalidade ──────────────────────────────────────────────────
 const BASE = 'Você é a Mia, assistente inteligente da Teffe Tecnologia. Personalidade humana, calorosa, natural e elegante — nunca pareça um robô. Respostas curtas e naturais, como uma conversa humana. Nunca mencione valores ou preços. Nunca use Sr./Sra./Srta. — apenas o nome. O cliente está sempre no comando, nunca pressione.';
+
+// ── Modo Suporte (cliente logado) ──────────────────────────────────────────
+const PROMPT_SUPORTE = 'Você é a Mia, assistente de suporte da Teffe. O cliente já está logado na área dele. NUNCA ofereça produtos ou serviços — ele já é cliente. Sua função é ajudar com qualquer dúvida relacionada à conta dele: contratos, boletos, chamados, suprimentos e equipamentos. Seja cordial, natural e humanizada — responda como um atendente de suporte experiente, não como um robô. Use o nome do cliente quando possível. Nunca tente vender nada.';
 
 // ── Fase 1: Abertura ───────────────────────────────────────────────────────
 const PROMPT_ABERTURA = BASE + `
@@ -83,7 +86,6 @@ type Msg = { role: string; content: string };
 function detectarFase(messages: Msg[]): 'abertura' | 'atendimento' | 'encaminhamento' {
   const botMsgs = messages.filter(m => m.role === 'assistant');
 
-  // Fase 3: bot já perguntou forma de contato
   const jaEncaminhou = botMsgs.some(m => {
     const c = m.content.toLowerCase();
     return c.includes('whatsapp, e-mail ou ligação') ||
@@ -92,7 +94,6 @@ function detectarFase(messages: Msg[]): 'abertura' | 'atendimento' | 'encaminham
   });
   if (jaEncaminhou) return 'encaminhamento';
 
-  // Fase 1: conversa muito inicial (antes da necessidade ser revelada)
   const userMsgs = messages.filter(m => m.role === 'user');
   if (userMsgs.length <= 1) return 'abertura';
 
@@ -111,9 +112,9 @@ function detectarCaminho(messages: Msg[]): string {
 function buildSystem(messages: Msg[], periodo: string): string {
   const fase = detectarFase(messages);
   let prompt: string;
-  if (fase === 'abertura')       prompt = PROMPT_ABERTURA;
+  if (fase === 'abertura')            prompt = PROMPT_ABERTURA;
   else if (fase === 'encaminhamento') prompt = PROMPT_ENCAMINHAMENTO;
-  else                           prompt = detectarCaminho(messages);
+  else                                prompt = detectarCaminho(messages);
   return prompt + '\n\nPeríodo atual do dia: ' + periodo + '.';
 }
 
@@ -124,7 +125,7 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const { messages } = await req.json();
+    const { messages, modo, cliente_nome } = await req.json();
 
     const h = (new Date().getUTCHours() + 21) % 24; // UTC-3 Brasília
     const periodo = h >= 5 && h < 12 ? 'manhã' : h >= 12 && h < 18 ? 'tarde' : 'noite';
@@ -137,7 +138,14 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const system = buildSystem(messages as Msg[], periodo);
+    let system: string;
+    if (modo === 'suporte') {
+      system = PROMPT_SUPORTE;
+      if (cliente_nome) system += `\n\nO cliente se chama ${cliente_nome}.`;
+      system += '\n\nPeríodo atual do dia: ' + periodo + '.';
+    } else {
+      system = buildSystem(messages as Msg[], periodo);
+    }
 
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -164,7 +172,8 @@ Deno.serve(async (req: Request) => {
     }
 
     const raw = data.content?.[0]?.text ?? '';
-    const salvar_lead = raw.startsWith('[LEAD_PRONTO]');
+    // salvar_lead só faz sentido no modo vendas
+    const salvar_lead = modo !== 'suporte' && raw.startsWith('[LEAD_PRONTO]');
     const text = salvar_lead ? raw.replace('[LEAD_PRONTO]', '').trim() : raw;
 
     return new Response(JSON.stringify({ text, salvar_lead }), {

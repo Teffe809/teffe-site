@@ -292,6 +292,11 @@
 .mia-send:disabled { opacity: .5; cursor: not-allowed; transform: none; }
 
 /* ── Responsivo ── */
+/* ── Oculta Mia nos portais internos ── */
+html.mia-oculta #mia-btn,
+html.mia-oculta #mia-tooltip,
+html.mia-oculta #mia-chat { display: none !important; }
+
 @media (max-width: 480px) {
   .mia-chat {
     left: 10px;

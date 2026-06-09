@@ -159,8 +159,10 @@ async function carregarArea(){
   const {data:cl}=await sf('/rest/v1/clientes?user_id=eq.'+_uid+'&limit=1&select=*');
   const c=cl&&cl[0];
   _cid=c?c.id:null;
-  document.getElementById('ac-nome').textContent=c?c.nome.split(' ')[0]:'Cliente';
+  const primeiroNome=c?c.nome.split(' ')[0]:'cliente';
+  document.getElementById('ac-nome').textContent=primeiroNome;
   document.getElementById('ac-empresa').textContent=c?c.empresa:'Minha Área';
+  if(typeof miaIniciarSupporte==='function') setTimeout(function(){miaIniciarSupporte(primeiroNome);},1500);
   acMostrarView('dash');
   carregarChamados();
   carregarEquips();
@@ -752,7 +754,8 @@ async function tecInit(){
   if(tok&&uid&&id&&nome){
     _tecTok=tok;_tecUid=uid;_tecId=id;_tecNome=nome;
     document.getElementById('tec-nome-display').textContent=_tecNome;
-    document.documentElement.classList.add('no-scroll');
+    document.documentElement.classList.add('no-scroll','mia-oculta');
+    if(typeof miaFecharChat==='function') miaFecharChat();
     document.getElementById('portal-tecnico').style.display='block';
     history.replaceState(null,'','#portaltecnico');
     await tecCarregarChamados();
@@ -798,7 +801,8 @@ async function tecFazerLogin(){
   document.getElementById('tec-login-bg').classList.remove('open');
   document.getElementById('tec-nome-display').textContent=_tecNome;
   document.getElementById('tec-email').value='';document.getElementById('tec-senha').value='';
-  document.documentElement.classList.add('no-scroll');
+  document.documentElement.classList.add('no-scroll','mia-oculta');
+  if(typeof miaFecharChat==='function') miaFecharChat();
   document.getElementById('portal-tecnico').style.display='block';
   history.replaceState(null,'','#portaltecnico');
   await tecCarregarChamados();
@@ -812,7 +816,7 @@ function tecFecharLogin(){
 function tecFazerLogout(){
   _tecTok=null;_tecUid=null;_tecId=null;_tecNome='';_tecChamadoAtual=null;_tecChamadosData={};
   ['tec_tok','tec_uid','tec_id','tec_nome'].forEach(k=>localStorage.removeItem(k));
-  document.documentElement.classList.remove('no-scroll');
+  document.documentElement.classList.remove('no-scroll','mia-oculta');
   document.getElementById('portal-tecnico').style.display='none';
   window.location.href='https://teffe.com.br';
 }

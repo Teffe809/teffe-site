@@ -12,10 +12,25 @@ var _miaIniciado  = false;
 var _miaEtapa     = 'inicio';  // inicio | aguardando-nome | conversa
 var _miaNome      = '';
 var _miaHistorico = []; // [{role, content}] enviado à Claude API
-var _miaLeadSalvo = false; // garante envio único por sessão
+var _miaLeadSalvo = false;
+var _MIA_MODO     = 'vendas'; // 'vendas' | 'suporte'
+
+/* ── Verifica se Mia deve operar neste contexto ── */
+function _miaContextoValido() {
+  var h = location.hash;
+  return h !== '#portaltecnico' && h !== '#admin' && h !== '#paineladmin';
+}
+
+/* ── Fecha o chat (chamado ao abrir portais internos) ── */
+function miaFecharChat() {
+  _miaAberto = false;
+  var chat = document.getElementById('mia-chat');
+  if (chat) chat.classList.remove('open');
+}
 
 /* ── Toggle abrir/fechar ── */
 function miaToggle() {
+  if (!_miaContextoValido()) return;
   var chat = document.getElementById('mia-chat');
   var btn  = document.getElementById('mia-btn');
   _miaAberto = !_miaAberto;
@@ -36,11 +51,33 @@ function miaToggle() {
   }
 }
 
-/* ── Sequência de boas-vindas (gerida localmente, sem chamar a API) ── */
+/* ── Inicializa Mia no Modo Suporte (chamada por supabase.js após login do cliente) ── */
+function miaIniciarSupporte(nomeCliente) {
+  if (!_miaContextoValido()) return;
+  _MIA_MODO    = 'suporte';
+  _miaNome     = nomeCliente || 'cliente';
+  _miaIniciado = false;
+  _miaEtapa    = 'inicio';
+  _miaHistorico = [];
+  _miaLeadSalvo = false;
+  var wrap = document.getElementById('mia-messages');
+  if (wrap) wrap.innerHTML = '';
+  // Abre o chat automaticamente
+  if (!_miaAberto) miaToggle();
+}
+
+/* ── Sequência de boas-vindas ── */
 function _miaBoasVindas() {
   _miaEtapa = 'inicio';
-  _miaInputEnabled(false);
+  if (_MIA_MODO === 'suporte') {
+    _miaBoasVindasSupporte();
+  } else {
+    _miaBoasVindasVendas();
+  }
+}
 
+function _miaBoasVindasVendas() {
+  _miaInputEnabled(false);
   var msg1 = 'Olá! Eu sou a Mia, assistente inteligente da Teffe. Vamos descobrir juntos o que podemos fazer para sua empresa crescer mais? 😊';
   var msg2 = 'Antes de começar, como posso te chamar?';
 
@@ -48,7 +85,6 @@ function _miaBoasVindas() {
   setTimeout(function() {
     _miaRemoveTyping();
     _miaAddMsg('bot', msg1.replace('Mia', '<strong>Mia</strong>'));
-
     setTimeout(function() {
       _miaShowTyping();
       setTimeout(function() {
@@ -61,6 +97,25 @@ function _miaBoasVindas() {
       }, 1000);
     }, 700);
   }, 1300);
+}
+
+function _miaBoasVindasSupporte() {
+  _miaInputEnabled(false);
+  var saudacao = 'Olá, <strong>' + _miaEsc(_miaNome) + '</strong>! Em que posso te ajudar hoje? 😊';
+
+  _miaShowTyping();
+  setTimeout(function() {
+    _miaRemoveTyping();
+    _miaAddMsg('bot', saudacao);
+    // Semeia histórico para a API ter contexto da saudação
+    _miaHistorico = [
+      { role: 'assistant', content: 'Olá, ' + _miaNome + '! Em que posso te ajudar hoje?' }
+    ];
+    _miaEtapa = 'conversa';
+    _miaInputEnabled(true);
+    var inp = document.getElementById('mia-input');
+    if (inp) { inp.placeholder = 'Como posso te ajudar?'; inp.focus(); }
+  }, 900);
 }
 
 /* ── Enviar mensagem ── */
@@ -82,7 +137,6 @@ function miaSend() {
 
     var respostaNome = 'Prazer, ' + _miaNome + '! O que sua empresa mais precisa nesse momento?';
 
-    // Semeia o histórico com a troca de nomes para a API ter contexto
     _miaHistorico = [
       { role: 'assistant', content: 'Olá! Eu sou a Mia, assistente inteligente da Teffe. Vamos descobrir juntos o que podemos fazer para sua empresa crescer mais?' },
       { role: 'user',      content: texto },
@@ -112,10 +166,16 @@ async function _miaResponder(msg) {
   _miaShowTyping();
 
   try {
+    var payload = { messages: _miaHistorico };
+    if (_MIA_MODO === 'suporte') {
+      payload.modo = 'suporte';
+      payload.cliente_nome = _miaNome;
+    }
+
     var res = await fetch(_MIA_EDGE, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages: _miaHistorico })
+      body: JSON.stringify(payload)
     });
 
     var data = await res.json();
@@ -124,7 +184,7 @@ async function _miaResponder(msg) {
       _miaRemoveTyping();
       console.error('[Mia] API error:', data);
       _miaAddMsg('bot', 'Desculpe, tive um problema técnico. Pode tentar novamente? 🙏');
-      _miaHistorico.pop(); // remove a mensagem do user que não foi respondida
+      _miaHistorico.pop();
       _miaInputEnabled(true);
       return;
     }
@@ -133,7 +193,8 @@ async function _miaResponder(msg) {
     _miaHistorico.push({ role: 'assistant', content: resposta });
     _miaExibirBlocos(_miaQuebrarBlocos(resposta));
 
-    if (data.salvar_lead && !_miaLeadSalvo) {
+    // Salvar lead apenas no modo vendas
+    if (_MIA_MODO === 'vendas' && data.salvar_lead && !_miaLeadSalvo) {
       _miaLeadSalvo = true;
       fetch(_MIA_EDGE_LEAD, {
         method: 'POST',
@@ -165,7 +226,6 @@ function _miaQuebrarBlocos(texto) {
       return;
     }
 
-    // Parágrafo longo: divide nas fronteiras de frases
     var frases = parte.split(/(?<=[.!?])\s+/);
     var atual = '';
     frases.forEach(function(f) {
@@ -291,9 +351,9 @@ function _miaEsc(str) {
     .replace(/>/g, '&gt;');
 }
 
-/* ── Pulso no botão após 5s se chat não foi aberto ── */
+/* ── Pulso no botão após 5s (apenas modo vendas, chat não aberto) ── */
 setTimeout(function() {
-  if (!_miaIniciado) {
+  if (!_miaIniciado && _MIA_MODO === 'vendas') {
     var btn = document.getElementById('mia-btn');
     if (btn) btn.classList.add('mia-btn-pulse');
   }
