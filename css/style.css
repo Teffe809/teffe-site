@@ -305,6 +305,10 @@ footer{background:#0E2248;padding:60px 48px 28px;}
   .equip-panel.active{grid-template-columns:1fr 1fr;}
 }
 
+/* ── SCROLL LOCK (portais e modais abertos) ── */
+html.no-scroll{overflow:hidden;}
+body:has(.orca-bg.open),body:has(.modal-bg.open){overflow:hidden;}
+
 /* ── MODAL ORÇAMENTO ── */
 .orca-bg{display:none;position:fixed;inset:0;z-index:4000;background:rgba(14,34,72,.88);backdrop-filter:blur(6px);align-items:flex-start;justify-content:center;overflow-y:auto;padding:20px 16px;}
 .orca-bg.open{display:flex;}

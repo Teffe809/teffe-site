@@ -2,6 +2,8 @@ const SURL='https://hlfjcpgrxiktgctozilk.supabase.co';
 const SKEY='sb_publishable_-Iu8PbqhLeZAXSBcczr2mQ_lzlGr4_g';
 let _tok=null,_uid=null,_cid=null,_atEquipId=null,_spEquipId=null,_spUltimoContador=null,_chamadosCache={};
 let _equipsAC=[];
+let _tecHistData=[],_tecHistPage=0,_tecHistEquip=null;
+const TEC_HIST_PG=10;
 
 // ── TIMER DE INATIVIDADE (5 min) ──
 const INATIVIDADE_MS=5*60*1000;
@@ -65,6 +67,7 @@ function _resetarModalLogin(){
 
 async function fazerLogout(inatividade=false){
   _pararInatividade();
+  document.documentElement.classList.remove('no-scroll');
   _tok=null;_uid=null;_cid=null;
   localStorage.clear();
   window.location.href='https://teffe.com.br';
@@ -149,6 +152,7 @@ async function confirmarAlterarSenha(){
 
 // ── CARREGAR ÁREA ──
 async function carregarArea(){
+  document.documentElement.classList.add('no-scroll');
   document.getElementById('area-cliente').style.display='block';
   history.pushState(null,'','#cliente');
   _iniciarInatividade();
@@ -748,6 +752,7 @@ async function tecInit(){
   if(tok&&uid&&id&&nome){
     _tecTok=tok;_tecUid=uid;_tecId=id;_tecNome=nome;
     document.getElementById('tec-nome-display').textContent=_tecNome;
+    document.documentElement.classList.add('no-scroll');
     document.getElementById('portal-tecnico').style.display='block';
     history.replaceState(null,'','#portaltecnico');
     await tecCarregarChamados();
@@ -793,6 +798,7 @@ async function tecFazerLogin(){
   document.getElementById('tec-login-bg').classList.remove('open');
   document.getElementById('tec-nome-display').textContent=_tecNome;
   document.getElementById('tec-email').value='';document.getElementById('tec-senha').value='';
+  document.documentElement.classList.add('no-scroll');
   document.getElementById('portal-tecnico').style.display='block';
   history.replaceState(null,'','#portaltecnico');
   await tecCarregarChamados();
@@ -806,6 +812,7 @@ function tecFecharLogin(){
 function tecFazerLogout(){
   _tecTok=null;_tecUid=null;_tecId=null;_tecNome='';_tecChamadoAtual=null;_tecChamadosData={};
   ['tec_tok','tec_uid','tec_id','tec_nome'].forEach(k=>localStorage.removeItem(k));
+  document.documentElement.classList.remove('no-scroll');
   document.getElementById('portal-tecnico').style.display='none';
   window.location.href='https://teffe.com.br';
 }
@@ -815,13 +822,150 @@ async function tecCarregarChamados(){
   if(!_tecId) return;
   const el=document.getElementById('tec-lista-chamados');
   el.innerHTML='<div class="tec-loading">Carregando chamados...</div>';
-  const {data,ok}=await sfTec('/rest/v1/chamados?tecnico_id=eq.'+_tecId+'&order=created_at.desc&select=*,clientes(nome,empresa,cidade)');
+  const {data,ok}=await sfTec('/rest/v1/chamados?tecnico_id=eq.'+_tecId+'&status_tecnico=neq.encerrado&status=neq.encerrado&order=created_at.desc&select=*,clientes(nome,empresa,cidade)');
   if(!ok){el.innerHTML='<div class="tec-empty">Erro ao carregar chamados.</div>';return;}
   if(!data||!data.length){el.innerHTML='<div class="tec-empty">Nenhum chamado atribuído a você.</div>';return;}
   _tecChamadosData={};
   data.forEach(c=>{_tecChamadosData[c.id]=c;});
   el.innerHTML=data.map(c=>tecRenderCard(c)).join('');
 }
+
+// ── VIEWS DO TÉCNICO ──
+function tecMostrarView(v){
+  document.getElementById('tec-view-chamados').style.display=v==='chamados'?'':'none';
+  document.getElementById('tec-view-historico').style.display=v==='historico'?'':'none';
+  document.getElementById('tec-tab-chamados').classList.toggle('active',v==='chamados');
+  document.getElementById('tec-tab-historico').classList.toggle('active',v==='historico');
+}
+
+// ── HISTÓRICO DE EQUIPAMENTO ──
+function tecHistLimpar(){
+  document.getElementById('tec-hist-equip-info').style.display='none';
+  document.getElementById('tec-hist-resultado').innerHTML='';
+  document.getElementById('tec-hist-paginacao').style.display='none';
+  _tecHistData=[];_tecHistPage=0;_tecHistEquip=null;
+}
+
+async function tecHistBuscar(){
+  const serial=document.getElementById('tec-hist-serial').value.trim();
+  if(!serial){alert('Digite o serial ou código do equipamento.');return;}
+  tecHistLimpar();
+  const resEl=document.getElementById('tec-hist-resultado');
+  resEl.innerHTML='<div class="tec-loading">Buscando equipamento...</div>';
+  const q=encodeURIComponent(serial);
+  const {data:equips,ok}=await sfTec('/rest/v1/equipamentos?or=(serial.ilike.*'+q+'*,codigo.ilike.*'+q+'*)&select=id,serial,codigo,marca,modelo,localizacao,cliente_id,clientes(nome,empresa,cidade)&limit=1');
+  if(!ok||!equips||!equips.length){
+    resEl.innerHTML='<div class="tec-hist-empty">Equipamento não encontrado. Verifique o serial ou código digitado.</div>';
+    return;
+  }
+  _tecHistEquip=equips[0];
+  const cl=_tecHistEquip.clientes||{};
+  const infoEl=document.getElementById('tec-hist-equip-info');
+  infoEl.innerHTML=`<div class="he-title">Equipamento encontrado</div>
+    <div class="he-row">
+      <div class="he-field"><b>Marca/Modelo:</b> ${_tecHistEquip.marca||'–'} ${_tecHistEquip.modelo||''}</div>
+      <div class="he-field"><b>Serial:</b> ${_tecHistEquip.serial||_tecHistEquip.codigo||'–'}</div>
+      ${_tecHistEquip.localizacao?`<div class="he-field"><b>Localização:</b> ${_tecHistEquip.localizacao}</div>`:''}
+      <div class="he-field"><b>Cliente:</b> ${cl.empresa||cl.nome||'–'}</div>
+    </div>`;
+  infoEl.style.display='block';
+  resEl.innerHTML='';
+  await tecHistCarregarChamados();
+}
+
+async function tecHistCarregarChamados(){
+  if(!_tecHistEquip) return;
+  const resEl=document.getElementById('tec-hist-resultado');
+  resEl.innerHTML='<div class="tec-loading">Carregando histórico...</div>';
+  const {data,ok}=await sfTec('/rest/v1/chamados?cliente_id=eq.'+_tecHistEquip.cliente_id+'&order=created_at.desc&select=*,clientes(nome,empresa,cidade)');
+  if(!ok){resEl.innerHTML='<div class="tec-hist-empty">Erro ao carregar histórico.</div>';return;}
+  _tecHistData=data||[];
+  _tecHistPage=0;
+  tecHistRenderLista();
+}
+
+function tecHistRenderLista(){
+  const resEl=document.getElementById('tec-hist-resultado');
+  const pgEl=document.getElementById('tec-hist-paginacao');
+  if(!_tecHistData.length){
+    resEl.innerHTML='<div class="tec-hist-empty">Nenhum chamado encontrado para este cliente.</div>';
+    pgEl.style.display='none';return;
+  }
+  const total=_tecHistData.length;
+  const totalPgs=Math.ceil(total/TEC_HIST_PG);
+  const start=_tecHistPage*TEC_HIST_PG;
+  const slice=_tecHistData.slice(start,start+TEC_HIST_PG);
+  resEl.innerHTML='<div class="tec-cards-grid">'+slice.map((c,i)=>tecHistRenderCard(c,start+i)).join('')+'</div>';
+  pgEl.style.display='flex';
+  if(totalPgs>1){
+    pgEl.innerHTML=`<button onclick="tecHistPagina(-1)" ${_tecHistPage===0?'disabled':''}>← Anterior</button>
+      <span>Página ${_tecHistPage+1} de ${totalPgs} (${total} chamado${total!==1?'s':''})</span>
+      <button onclick="tecHistPagina(1)" ${_tecHistPage>=totalPgs-1?'disabled':''}>Próxima →</button>`;
+  }else{
+    pgEl.innerHTML=`<span>${total} chamado${total!==1?'s':''} encontrado${total!==1?'s':''}</span>`;
+  }
+}
+
+function tecHistRenderCard(c,idx){
+  const st=c.status_tecnico||c.status||'aberto';
+  const tipoMap={assistencia:'Assistência Técnica',instalacao:'Instalação',desinstalacao:'Desinstalação',vistoria:'Vistoria',visita_tecnica:'Visita Técnica'};
+  const tipo=tipoMap[c.tipo_servico]||tipoMap[c.tipo_chamado]||c.tipo_servico||c.tipo_chamado||'–';
+  const cliente=c.clientes?(c.clientes.empresa||c.clientes.nome||'–'):'–';
+  const data=c.created_at?new Date(c.created_at).toLocaleDateString('pt-BR'):'–';
+  return `<div class="tec-card tec-card-${st} tec-card-hist" onclick="tecHistAbrirDetalhe(${idx})">
+    <div class="tec-card-header">
+      <span class="tec-card-num">#${c.numero||c.id.slice(0,6).toUpperCase()}</span>
+      <span class="tec-badge-st tec-st-${st}">${tecStatusLabel(st)}</span>
+    </div>
+    <div class="tec-card-tipo">${tipo}</div>
+    <div class="tec-card-cliente">${cliente}</div>
+    <div class="tec-card-local" style="font-size:11px;color:#8896AB;">${data}</div>
+  </div>`;
+}
+
+function tecHistPagina(d){
+  const totalPgs=Math.ceil(_tecHistData.length/TEC_HIST_PG);
+  _tecHistPage=Math.max(0,Math.min(totalPgs-1,_tecHistPage+d));
+  tecHistRenderLista();
+  document.getElementById('portal-tecnico').scrollTo({top:0,behavior:'smooth'});
+}
+
+async function tecHistAbrirDetalhe(idx){
+  const c=_tecHistData[idx];
+  if(!c) return;
+  const st=c.status_tecnico||c.status||'aberto';
+  const tipoMap={assistencia:'Assistência Técnica',instalacao:'Instalação',desinstalacao:'Desinstalação',vistoria:'Vistoria',visita_tecnica:'Visita Técnica'};
+  const tipo=tipoMap[c.tipo_servico]||tipoMap[c.tipo_chamado]||c.tipo_servico||c.tipo_chamado||'–';
+  const cliente=c.clientes?(c.clientes.empresa||c.clientes.nome||'–'):'–';
+  const cidade=c.clientes?c.clientes.cidade||'–':'–';
+  const prioMap={baixa:'Baixa',normal:'Normal',alta:'Alta',urgente:'Urgente'};
+  const fmtDt=s=>s?new Date(s).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}):'–';
+  const {data:pRows}=await sfTec('/rest/v1/chamado_pecas?chamado_id=eq.'+c.id+'&select=*,pecas(codigo,descricao,unidade)');
+  const pecas=pRows||[];
+  document.getElementById('tec-hist-modal-conteudo').innerHTML=`
+    <div class="tec-modal-header">
+      <h2>Chamado #${c.numero||c.id.slice(0,6).toUpperCase()}</h2>
+      <span class="tec-badge-st tec-st-${st}">${tecStatusLabel(st)}</span>
+    </div>
+    <div class="tec-det-grid">
+      <div class="tec-det-row"><span class="tec-det-lbl">Tipo</span><span class="tec-det-val">${tipo}</span></div>
+      <div class="tec-det-row"><span class="tec-det-lbl">Cliente</span><span class="tec-det-val">${cliente}</span></div>
+      <div class="tec-det-row"><span class="tec-det-lbl">Cidade</span><span class="tec-det-val">${cidade}</span></div>
+      ${c.tecnico?`<div class="tec-det-row"><span class="tec-det-lbl">Técnico</span><span class="tec-det-val">${c.tecnico}</span></div>`:''}
+      ${c.prioridade?`<div class="tec-det-row"><span class="tec-det-lbl">Prioridade</span><span class="tec-det-val">${prioMap[c.prioridade]||c.prioridade}</span></div>`:''}
+      ${c.solicitante_nome?`<div class="tec-det-row"><span class="tec-det-lbl">Solicitante</span><span class="tec-det-val">${c.solicitante_nome}</span></div>`:''}
+      ${c.created_at?`<div class="tec-det-row"><span class="tec-det-lbl">Aberto em</span><span class="tec-det-val">${fmtDt(c.created_at)}</span></div>`:''}
+      ${c.data_encerramento?`<div class="tec-det-row"><span class="tec-det-lbl">Encerrado em</span><span class="tec-det-val">${fmtDt(c.data_encerramento)}</span></div>`:''}
+      ${c.descricao?`<div class="tec-det-row tec-det-row-full"><span class="tec-det-lbl">Descrição</span><span class="tec-det-val">${c.descricao.replace(/\n/g,'<br>')}</span></div>`:''}
+      ${c.descricao_tecnico?`<div class="tec-det-row tec-det-row-full"><span class="tec-det-lbl">Defeito encontrado</span><span class="tec-det-val">${c.descricao_tecnico.replace(/\n/g,'<br>')}</span></div>`:''}
+      ${c.resolucao?`<div class="tec-det-row tec-det-row-full"><span class="tec-det-lbl">Solução aplicada</span><span class="tec-det-val">${c.resolucao.replace(/\n/g,'<br>')}</span></div>`:''}
+    </div>
+    ${pecas.length?`<div class="tec-det-section" style="margin-top:16px;"><div class="tec-det-lbl-standalone">Peças utilizadas</div><table class="ac-table" style="margin-top:6px;"><thead><tr><th>Código</th><th>Descrição</th><th>Qtd.</th></tr></thead><tbody>${pecas.map(p=>`<tr><td>${(p.pecas&&p.pecas.codigo)||'–'}</td><td>${(p.pecas&&p.pecas.descricao)||'–'}</td><td>${p.quantidade||0} ${(p.pecas&&p.pecas.unidade)||'un'}</td></tr>`).join('')}</tbody></table></div>`:''}
+  `;
+  document.getElementById('tec-hist-modal').classList.add('open');
+}
+
+function tecHistFecharDetalhe(){document.getElementById('tec-hist-modal').classList.remove('open');}
 
 function tecStatusLabel(s){
   const l={aberto:'Aberto',em_deslocamento:'Em Deslocamento',em_atendimento:'Em Atendimento',aguardando_peca:'Aguardando Peça',pendente:'Pendente',encerrado:'Encerrado',andamento:'Em Andamento'};

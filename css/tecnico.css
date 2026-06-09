@@ -89,6 +89,32 @@
 .tec-peca-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
 .tec-peca-row .ac-input{margin:0;}
 
+/* ── BOTÃO AZUL ── */
+.tec-btn-azul{background:#1A3F80;color:#fff;display:flex;align-items:center;gap:6px;white-space:nowrap;}
+.tec-btn-azul:hover{opacity:.85;}
+
+/* ── NAV TABS ── */
+.tec-nav-tabs{display:flex;gap:0;margin-bottom:24px;border-bottom:2px solid #DEE3ED;}
+.tec-nav-tab{background:none;border:none;border-bottom:3px solid transparent;padding:10px 22px;font-size:14px;font-weight:700;color:#6B7A99;cursor:pointer;margin-bottom:-2px;transition:all .2s;font-family:'Syne',sans-serif;}
+.tec-nav-tab:hover{color:#1A3F80;}
+.tec-nav-tab.active{color:#1A3F80;border-bottom-color:#1A3F80;}
+
+/* ── HISTÓRICO DE EQUIPAMENTO ── */
+.tec-hist-search{display:flex;gap:10px;margin-bottom:20px;}
+.tec-hist-search .ac-input{flex:1;min-width:0;}
+.tec-hist-equip-info{background:#fff;border:1.5px solid #DEE3ED;border-radius:12px;padding:16px 20px;margin-bottom:20px;}
+.tec-hist-equip-info .he-title{font-size:11px;font-weight:700;color:#1A3F80;margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px;}
+.tec-hist-equip-info .he-row{display:flex;gap:20px;flex-wrap:wrap;}
+.tec-hist-equip-info .he-field{font-size:13px;color:#4A5568;line-height:1.5;}
+.tec-hist-equip-info .he-field b{color:#1A2E5A;}
+.tec-hist-empty{text-align:center;padding:48px 20px;color:#9CA3AF;font-size:14px;}
+.tec-hist-paginacao{display:flex;align-items:center;justify-content:center;gap:16px;padding:20px 0;margin-top:4px;}
+.tec-hist-paginacao span{font-size:13px;color:#6B7A99;font-weight:500;}
+.tec-hist-paginacao button{background:#fff;border:1.5px solid #DEE3ED;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:600;color:#1A3F80;cursor:pointer;transition:all .2s;}
+.tec-hist-paginacao button:hover:not(:disabled){background:#EEF1F7;}
+.tec-hist-paginacao button:disabled{opacity:.4;cursor:default;}
+.tec-card-hist{cursor:pointer;}
+
 /* ── RESPONSIVO ── */
 @media(max-width:600px){
   .tec-cards-grid{grid-template-columns:1fr;}
@@ -96,4 +122,6 @@
   .tec-header{padding:0 16px;}
   .tec-acoes{flex-direction:column;}
   .tec-btn{width:100%;}
+  .tec-hist-search{flex-direction:column;}
+  .tec-nav-tab{padding:9px 14px;font-size:13px;}
 }

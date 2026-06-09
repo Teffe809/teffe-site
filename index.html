@@ -2379,8 +2379,22 @@
     </div>
   </div>
   <div class="tec-content">
-    <div class="tec-page-title">Meus Chamados</div>
-    <div id="tec-lista-chamados" class="tec-cards-grid"></div>
+    <div class="tec-nav-tabs">
+      <button class="tec-nav-tab active" id="tec-tab-chamados" onclick="tecMostrarView('chamados')">Meus Chamados</button>
+      <button class="tec-nav-tab" id="tec-tab-historico" onclick="tecMostrarView('historico')">Histórico de Equipamento</button>
+    </div>
+    <div id="tec-view-chamados">
+      <div id="tec-lista-chamados" class="tec-cards-grid"></div>
+    </div>
+    <div id="tec-view-historico" style="display:none;">
+      <div class="tec-hist-search">
+        <input type="text" id="tec-hist-serial" class="ac-input" placeholder="Digite o serial ou código do equipamento..." oninput="tecHistLimpar()" onkeydown="if(event.key==='Enter')tecHistBuscar()" autocomplete="off"/>
+        <button class="tec-btn tec-btn-azul" onclick="tecHistBuscar()"><i class="ti ti-search"></i> Buscar</button>
+      </div>
+      <div id="tec-hist-equip-info" class="tec-hist-equip-info" style="display:none;"></div>
+      <div id="tec-hist-resultado"></div>
+      <div id="tec-hist-paginacao" class="tec-hist-paginacao" style="display:none;"></div>
+    </div>
   </div>
 </div>
 
@@ -2392,6 +2406,17 @@
     <div id="tec-modal-acoes" class="tec-acoes"></div>
     <div style="text-align:right;margin-top:14px;padding-top:14px;border-top:1px solid #EEF1F7;">
       <button onclick="tecFecharDetalhe()" class="tec-btn-fechar">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- TEC: MODAL HISTÓRICO (read-only) -->
+<div class="modal-bg" id="tec-hist-modal" style="z-index:5300;" onclick="if(event.target===this)tecHistFecharDetalhe()">
+  <div class="modal" style="max-width:580px;max-height:90vh;overflow-y:auto;text-align:left;">
+    <button class="modal-x" onclick="tecHistFecharDetalhe()">✕</button>
+    <div id="tec-hist-modal-conteudo"></div>
+    <div style="text-align:right;margin-top:14px;padding-top:14px;border-top:1px solid #EEF1F7;">
+      <button onclick="tecHistFecharDetalhe()" class="tec-btn-fechar">Fechar</button>
     </div>
   </div>
 </div>
