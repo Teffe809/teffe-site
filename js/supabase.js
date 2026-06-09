@@ -69,6 +69,83 @@ async function fazerLogout(inatividade=false){
   window.location.href='https://teffe.com.br';
 }
 
+// ── RECUPERAÇÃO / TROCA DE SENHA ──
+function esqueciMinhaSenha(p){
+  document.getElementById(p+'-login-panel').style.display='none';
+  document.getElementById(p+'-rec-panel').style.display='block';
+  const m=document.getElementById(p+'-rec-msg');
+  m.className='rec-msg';m.textContent='';
+  const e=document.getElementById(p+'-rec-email');
+  if(e)e.value='';
+}
+function voltarAoLogin(p){
+  document.getElementById(p+'-rec-panel').style.display='none';
+  document.getElementById(p+'-login-panel').style.display='block';
+}
+async function enviarLinkRecuperacao(p){
+  const emailEl=document.getElementById(p+'-rec-email');
+  const msgEl=document.getElementById(p+'-rec-msg');
+  const btnEl=document.getElementById(p+'-rec-btn');
+  const email=(emailEl&&emailEl.value||'').trim();
+  if(!email){msgEl.className='rec-msg rec-msg-erro';msgEl.textContent='Informe seu e-mail.';return;}
+  const portalMap={cli:'cliente',tec:'tecnico',adm:'admin'};
+  const redirectTo='https://teffe.com.br/redefinir-senha.html?portal='+(portalMap[p]||'cliente');
+  btnEl.textContent='Enviando...';btnEl.disabled=true;
+  const r=await fetch(SURL+'/auth/v1/recover',{
+    method:'POST',
+    headers:{'apikey':SKEY,'Content-Type':'application/json'},
+    body:JSON.stringify({email,redirectTo})
+  });
+  btnEl.textContent='Enviar link →';btnEl.disabled=false;
+  msgEl.className='rec-msg '+(r.ok?'rec-msg-ok':'rec-msg-erro');
+  msgEl.textContent=r.ok
+    ?'Link enviado! Verifique sua caixa de entrada.'
+    :'Não foi possível enviar. Verifique o e-mail informado.';
+}
+function abrirAlterarSenha(portal){
+  const m=document.getElementById('modal-alterar-senha');
+  m.dataset.portal=portal;
+  document.getElementById('alterar-nova-senha').value='';
+  document.getElementById('alterar-confirmar-senha').value='';
+  const msg=document.getElementById('alterar-msg');
+  msg.className='rec-msg';msg.textContent='';
+  m.classList.add('open');
+}
+function fecharAlterarSenha(){
+  document.getElementById('modal-alterar-senha').classList.remove('open');
+}
+async function confirmarAlterarSenha(){
+  const nova=document.getElementById('alterar-nova-senha').value;
+  const conf=document.getElementById('alterar-confirmar-senha').value;
+  const msg=document.getElementById('alterar-msg');
+  const btn=document.getElementById('alterar-btn');
+  msg.className='rec-msg';msg.textContent='';
+  if(nova.length<6){msg.className='rec-msg rec-msg-erro';msg.textContent='A senha deve ter pelo menos 6 caracteres.';return;}
+  if(nova!==conf){msg.className='rec-msg rec-msg-erro';msg.textContent='As senhas não coincidem.';return;}
+  const portal=document.getElementById('modal-alterar-senha').dataset.portal;
+  if(portal==='adm'){
+    if(typeof admConfirmarAlterarSenha==='function') return admConfirmarAlterarSenha(nova,msg,btn);
+    return;
+  }
+  const token=portal==='tec'?_tecTok:_tok;
+  if(!token){msg.className='rec-msg rec-msg-erro';msg.textContent='Sessão expirada. Faça login novamente.';return;}
+  btn.textContent='Salvando...';btn.disabled=true;
+  const r=await fetch(SURL+'/auth/v1/user',{
+    method:'PUT',
+    headers:{'apikey':SKEY,'Authorization':'Bearer '+token,'Content-Type':'application/json'},
+    body:JSON.stringify({password:nova})
+  });
+  btn.textContent='Salvar senha →';btn.disabled=false;
+  if(r.ok){
+    msg.className='rec-msg rec-msg-ok';msg.textContent='Senha alterada com sucesso!';
+    setTimeout(fecharAlterarSenha,2000);
+  } else {
+    const d=await r.json().catch(()=>({}));
+    msg.className='rec-msg rec-msg-erro';
+    msg.textContent=d.msg||'Erro ao alterar a senha. Tente novamente.';
+  }
+}
+
 // ── CARREGAR ÁREA ──
 async function carregarArea(){
   document.getElementById('area-cliente').style.display='block';

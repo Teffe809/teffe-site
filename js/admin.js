@@ -107,6 +107,22 @@ function admFazerLogout(){
   window.location.href='https://teffe.com.br';
 }
 
+// ── ALTERAR SENHA (ADMIN) ──
+function admAbrirAlterarSenha(){
+  if(typeof abrirAlterarSenha==='function') abrirAlterarSenha('adm');
+}
+async function admConfirmarAlterarSenha(nova,msgEl,btnEl){
+  if(btnEl){btnEl.textContent='Salvando...';btnEl.disabled=true;}
+  const {error}=await _supabase.auth.updateUser({password:nova});
+  if(btnEl){btnEl.textContent='Salvar senha →';btnEl.disabled=false;}
+  if(error){
+    if(msgEl){msgEl.className='rec-msg rec-msg-erro';msgEl.textContent=error.message||'Erro ao alterar a senha.';}
+  } else {
+    if(msgEl){msgEl.className='rec-msg rec-msg-ok';msgEl.textContent='Senha alterada com sucesso!';}
+    setTimeout(function(){if(typeof fecharAlterarSenha==='function')fecharAlterarSenha();},2000);
+  }
+}
+
 function admFecharLogin(){
   document.getElementById('adm-login-bg').classList.remove('open');
   document.getElementById('admin-panel').style.display='none';

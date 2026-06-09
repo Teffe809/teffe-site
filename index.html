@@ -1935,6 +1935,7 @@
 </svg>
       <span></span>
     </div>
+    <div id="cli-login-panel">
     <h2>Área do Cliente</h2>
     <p class="msub">Acesse sua conta para gerenciar chamados e contratos.</p>
     <div id="login-inatividade" style="display:none;align-items:center;gap:8px;background:#FFF8E1;border:1px solid #FFE082;color:#b45309;padding:9px 14px;border-radius:8px;font-size:13px;margin-bottom:12px;"><i class="ti ti-clock-pause"></i> Sessão encerrada por inatividade.</div>
@@ -1943,7 +1944,16 @@
     <div class="fg"><label>E-mail</label><input id="login-email" type="email" placeholder="seu@empresa.com.br"/></div>
     <div class="fg" style="margin-top:12px"><label>Senha</label><input id="login-senha" type="password" placeholder="••••••••"/></div>
     <button class="btn-login" id="btn-entrar" onclick="fazerLogin()">Entrar →</button>
-    <div class="modal-links"><a href="#">Esqueci minha senha</a></div>
+    <div class="modal-links"><a href="#" onclick="esqueciMinhaSenha('cli');return false;">Esqueci minha senha</a></div>
+    </div>
+    <div id="cli-rec-panel" style="display:none;">
+    <h2>Recuperar senha</h2>
+    <p class="msub">Informe seu e-mail para receber o link de redefinição.</p>
+    <div id="cli-rec-msg" class="rec-msg"></div>
+    <div class="fg"><label>E-mail</label><input id="cli-rec-email" type="email" placeholder="seu@empresa.com.br"/></div>
+    <button class="btn-login" id="cli-rec-btn" onclick="enviarLinkRecuperacao('cli')" style="margin-top:16px;">Enviar link →</button>
+    <div class="modal-links"><a href="#" onclick="voltarAoLogin('cli');return false;">← Voltar ao login</a></div>
+    </div>
   </div>
 </div>
 
@@ -1975,6 +1985,7 @@
     </div>
     <div style="display:flex;align-items:center;gap:16px;font-size:14px;color:#4A5568;">
       <span>Olá, <strong id="ac-nome"></strong></span>
+      <button class="ac-sair" style="background:#EEF1F7;color:#1A3F80;" onclick="abrirAlterarSenha('cli')"><i class="ti ti-lock"></i> Alterar senha</button>
       <button class="ac-sair" onclick="fazerLogout()"><i class="ti ti-logout"></i> Sair</button>
     </div>
   </div>
@@ -2156,12 +2167,23 @@
 <div class="modal-bg" id="adm-login-bg">
   <div class="modal" style="max-width:420px;">
     <button class="modal-x" onclick="admFecharLogin()">✕</button>
+    <div id="adm-login-panel">
     <h2>Painel Administrativo</h2>
     <p class="msub">Acesso restrito a administradores.</p>
     <div id="adm-login-erro" class="adm-err"></div>
     <div class="fg"><label>E-mail</label><input id="adm-email" type="email" placeholder="admin@teffe.com.br"/></div>
     <div class="fg" style="margin-top:12px;"><label>Senha</label><input id="adm-senha" type="password" placeholder="••••••••"/></div>
     <button class="btn-login" id="adm-btn-entrar" onclick="admFazerLogin()">Entrar →</button>
+    <div class="modal-links"><a href="#" onclick="esqueciMinhaSenha('adm');return false;">Esqueci minha senha</a></div>
+    </div>
+    <div id="adm-rec-panel" style="display:none;">
+    <h2>Recuperar senha</h2>
+    <p class="msub">Informe seu e-mail para receber o link de redefinição.</p>
+    <div id="adm-rec-msg" class="rec-msg"></div>
+    <div class="fg"><label>E-mail</label><input id="adm-rec-email" type="email" placeholder="admin@teffe.com.br"/></div>
+    <button class="btn-login" id="adm-rec-btn" onclick="enviarLinkRecuperacao('adm')" style="margin-top:16px;">Enviar link →</button>
+    <div class="modal-links"><a href="#" onclick="voltarAoLogin('adm');return false;">← Voltar ao login</a></div>
+    </div>
   </div>
 </div>
 
@@ -2180,6 +2202,7 @@
     <div class="adm-navbar-right">
       <i class="ti ti-user-circle" style="font-size:20px;"></i>
       <span id="adm-nome-display"></span>
+      <button class="adm-sair-btn" onclick="admAbrirAlterarSenha()"><i class="ti ti-lock"></i> Alterar senha</button>
       <button class="adm-sair-btn" onclick="admFazerLogout()"><i class="ti ti-logout"></i> Sair</button>
     </div>
   </div>
@@ -2300,12 +2323,23 @@
 <div class="modal-bg" id="tec-login-bg" style="z-index:9000;">
   <div class="modal" style="max-width:420px;">
     <button class="modal-x" onclick="tecFecharLogin()">✕</button>
+    <div id="tec-login-panel">
     <h2>Portal do Técnico</h2>
     <p class="msub">Acesso exclusivo para técnicos Teffe.</p>
     <div id="tec-login-erro" class="adm-err"></div>
     <div class="fg"><label>E-mail</label><input id="tec-email" type="email" placeholder="tecnico@teffe.com.br"/></div>
     <div class="fg" style="margin-top:12px;"><label>Senha</label><input id="tec-senha" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')tecFazerLogin()"/></div>
     <button class="btn-login" id="tec-btn-entrar" onclick="tecFazerLogin()" style="margin-top:20px;">Entrar →</button>
+    <div class="modal-links"><a href="#" onclick="esqueciMinhaSenha('tec');return false;">Esqueci minha senha</a></div>
+    </div>
+    <div id="tec-rec-panel" style="display:none;">
+    <h2>Recuperar senha</h2>
+    <p class="msub">Informe seu e-mail para receber o link de redefinição.</p>
+    <div id="tec-rec-msg" class="rec-msg"></div>
+    <div class="fg"><label>E-mail</label><input id="tec-rec-email" type="email" placeholder="tecnico@teffe.com.br"/></div>
+    <button class="btn-login" id="tec-rec-btn" onclick="enviarLinkRecuperacao('tec')" style="margin-top:16px;">Enviar link →</button>
+    <div class="modal-links"><a href="#" onclick="voltarAoLogin('tec');return false;">← Voltar ao login</a></div>
+    </div>
   </div>
 </div>
 
@@ -2322,6 +2356,7 @@
     </div>
     <div class="tec-header-right">
       <span id="tec-nome-display" style="font-size:14px;font-weight:600;"></span>
+      <button class="tec-sair-btn" onclick="abrirAlterarSenha('tec')"><i class="ti ti-lock"></i> Alterar senha</button>
       <button class="tec-sair-btn" onclick="tecFazerLogout()"><i class="ti ti-logout"></i> Sair</button>
     </div>
   </div>
@@ -2422,5 +2457,18 @@
 </div>
 
 <script src="js/mia.js"></script>
+
+<!-- MODAL ALTERAR SENHA (compartilhado entre os 3 portais) -->
+<div class="modal-bg" id="modal-alterar-senha" style="z-index:9200;" onclick="if(event.target===this)fecharAlterarSenha()">
+  <div class="modal" style="max-width:400px;">
+    <button class="modal-x" onclick="fecharAlterarSenha()">✕</button>
+    <h2>Alterar Senha</h2>
+    <p class="msub">Digite e confirme sua nova senha.</p>
+    <div id="alterar-msg" class="rec-msg"></div>
+    <div class="fg"><label>Nova senha</label><input type="password" id="alterar-nova-senha" placeholder="Mínimo 6 caracteres" autocomplete="new-password"/></div>
+    <div class="fg" style="margin-top:12px;"><label>Confirmar nova senha</label><input type="password" id="alterar-confirmar-senha" placeholder="Repita a nova senha" autocomplete="new-password"/></div>
+    <button class="btn-login" id="alterar-btn" onclick="confirmarAlterarSenha()" style="margin-top:20px;">Salvar senha →</button>
+  </div>
+</div>
 </body>
 </html>

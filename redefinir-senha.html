@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Redefinir Senha — Teffe Tecnologia</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,300&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="css/style.css"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css"/>
+<style>
+  .rs-wrap{min-height:calc(100vh - 80px);display:flex;align-items:center;justify-content:center;padding:100px 20px 60px;background:linear-gradient(150deg,#f0f4fa 0%,#e8eef8 100%);}
+  .rs-card{background:#fff;border-radius:18px;box-shadow:0 8px 40px rgba(26,63,128,.10);padding:48px 44px;max-width:440px;width:100%;text-align:center;}
+  .rs-icon{width:72px;height:72px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 24px;font-size:32px;background:#EEF3FC;color:#1A3F80;}
+  .rs-icon-ok{background:#FFF7ED;color:#E07820;}
+  .rs-icon-err{background:#FFF0F0;color:#c0392b;}
+  .rs-icon-check{background:#F0FDF4;color:#059669;}
+  .rs-card h1{font-family:var(--font-h,Syne,sans-serif);font-size:26px;font-weight:800;color:#1A2E5A;margin-bottom:10px;}
+  .rs-card p.rs-sub{font-size:14px;color:#6B7A90;margin-bottom:28px;line-height:1.6;}
+  .rs-card .fg{text-align:left;margin-top:14px;}
+  .rs-card .fg label{display:block;font-size:13px;font-weight:600;color:#4A5568;margin-bottom:6px;}
+  .rs-card .fg input{width:100%;padding:11px 14px;border:1.5px solid #D0D8E8;border-radius:9px;font-size:14px;font-family:inherit;box-sizing:border-box;transition:border-color .2s;}
+  .rs-card .fg input:focus{outline:none;border-color:#1A3F80;}
+  .rs-msg{font-size:13px;padding:10px 14px;border-radius:8px;margin:16px 0 0;text-align:left;display:none;}
+  .rs-msg:not(:empty){display:block;}
+  .rs-msg-ok{background:#f0fdf4;border:1px solid #a7f3d0;color:#065f46;}
+  .rs-msg-erro{background:#fff0f0;border:1px solid #ffcccc;color:#c0392b;}
+  .rs-btn-link{display:inline-block;margin-top:24px;padding:13px 32px;background:#1A3F80;color:#fff;border:none;border-radius:9px;font-family:var(--font-h,Syne,sans-serif);font-size:15px;font-weight:600;cursor:pointer;text-decoration:none;transition:background .2s;width:100%;box-sizing:border-box;}
+  .rs-btn-link:hover{background:#2060B8;}
+  .rs-spinner{display:inline-block;width:24px;height:24px;border:3px solid #D0D8E8;border-top-color:#1A3F80;border-radius:50%;animation:rs-spin .7s linear infinite;}
+  @keyframes rs-spin{to{transform:rotate(360deg);}}
+</style>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar">
+  <a href="index.html" class="nav-logo">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 580 175" style="height:48px;width:auto;background:#fff;">
+  <rect width="580" height="175" fill="#ffffff"/>
+  <polygon points="95,31 140,57 140,109 95,135 50,109 50,57" fill="none" stroke="#E07820" stroke-width="5" stroke-linejoin="round"/>
+  <polygon points="95,37 135,60 135,106 95,129 55,106 55,60" fill="#ffffff"/>
+  <polygon points="95,43 130,63 130,103 95,123 60,103 60,63" fill="#1A2E5A"/>
+  <rect x="78" y="62" width="34" height="6" rx="2.5" fill="#E07820"/>
+  <rect x="91" y="62" width="7" height="30" rx="2.5" fill="#E07820"/>
+  <line x1="140" y1="57" x2="163" y2="44" stroke="#E07820" stroke-width="1.8"/><circle cx="166" cy="42" r="3.8" fill="#E07820"/>
+  <line x1="140" y1="109" x2="163" y2="122" stroke="#E07820" stroke-width="1.8"/><circle cx="166" cy="124" r="3.8" fill="#E07820"/>
+  <line x1="95" y1="135" x2="95" y2="158" stroke="#E07820" stroke-width="1.8"/><circle cx="95" cy="161" r="3.8" fill="#E07820"/>
+  <line x1="50" y1="109" x2="27" y2="122" stroke="#E07820" stroke-width="1.8"/><circle cx="24" cy="124" r="3.8" fill="#E07820"/>
+  <line x1="50" y1="57" x2="27" y2="44" stroke="#E07820" stroke-width="1.8"/><circle cx="24" cy="42" r="3.8" fill="#E07820"/>
+  <text font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="76" x="200" y="103">
+    <tspan fill="#1A2E5A">TE</tspan><tspan fill="#E07820">FFE</tspan>
+  </text>
+  <rect x="200" y="111" width="310" height="3" rx="1.5" fill="#E07820"/>
+  <text x="202" y="139" font-family="Arial, sans-serif" font-weight="700" font-size="15" fill="#E07820" letter-spacing="6">TECNOLOGIA</text>
+</svg>
+  </a>
+</nav>
+
+<!-- CONTEÚDO PRINCIPAL -->
+<div class="rs-wrap">
+  <div class="rs-card">
+
+    <!-- Estado: carregando -->
+    <div id="rs-carregando">
+      <div class="rs-icon"><div class="rs-spinner"></div></div>
+      <h1>Verificando link…</h1>
+      <p class="rs-sub">Aguarde um momento.</p>
+    </div>
+
+    <!-- Estado: formulário de nova senha -->
+    <div id="rs-formulario" style="display:none;">
+      <div class="rs-icon rs-icon-ok"><i class="ti ti-lock-open"></i></div>
+      <h1>Redefinir Senha</h1>
+      <p class="rs-sub">Digite sua nova senha abaixo. Mínimo de 6 caracteres.</p>
+      <div id="rs-msg" class="rs-msg"></div>
+      <div class="fg">
+        <label>Nova senha</label>
+        <input type="password" id="rs-nova" placeholder="Mínimo 6 caracteres" autocomplete="new-password"/>
+      </div>
+      <div class="fg" style="margin-top:12px;">
+        <label>Confirmar nova senha</label>
+        <input type="password" id="rs-conf" placeholder="Repita a nova senha" autocomplete="new-password"/>
+      </div>
+      <button class="rs-btn-link" id="rs-btn" onclick="rsConfirmar()">Salvar nova senha →</button>
+    </div>
+
+    <!-- Estado: link inválido ou expirado -->
+    <div id="rs-invalido" style="display:none;">
+      <div class="rs-icon rs-icon-err"><i class="ti ti-link-off"></i></div>
+      <h1>Link inválido ou expirado</h1>
+      <p class="rs-sub">Este link de redefinição não é mais válido. Solicite um novo link pela tela de login.</p>
+      <a id="rs-link-login-inv" href="index.html#cliente" class="rs-btn-link">Voltar ao login</a>
+    </div>
+
+    <!-- Estado: sucesso -->
+    <div id="rs-sucesso" style="display:none;">
+      <div class="rs-icon rs-icon-check"><i class="ti ti-circle-check"></i></div>
+      <h1>Senha redefinida!</h1>
+      <p class="rs-sub">Sua senha foi alterada com sucesso. Você já pode fazer login com a nova senha.</p>
+      <a id="rs-link-login-ok" href="index.html#cliente" class="rs-btn-link">Ir para o login</a>
+    </div>
+
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-top">
+      <div class="footer-brand">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 580 175" style="height:44px;width:auto;">
+  <polygon points="95,31 140,57 140,109 95,135 50,109 50,57" fill="none" stroke="#E07820" stroke-width="5" stroke-linejoin="round"/>
+  <polygon points="95,37 135,60 135,106 95,129 55,106 55,60" fill="#0E2248"/>
+  <polygon points="95,43 130,63 130,103 95,123 60,103 60,63" fill="#1A2E5A"/>
+  <rect x="78" y="62" width="34" height="6" rx="2.5" fill="#E07820"/>
+  <rect x="91" y="62" width="7" height="30" rx="2.5" fill="#E07820"/>
+  <line x1="140" y1="57" x2="163" y2="44" stroke="#E07820" stroke-width="1.8"/><circle cx="166" cy="42" r="3.8" fill="#E07820"/>
+  <line x1="140" y1="109" x2="163" y2="122" stroke="#E07820" stroke-width="1.8"/><circle cx="166" cy="124" r="3.8" fill="#E07820"/>
+  <line x1="95" y1="135" x2="95" y2="158" stroke="#E07820" stroke-width="1.8"/><circle cx="95" cy="161" r="3.8" fill="#E07820"/>
+  <line x1="50" y1="109" x2="27" y2="122" stroke="#E07820" stroke-width="1.8"/><circle cx="24" cy="124" r="3.8" fill="#E07820"/>
+  <line x1="50" y1="57" x2="27" y2="44" stroke="#E07820" stroke-width="1.8"/><circle cx="24" cy="42" r="3.8" fill="#E07820"/>
+  <text font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="76" x="200" y="103">
+    <tspan fill="#ffffff">TE</tspan><tspan fill="#E07820">FFE</tspan>
+  </text>
+  <rect x="200" y="111" width="310" height="3" rx="1.5" fill="#E07820"/>
+  <text x="202" y="139" font-family="Arial, sans-serif" font-weight="700" font-size="15" fill="#E07820" letter-spacing="6">TECNOLOGIA</text>
+</svg>
+        </div>
+        <p>Outsourcing de impressão e TI para empresas que querem crescer sem preocupação com infraestrutura tecnológica.</p>
+        <div class="footer-slogan">Tecnologia que você pode confiar.</div>
+      </div>
+      <div class="footer-col"><h4>Soluções</h4><ul>
+        <li><a href="index.html">Teffe IA</a></li>
+        <li><a href="index.html">Outsourcing de Impressão</a></li>
+        <li><a href="index.html">Locação de Notebooks</a></li>
+        <li><a href="index.html">Locação de Computadores</a></li>
+      </ul></div>
+      <div class="footer-col"><h4>Equipamentos</h4><ul>
+        <li><a href="index.html">Impressora Laser</a></li>
+        <li><a href="index.html">Jato de Tinta</a></li>
+        <li><a href="index.html">Plotter</a></li>
+        <li><a href="index.html">Etiquetas</a></li>
+        <li><a href="index.html">Notebook</a></li>
+        <li><a href="index.html">Desktop</a></li>
+      </ul></div>
+      <div class="footer-col"><h4>Para sua empresa</h4><ul>
+        <li><a href="index.html">Indústria</a></li>
+        <li><a href="index.html">Comércio</a></li>
+        <li><a href="index.html">Saúde</a></li>
+        <li><a href="index.html">Educação</a></li>
+        <li><a href="index.html">Logística</a></li>
+        <li><a href="index.html">Escritório</a></li>
+      </ul></div>
+      <div class="footer-col"><h4>Institucional</h4><ul>
+        <li><a href="index.html">Quem somos</a></li>
+        <li><a href="index.html">Trabalhe conosco</a></li>
+        <li><a href="index.html">Teffe EcoTech</a></li>
+        <li><a href="index.html">Área do Cliente</a></li>
+        <li><a href="politica-de-privacidade.html">Política de Privacidade</a></li>
+      </ul></div>
+      <div class="footer-col"><h4>Contato</h4><ul>
+        <li><a href="index.html#contato-cta">Fale conosco</a></li>
+        <li><span>(14) 99828-9248</span></li>
+        <li><span>contato@teffe.com.br</span></li>
+      </ul></div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 <a href="index.html">Teffe</a>. Todos os direitos reservados.</span>
+      <span>Tecnologia que você pode confiar.</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+const SURL='https://hlfjcpgrxiktgctozilk.supabase.co';
+const SKEY='sb_publishable_-Iu8PbqhLeZAXSBcczr2mQ_lzlGr4_g';
+
+let _rsToken=null;
+
+(function init(){
+  const hash=window.location.hash.substring(1);
+  const params=new URLSearchParams(hash);
+  const token=params.get('access_token');
+  const type=params.get('type');
+  const portal=new URLSearchParams(window.location.search).get('portal')||'cliente';
+
+  // Ajusta href do botão de voltar ao login conforme portal
+  const loginHref='index.html#'+(portal==='tecnico'?'portaltecnico':portal==='admin'?'admin':'cliente');
+  document.getElementById('rs-link-login-inv').href=loginHref;
+  document.getElementById('rs-link-login-ok').href=loginHref;
+
+  if(token&&type==='recovery'){
+    _rsToken=token;
+    rsShow('rs-formulario');
+  } else {
+    rsShow('rs-invalido');
+  }
+
+  // Enter key no campo de confirmação
+  document.getElementById('rs-conf').addEventListener('keydown',function(e){
+    if(e.key==='Enter') rsConfirmar();
+  });
+})();
+
+function rsShow(id){
+  ['rs-carregando','rs-formulario','rs-invalido','rs-sucesso'].forEach(function(s){
+    document.getElementById(s).style.display=(s===id?'':'none');
+  });
+}
+
+async function rsConfirmar(){
+  const nova=document.getElementById('rs-nova').value;
+  const conf=document.getElementById('rs-conf').value;
+  const msg=document.getElementById('rs-msg');
+  const btn=document.getElementById('rs-btn');
+
+  msg.className='rs-msg';
+  msg.textContent='';
+
+  if(nova.length<6){
+    msg.className='rs-msg rs-msg-erro';
+    msg.textContent='A senha deve ter pelo menos 6 caracteres.';
+    return;
+  }
+  if(nova!==conf){
+    msg.className='rs-msg rs-msg-erro';
+    msg.textContent='As senhas não coincidem.';
+    return;
+  }
+
+  btn.textContent='Salvando…';
+  btn.disabled=true;
+
+  const r=await fetch(SURL+'/auth/v1/user',{
+    method:'PUT',
+    headers:{'apikey':SKEY,'Authorization':'Bearer '+_rsToken,'Content-Type':'application/json'},
+    body:JSON.stringify({password:nova})
+  });
+
+  btn.textContent='Salvar nova senha →';
+  btn.disabled=false;
+
+  if(r.ok){
+    rsShow('rs-sucesso');
+  } else {
+    const d=await r.json().catch(function(){return {};});
+    msg.className='rs-msg rs-msg-erro';
+    msg.textContent=d.msg||'Erro ao redefinir a senha. O link pode ter expirado — solicite um novo.';
+  }
+}
+</script>
+</body>
+</html>

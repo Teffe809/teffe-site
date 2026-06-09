@@ -276,6 +276,10 @@ footer{background:#0E2248;padding:60px 48px 28px;}
 .btn-login:hover{background:var(--azul2);}
 .modal-links{text-align:center;margin-top:14px;font-size:13px;color:var(--gray-muted);}
 .modal-links a{color:var(--azul2);text-decoration:none;font-weight:500;}
+.rec-msg{font-size:13px;padding:10px 14px;border-radius:8px;margin-bottom:4px;display:none;}
+.rec-msg:not(:empty){display:block;}
+.rec-msg-ok{background:#f0fdf4;border:1px solid #a7f3d0;color:#065f46;}
+.rec-msg-erro{background:#fff0f0;border:1px solid #ffcccc;color:#c0392b;}
 
 /* ── RESPONSIVE ── */
 @media(max-width:960px){
