@@ -150,8 +150,9 @@ Regras importantes:
 
 // ── Handler WhatsApp (webhook Evolution API) ───────────────────────────────
 async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> {
-  // Só processa eventos de mensagem recebida
-  if (body.event !== 'messages.upsert') {
+  // Normaliza event name: 'MESSAGES_UPSERT' ou 'messages.upsert' → ambos aceitos
+  const evt = String(body.event ?? '').toUpperCase().replace('.', '_');
+  if (evt !== 'MESSAGES_UPSERT') {
     return new Response('OK', { status: 200 });
   }
 
