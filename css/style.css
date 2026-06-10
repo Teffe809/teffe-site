@@ -924,3 +924,59 @@ body:has(.orca-bg.open),body:has(.modal-bg.open){overflow:hidden;}
   .tia-grid{grid-template-columns:1fr;}
   .teffe-ia-section{padding:52px 24px;}
 }
+
+/* ═══ MOBILE FIXES — viewport 375 px ═══ */
+@media(max-width:768px){
+  /* Hero principal — remove margem esquerda dos botões */
+  .hero-btns{margin-left:0;}
+
+  /* Navbar interno das equip-pages — aparece no mobile para navegação */
+  .ep-navbar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 16px;background:#fff;border-bottom:1px solid var(--gray-light);position:sticky;top:0;z-index:10;}
+  .ep-navbar svg{display:none;}
+  .ep-back{display:flex;align-items:center;font-size:20px;line-height:1;background:none;border:1.5px solid var(--gray-light);border-radius:8px;cursor:pointer;color:var(--azul);padding:6px 12px;flex-shrink:0;}
+  .ep-cta-btn{font-size:12px;padding:7px 12px;white-space:nowrap;}
+
+  /* ep-hero: altura fixa → auto; padding excessivo do hero-left corrigido */
+  .ep-hero{min-height:0;}
+  .equip-page .ep-hero{height:auto;}
+  .ep-hero-left{padding:28px 0 !important;}
+
+  /* Quem Somos — Missão/Visão/Valores: 3 col → 1 */
+  .qs-mvv-grid{grid-template-columns:1fr !important;}
+  /* Quem Somos — flip cards: 5 col → 2 */
+  .qs-flip-grid{grid-template-columns:repeat(2,1fr) !important;}
+
+  /* Trabalhe Conosco — formulário 2 col → 1 */
+  .tc-form-row{grid-template-columns:1fr !important;}
+
+  /* EcoTech — dicas: 3 col → 1; impacto: 4 col → 2 */
+  .amb-dicas-grid{grid-template-columns:1fr !important;}
+  .amb-impacto-grid{grid-template-columns:1fr 1fr !important;}
+
+  /* Modal orçamento — grid 2 col → 1; scroll vertical */
+  .orca-grid{grid-template-columns:1fr;}
+  .orca-modal{padding:28px 20px;max-height:90vh;overflow-y:auto;}
+  .orca-bg{align-items:flex-start;overflow-y:auto;}
+
+  /* Área do Cliente — forms e grids */
+  .ac-form-2col{grid-template-columns:1fr;}
+  .ac-tipo-btns{grid-template-columns:1fr;}
+  .adm-grid-3{grid-template-columns:1fr;}
+  .adm-grid-2{grid-template-columns:1fr;}
+
+  /* Footer — espaço para botões flutuantes; 2 col → 1 */
+  footer{padding-bottom:90px;}
+  .footer-top{grid-template-columns:1fr !important;}
+  .footer-logo-col{grid-column:span 1 !important;}
+}
+
+@media(max-width:480px){
+  /* ep-features e ep-vantagens → 1 col em telas pequenas */
+  .ep-features{grid-template-columns:1fr;}
+  .ep-vantagens{grid-template-columns:1fr;}
+  /* flip cards e impacto ambiental → 1 col */
+  .qs-flip-grid{grid-template-columns:1fr !important;}
+  .amb-impacto-grid{grid-template-columns:1fr !important;}
+  /* Esconde tooltip da Mia (sobrepõe conteúdo em telas pequenas) */
+  #mia-tooltip{display:none !important;}
+}
