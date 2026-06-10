@@ -175,14 +175,29 @@ Após o cliente escolher o horário, inicie sua resposta OBRIGATORIAMENTE com [L
 
 // ── Handler WhatsApp (webhook Evolution API) ───────────────────────────────
 async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> {
-  const evt = String(body.event ?? '').toUpperCase().replace('.', '_');
-  if (evt !== 'MESSAGES_UPSERT') {
+  // Log do payload completo para diagnóstico
+  console.log('[mia-chat] payload recebido:', JSON.stringify(body));
+
+  const evt = String(body.event ?? '').toUpperCase().replace(/[.\s-]/g, '_');
+
+  // Aceita MESSAGES_UPSERT e SEND_MESSAGE (mensagens enviadas pelo dono)
+  const isUpsert     = evt === 'MESSAGES_UPSERT';
+  const isSendMessage = evt === 'SEND_MESSAGE';
+
+  if (!isUpsert && !isSendMessage) {
+    console.log('[mia-chat] evento ignorado:', body.event);
     return new Response('OK', { status: 200 });
   }
 
-  const data    = (body.data ?? {}) as Record<string, unknown>;
+  // data pode ser objeto ou array (Evolution API v2 às vezes envia array)
+  const rawData = body.data;
+  const data    = (Array.isArray(rawData) ? rawData[0] : rawData ?? {}) as Record<string, unknown>;
   const key     = (data.key ?? {}) as Record<string, unknown>;
-  const fromMe  = Boolean(key.fromMe);
+
+  // fromMe: true em SEND_MESSAGE ou em MESSAGES_UPSERT com fromMe explícito
+  const fromMe  = isSendMessage ? true : Boolean(key.fromMe);
+
+  console.log('[mia-chat] evt:', evt, '| fromMe:', fromMe, '| remoteJid:', key.remoteJid);
 
   const remoteJid = String(key.remoteJid ?? '');
 
@@ -205,54 +220,61 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
       ''
     ).trim();
 
-    if (texto.startsWith('#')) {
-      // Carrega estado atual para fazer o toggle
-      let pausadoAtual = false;
-      let historicoAtual: Msg[] = [];
-      try {
-        const res = await fetch(
-          `${supabaseUrl}/rest/v1/mia_conversas_whatsapp?telefone=eq.${encodeURIComponent(telefone)}&select=historico,pausado`,
-          { headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` } }
-        );
-        if (res.ok) {
-          const rows = await res.json() as Array<{ historico: Msg[]; pausado: boolean }>;
-          if (rows.length > 0) {
-            pausadoAtual   = rows[0].pausado ?? false;
-            historicoAtual = rows[0].historico ?? [];
-          }
-        }
-      } catch (_) { /* ignora */ }
+    // Só processa se começa com #; ignora respostas programáticas da Mia
+    if (!texto.startsWith('#')) {
+      return new Response('OK', { status: 200 });
+    }
 
-      // Toggle: pausa ↔ reativa
-      const novoPausado = !pausadoAtual;
-      fetch(
-        `${supabaseUrl}/rest/v1/mia_conversas_whatsapp?on_conflict=telefone`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            apikey: serviceKey,
-            Authorization: `Bearer ${serviceKey}`,
-            Prefer: 'resolution=merge-duplicates',
-          },
-          body: JSON.stringify({
-            telefone,
-            historico: historicoAtual,
-            pausado: novoPausado,
-            updated_at: new Date().toISOString(),
-          }),
-        }
-      ).catch(console.error);
+    console.log('[mia-chat] modo híbrido ativado | telefone:', telefone, '| texto:', texto);
 
-      // Envia mensagem sem o # para o destinatário
-      const mensagemLimpa = texto.slice(1).trim();
-      if (mensagemLimpa) {
-        fetch(`${EVOLUTION_URL}/message/sendText/${EVOLUTION_INSTANCE}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', apikey: evolutionKey },
-          body: JSON.stringify({ number: telefone, text: mensagemLimpa }),
-        }).catch(console.error);
+    // Carrega estado atual para fazer o toggle (await — sem race condition)
+    let pausadoAtual = false;
+    let historicoAtual: Msg[] = [];
+    try {
+      const res = await fetch(
+        `${supabaseUrl}/rest/v1/mia_conversas_whatsapp?telefone=eq.${encodeURIComponent(telefone)}&select=historico,pausado`,
+        { headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` } }
+      );
+      if (res.ok) {
+        const rows = await res.json() as Array<{ historico: Msg[]; pausado: boolean }>;
+        if (rows.length > 0) {
+          pausadoAtual   = rows[0].pausado ?? false;
+          historicoAtual = rows[0].historico ?? [];
+        }
       }
+    } catch (_) { /* ignora */ }
+
+    // Toggle: pausa ↔ reativa (await garante que está salvo antes de qualquer outra requisição)
+    const novoPausado = !pausadoAtual;
+    await fetch(
+      `${supabaseUrl}/rest/v1/mia_conversas_whatsapp?on_conflict=telefone`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: serviceKey,
+          Authorization: `Bearer ${serviceKey}`,
+          Prefer: 'resolution=merge-duplicates',
+        },
+        body: JSON.stringify({
+          telefone,
+          historico: historicoAtual,
+          pausado: novoPausado,
+          updated_at: new Date().toISOString(),
+        }),
+      }
+    ).catch(console.error);
+
+    console.log('[mia-chat] pausado setado para', telefone, '→', novoPausado);
+
+    // Envia mensagem sem o # para o destinatário
+    const mensagemLimpa = texto.slice(1).trim();
+    if (mensagemLimpa) {
+      fetch(`${EVOLUTION_URL}/message/sendText/${EVOLUTION_INSTANCE}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', apikey: evolutionKey },
+        body: JSON.stringify({ number: telefone, text: mensagemLimpa }),
+      }).catch(console.error);
     }
 
     return new Response('OK', { status: 200 });
