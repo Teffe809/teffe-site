@@ -175,28 +175,91 @@ Após o cliente escolher o horário, inicie sua resposta OBRIGATORIAMENTE com [L
 
 // ── Handler WhatsApp (webhook Evolution API) ───────────────────────────────
 async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> {
-  // Normaliza event name: 'MESSAGES_UPSERT' ou 'messages.upsert' → ambos aceitos
   const evt = String(body.event ?? '').toUpperCase().replace('.', '_');
   if (evt !== 'MESSAGES_UPSERT') {
     return new Response('OK', { status: 200 });
   }
 
-  const data = (body.data ?? {}) as Record<string, unknown>;
-  const key  = (data.key ?? {}) as Record<string, unknown>;
-
-  // Ignora mensagens enviadas por nós mesmos
-  if (key.fromMe) return new Response('OK', { status: 200 });
+  const data    = (body.data ?? {}) as Record<string, unknown>;
+  const key     = (data.key ?? {}) as Record<string, unknown>;
+  const fromMe  = Boolean(key.fromMe);
 
   const remoteJid = String(key.remoteJid ?? '');
 
   // Ignora grupos
   if (remoteJid.endsWith('@g.us')) return new Response('OK', { status: 200 });
 
-  // Extrai número limpo (somente dígitos)
   const telefone = remoteJid.replace('@s.whatsapp.net', '').replace(/\D/g, '');
   if (!telefone) return new Response('OK', { status: 200 });
 
-  // Extrai texto da mensagem (suporta texto simples e extendedTextMessage)
+  const supabaseUrl  = Deno.env.get('SUPABASE_URL') ?? '';
+  const serviceKey   = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+  const evolutionKey = Deno.env.get('EVOLUTION_API_KEY') ?? '';
+
+  // ── Modo híbrido: mensagem do dono começando com # ──
+  if (fromMe) {
+    const msgObj = (data.message ?? {}) as Record<string, unknown>;
+    const texto  = String(
+      msgObj.conversation ??
+      ((msgObj.extendedTextMessage as Record<string, unknown>)?.text) ??
+      ''
+    ).trim();
+
+    if (texto.startsWith('#')) {
+      // Carrega estado atual para fazer o toggle
+      let pausadoAtual = false;
+      let historicoAtual: Msg[] = [];
+      try {
+        const res = await fetch(
+          `${supabaseUrl}/rest/v1/mia_conversas_whatsapp?telefone=eq.${encodeURIComponent(telefone)}&select=historico,pausado`,
+          { headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` } }
+        );
+        if (res.ok) {
+          const rows = await res.json() as Array<{ historico: Msg[]; pausado: boolean }>;
+          if (rows.length > 0) {
+            pausadoAtual   = rows[0].pausado ?? false;
+            historicoAtual = rows[0].historico ?? [];
+          }
+        }
+      } catch (_) { /* ignora */ }
+
+      // Toggle: pausa ↔ reativa
+      const novoPausado = !pausadoAtual;
+      fetch(
+        `${supabaseUrl}/rest/v1/mia_conversas_whatsapp?on_conflict=telefone`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            apikey: serviceKey,
+            Authorization: `Bearer ${serviceKey}`,
+            Prefer: 'resolution=merge-duplicates',
+          },
+          body: JSON.stringify({
+            telefone,
+            historico: historicoAtual,
+            pausado: novoPausado,
+            updated_at: new Date().toISOString(),
+          }),
+        }
+      ).catch(console.error);
+
+      // Envia mensagem sem o # para o destinatário
+      const mensagemLimpa = texto.slice(1).trim();
+      if (mensagemLimpa) {
+        fetch(`${EVOLUTION_URL}/message/sendText/${EVOLUTION_INSTANCE}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', apikey: evolutionKey },
+          body: JSON.stringify({ number: telefone, text: mensagemLimpa }),
+        }).catch(console.error);
+      }
+    }
+
+    return new Response('OK', { status: 200 });
+  }
+
+  // ── Mensagem do cliente (fromMe: false) ──
+
   const msgObj = (data.message ?? {}) as Record<string, unknown>;
   const texto  = String(
     msgObj.conversation ??
@@ -209,30 +272,34 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
 
   const nome = String(data.pushName ?? '');
 
-  const h      = (new Date().getUTCHours() + 21) % 24; // UTC-3 (Brasília)
+  const h       = (new Date().getUTCHours() + 21) % 24; // UTC-3 (Brasília)
   const periodo = h >= 5 && h < 12 ? 'manhã' : h >= 12 && h < 18 ? 'tarde' : 'noite';
   const saudacao = h >= 6 && h < 12 ? 'Bom dia'
                  : h >= 12 && h < 18 ? 'Boa tarde'
                  : h >= 18 && h < 23 ? 'Boa noite'
                  : 'Olá';
 
-  const supabaseUrl  = Deno.env.get('SUPABASE_URL') ?? '';
-  const serviceKey   = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-  const apiKey       = Deno.env.get('ANTHROPIC_API_KEY') ?? '';
-  const evolutionKey = Deno.env.get('EVOLUTION_API_KEY') ?? '';
+  const apiKey = Deno.env.get('ANTHROPIC_API_KEY') ?? '';
 
-  // ── Carrega histórico da conversa ──
+  // ── Carrega histórico e estado da conversa ──
   let historico: Msg[] = [];
+  let pausado = false;
   try {
     const histRes = await fetch(
-      `${supabaseUrl}/rest/v1/mia_conversas_whatsapp?telefone=eq.${encodeURIComponent(telefone)}&select=historico`,
+      `${supabaseUrl}/rest/v1/mia_conversas_whatsapp?telefone=eq.${encodeURIComponent(telefone)}&select=historico,pausado`,
       { headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` } }
     );
     if (histRes.ok) {
-      const rows = await histRes.json() as Array<{ historico: Msg[] }>;
-      if (rows.length > 0) historico = rows[0].historico ?? [];
+      const rows = await histRes.json() as Array<{ historico: Msg[]; pausado: boolean }>;
+      if (rows.length > 0) {
+        historico = rows[0].historico ?? [];
+        pausado   = rows[0].pausado ?? false;
+      }
     }
   } catch (_) { /* começa do zero se o banco falhar */ }
+
+  // Mia pausada para este número — aguarda resposta manual do dono
+  if (pausado) return new Response('OK', { status: 200 });
 
   const primeiraMsg = historico.length === 0;
 
