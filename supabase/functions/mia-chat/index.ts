@@ -123,7 +123,7 @@ function buildSystem(messages: Msg[], periodo: string): string {
 }
 
 // buildSystemWhatsApp — prompt dedicado ao canal WhatsApp (Evolution API)
-function buildSystemWhatsApp(periodo: string, nome: string): string {
+function buildSystemWhatsApp(periodo: string, nome: string, primeiraMsg = false, saudacao = ''): string {
   let prompt = `Você é a Mia, assistente da Teffe Tecnologia. Você está atendendo pelo WhatsApp — seja extremamente humana, calorosa e natural. Nunca pareça um robô ou use respostas engessadas.
 
 Sua missão é entender profundamente o que o cliente precisa antes de qualquer coisa. Faça perguntas naturais, ouça com atenção, demonstre interesse genuíno pelo negócio da pessoa.
@@ -142,6 +142,10 @@ Regras importantes:
 - Pode usar emojis com moderação para ser mais humana
 - Se não souber responder algo, diz que vai verificar e retorna em breve
 - Horário de Brasília sempre considerado nas despedidas`;
+
+  if (primeiraMsg && saudacao) {
+    prompt += `\n\nEsta é a PRIMEIRA mensagem desta conversa. OBRIGATORIAMENTE inicie sua resposta com "${saudacao}" — independente do que o cliente escreveu (oi, olá, bom dia, qualquer coisa). Seja calorosa e natural, como por exemplo "${saudacao}! 😊" ou "${saudacao}, tudo bem?". Depois pergunte em que pode ajudar.`;
+  }
 
   if (nome) prompt += `\n\nO cliente se chama ${nome}. Use o nome nas respostas.`;
   prompt += '\n\nPeríodo atual do dia: ' + periodo + '.';
@@ -184,8 +188,12 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
 
   const nome = String(data.pushName ?? '');
 
-  const h      = (new Date().getUTCHours() + 21) % 24; // UTC-3
+  const h      = (new Date().getUTCHours() + 21) % 24; // UTC-3 (Brasília)
   const periodo = h >= 5 && h < 12 ? 'manhã' : h >= 12 && h < 18 ? 'tarde' : 'noite';
+  const saudacao = h >= 6 && h < 12 ? 'Bom dia'
+                 : h >= 12 && h < 18 ? 'Boa tarde'
+                 : h >= 18 && h < 23 ? 'Boa noite'
+                 : 'Olá';
 
   const supabaseUrl  = Deno.env.get('SUPABASE_URL') ?? '';
   const serviceKey   = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
@@ -205,11 +213,13 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
     }
   } catch (_) { /* começa do zero se o banco falhar */ }
 
+  const primeiraMsg = historico.length === 0;
+
   // Adiciona mensagem do usuário
   historico.push({ role: 'user', content: texto });
 
   // ── Chama Claude ──
-  const system = buildSystemWhatsApp(periodo, nome);
+  const system = buildSystemWhatsApp(periodo, nome, primeiraMsg, saudacao);
   const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
