@@ -3,22 +3,18 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'content-type',
 };
 
-const EVOLUTION_URL      = 'https://evolution-api-production-baf4.up.railway.app';
-const EVOLUTION_INSTANCE = 'teffe-mia';
+const EVOLUTION_URL = 'https://evolution-api-production-baf4.up.railway.app';
 
-// ── Base de personalidade ──────────────────────────────────────────────────
+// ── Base de personalidade (site) ───────────────────────────────────────────
 const BASE = 'Você é a Mia, assistente inteligente da Teffe Tecnologia. Personalidade humana, calorosa, natural e elegante — nunca pareça um robô. Respostas curtas e naturais, como uma conversa humana. Nunca mencione valores ou preços. Nunca use Sr./Sra./Srta. — apenas o nome. O cliente está sempre no comando, nunca pressione.';
 
-// ── Modo Suporte (cliente logado na Área do Cliente) ──────────────────────
 const PROMPT_SUPORTE = 'Você é a Mia, assistente de suporte da Teffe. O cliente já está logado na área dele. NUNCA ofereça produtos ou serviços — ele já é cliente. Sua função é ajudar com qualquer dúvida relacionada à conta dele: contratos, boletos, chamados, suprimentos e equipamentos. Seja cordial, natural e humanizada — responda como um atendente de suporte experiente, não como um robô. Use o nome do cliente quando possível. Nunca tente vender nada.';
 
-// ── Fase 1: Abertura (site — ainda não sabemos o nome) ─────────────────────
 const PROMPT_ABERTURA = BASE + `
 
 Sua missão agora: descobrir o nome do visitante e, em seguida, perguntar o que a empresa mais precisa nesse momento.
 Após saber o nome, use-o em todas as mensagens seguintes.`;
 
-// ── Fase 2: Atendimento — um script por caminho ───────────────────────────
 const CAMINHO_1 = BASE + `
 
 O visitante tem interesse em outsourcing de impressão. Use o nome do visitante.
@@ -73,7 +69,6 @@ Pergunte qual é o maior desafio do dia a dia da empresa e direcione naturalment
 
 Quando identificar a necessidade e coletar as informações: diga "Agora que já tenho o que preciso, estarei encaminhando para nossa equipe comercial — eles vão montar uma proposta personalizada de acordo com a sua necessidade." e pergunte "Você prefere contato pelo WhatsApp, e-mail ou ligação?"`;
 
-// ── Fase 3: Encaminhamento ─────────────────────────────────────────────────
 const PROMPT_ENCAMINHAMENTO = BASE + `
 
 Você já coletou as informações do visitante. Siga exatamente esta sequência:
@@ -83,12 +78,10 @@ Você já coletou as informações do visitante. Siga exatamente esta sequência
 4. Se não houver mais nada: despeça com "Foi um prazer falar com você, [Nome]! Tenha um excelente [período]!" usando o período correto do dia.
 Nunca use "em breve".`;
 
-// ── Detecção de fase e caminho ─────────────────────────────────────────────
 type Msg = { role: string; content: string };
 
 function detectarFase(messages: Msg[]): 'abertura' | 'atendimento' | 'encaminhamento' {
   const botMsgs = messages.filter(m => m.role === 'assistant');
-
   const jaEncaminhou = botMsgs.some(m => {
     const c = m.content.toLowerCase();
     return c.includes('whatsapp, e-mail ou ligação') ||
@@ -96,10 +89,8 @@ function detectarFase(messages: Msg[]): 'abertura' | 'atendimento' | 'encaminham
            c.includes('prefere contato');
   });
   if (jaEncaminhou) return 'encaminhamento';
-
   const userMsgs = messages.filter(m => m.role === 'user');
   if (userMsgs.length <= 1) return 'abertura';
-
   return 'atendimento';
 }
 
@@ -112,7 +103,6 @@ function detectarCaminho(messages: Msg[]): string {
   return CAMINHO_5;
 }
 
-// buildSystem para o site (inclui fase de abertura para coletar o nome)
 function buildSystem(messages: Msg[], periodo: string): string {
   const fase = detectarFase(messages);
   let prompt: string;
@@ -122,53 +112,18 @@ function buildSystem(messages: Msg[], periodo: string): string {
   return prompt + '\n\nPeríodo atual do dia: ' + periodo + '.';
 }
 
-// buildSystemWhatsApp — prompt dedicado ao canal WhatsApp (Evolution API)
-function buildSystemWhatsApp(periodo: string, nome: string, primeiraMsg = false, saudacao = ''): string {
-  let prompt = `Você é a Mia, assistente da Teffe Tecnologia. Você está atendendo pelo WhatsApp — seja extremamente humana, calorosa e natural. Nunca pareça um robô ou use respostas engessadas.
-
-Sua missão é entender profundamente o que o cliente precisa e conduzi-lo naturalmente ao fechamento. O cliente sempre sente que está decidindo — você sempre está conduzindo.
-
-A Teffe oferece: Outsourcing de impressão, Locação de notebook, Locação de desktop, Suporte de TI e o Teffe IA — solução de atendimento inteligente com IA para empresas.
-
-═══ TÉCNICAS DE CONDUÇÃO ═══
-
-1. PERGUNTAS DE ESCOLHA DIRIGIDA — nunca pergunta sim/não. Sempre duas opções que levam ao mesmo destino:
-- Em vez de "Você quer uma proposta?" → "Prefere receber a proposta aqui no WhatsApp ou por e-mail?"
-- Em vez de "Posso te ligar?" → "Qual o melhor horário para nosso gerente de relacionamento te chamar — manhã ou tarde?"
-- Em vez de "Você tem interesse?" → "O que faz mais sentido para sua empresa — reduzir custo fixo ou ter suporte técnico incluso?"
-
-2. CONFIRMAÇÃO PROGRESSIVA — confirma pequenos acordos ao longo da conversa:
-- "Então você já tem impressoras próprias e está com problema de manutenção, certo?"
-- "Perfeito, então o que você precisa é de uma solução que cubra tudo sem surpresa no orçamento, é isso?"
-Cada confirmação do cliente é um micro-compromisso que aproxima do fechamento.
-
-3. ESPELHAMENTO DA NECESSIDADE — antes de qualquer solução, repete o problema com as palavras do próprio cliente:
-- "Entendi — você está gastando muito com manutenção e o equipamento vive parando, prejudicando sua operação. É isso?"
-O cliente se sente ouvido e você ganha autoridade para oferecer a solução.
-
-4. URGÊNCIA NATURAL — nunca pressiona, mas cria contexto de oportunidade:
-- "Esse tipo de solução costuma ter bastante procura — quanto antes a gente conversar, mais rápido você resolve isso."
-
-5. ENCAMINHAMENTO PREMIUM — quando identificar interesse real:
-"Vou deixar nosso gerente de relacionamento ciente da sua necessidade — ele vai entrar em contato para montar a melhor solução para você. Qual o melhor horário para ele te chamar — manhã ou tarde?"
-
-Após o cliente escolher o horário, inicie sua resposta OBRIGATORIAMENTE com [LEAD_PRONTO] e diga:
-"Perfeito! [horário escolhido] anotado. Pode aguardar que ele vai entrar em contato. Foi um prazer falar com você! Tenha um [período]! 😊"
-
-═══ REGRAS ═══
-- Respostas curtas e naturais — como uma conversa de WhatsApp
-- Nunca mande listas longas ou textos enormes de uma vez
-- Use o nome da pessoa quando souber
-- Nunca use linguagem corporativa fria
-- Pode usar emojis com moderação
-- Nunca mencione valores ou preços
-- Se não souber responder algo, diz que vai verificar e retorna em breve
-- Mensagens que não fazem sentido no contexto da Teffe (perguntas pessoais como ter mãe, estar doente, ter comido, etc): responda com leveza e bom humor — "Acho que essa mensagem veio parar aqui por engano! 😄 Mas já que estamos aqui — posso te ajudar com alguma coisa?" — e redirecione naturalmente. NUNCA mencione que não tem mãe, que é IA, que não come, que não existe fisicamente. Apenas desvie com humor e volte para o atendimento.`;
-
+// ── Monta system prompt final a partir do base (vindo do banco) ────────────
+function buildSystemFromBase(
+  basePrompt: string,
+  periodo: string,
+  nome: string,
+  primeiraMsg: boolean,
+  saudacao: string,
+): string {
+  let prompt = basePrompt;
   if (primeiraMsg && saudacao) {
     prompt += `\n\nEsta é a PRIMEIRA mensagem desta conversa. OBRIGATORIAMENTE inicie sua resposta com "${saudacao}" — independente do que o cliente escreveu (oi, olá, bom dia, qualquer coisa). Seja calorosa e natural, como por exemplo "${saudacao}! 😊" ou "${saudacao}, tudo bem?". Depois pergunte em que pode ajudar.`;
   }
-
   if (nome) prompt += `\n\nO cliente se chama ${nome}. Use o nome nas respostas.`;
   prompt += '\n\nPeríodo atual do dia: ' + periodo + '.';
   return prompt;
@@ -176,13 +131,10 @@ Após o cliente escolher o horário, inicie sua resposta OBRIGATORIAMENTE com [L
 
 // ── Handler WhatsApp (webhook Evolution API) ───────────────────────────────
 async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> {
-  // Log do payload completo para diagnóstico
   console.log('[mia-chat] payload recebido:', JSON.stringify(body));
 
-  const evt = String(body.event ?? '').toUpperCase().replace(/[.\s-]/g, '_');
-
-  // Aceita MESSAGES_UPSERT e SEND_MESSAGE (mensagens enviadas pelo dono)
-  const isUpsert     = evt === 'MESSAGES_UPSERT';
+  const evt           = String(body.event ?? '').toUpperCase().replace(/[.\s-]/g, '_');
+  const isUpsert      = evt === 'MESSAGES_UPSERT';
   const isSendMessage = evt === 'SEND_MESSAGE';
 
   if (!isUpsert && !isSendMessage) {
@@ -190,26 +142,46 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
     return new Response('OK', { status: 200 });
   }
 
-  // data pode ser objeto ou array (Evolution API v2 às vezes envia array)
+  const instancia   = String(body.instance ?? '');
+  const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+  const serviceKey  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+
+  // ── Busca configuração da instância no banco ──
+  let systemPromptBase = '';
+  try {
+    const instRes = await fetch(
+      `${supabaseUrl}/rest/v1/mia_instancias?instancia=eq.${encodeURIComponent(instancia)}&select=system_prompt,ativo`,
+      { headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` } },
+    );
+    if (instRes.ok) {
+      const rows = await instRes.json() as Array<{ system_prompt: string; ativo: boolean }>;
+      if (rows.length === 0 || !rows[0].ativo) {
+        console.log('[mia-chat] instância não encontrada ou inativa:', instancia);
+        return new Response('OK', { status: 200 });
+      }
+      systemPromptBase = rows[0].system_prompt;
+    } else {
+      console.log('[mia-chat] erro ao buscar instância:', instRes.status);
+      return new Response('OK', { status: 200 });
+    }
+  } catch (e) {
+    console.log('[mia-chat] exceção ao buscar instância:', e);
+    return new Response('OK', { status: 200 });
+  }
+
   const rawData = body.data;
   const data    = (Array.isArray(rawData) ? rawData[0] : rawData ?? {}) as Record<string, unknown>;
   const key     = (data.key ?? {}) as Record<string, unknown>;
-
-  // fromMe: true em SEND_MESSAGE ou em MESSAGES_UPSERT com fromMe explícito
   const fromMe  = isSendMessage ? true : Boolean(key.fromMe);
 
-  console.log('[mia-chat] evt:', evt, '| fromMe:', fromMe, '| remoteJid:', key.remoteJid);
+  console.log('[mia-chat] evt:', evt, '| instancia:', instancia, '| fromMe:', fromMe, '| remoteJid:', key.remoteJid);
 
   const remoteJid = String(key.remoteJid ?? '');
-
-  // Ignora grupos
   if (remoteJid.endsWith('@g.us')) return new Response('OK', { status: 200 });
 
   const telefone = remoteJid.replace('@s.whatsapp.net', '').replace(/\D/g, '');
   if (!telefone) return new Response('OK', { status: 200 });
 
-  const supabaseUrl  = Deno.env.get('SUPABASE_URL') ?? '';
-  const serviceKey   = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
   const evolutionKey = Deno.env.get('EVOLUTION_API_KEY') ?? '';
 
   // ── Modo híbrido: mensagem do dono começando com # ──
@@ -221,20 +193,16 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
       ''
     ).trim();
 
-    // Só processa se começa com #; ignora respostas programáticas da Mia
-    if (!texto.startsWith('#')) {
-      return new Response('OK', { status: 200 });
-    }
+    if (!texto.startsWith('#')) return new Response('OK', { status: 200 });
 
-    console.log('[mia-chat] modo híbrido ativado | telefone:', telefone, '| texto:', texto);
+    console.log('[mia-chat] modo híbrido | instancia:', instancia, '| telefone:', telefone);
 
-    // Carrega estado atual para fazer o toggle (await — sem race condition)
-    let pausadoAtual = false;
+    let pausadoAtual   = false;
     let historicoAtual: Msg[] = [];
     try {
       const res = await fetch(
-        `${supabaseUrl}/rest/v1/mia_conversas_whatsapp?telefone=eq.${encodeURIComponent(telefone)}&select=historico,pausado`,
-        { headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` } }
+        `${supabaseUrl}/rest/v1/mia_conversas_whatsapp?instancia=eq.${encodeURIComponent(instancia)}&telefone=eq.${encodeURIComponent(telefone)}&select=historico,pausado`,
+        { headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` } },
       );
       if (res.ok) {
         const rows = await res.json() as Array<{ historico: Msg[]; pausado: boolean }>;
@@ -245,10 +213,9 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
       }
     } catch (_) { /* ignora */ }
 
-    // Toggle: pausa ↔ reativa (await garante que está salvo antes de qualquer outra requisição)
     const novoPausado = !pausadoAtual;
     await fetch(
-      `${supabaseUrl}/rest/v1/mia_conversas_whatsapp?on_conflict=telefone`,
+      `${supabaseUrl}/rest/v1/mia_conversas_whatsapp?on_conflict=instancia,telefone`,
       {
         method: 'POST',
         headers: {
@@ -258,24 +225,20 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
           Prefer: 'resolution=merge-duplicates',
         },
         body: JSON.stringify({
+          instancia,
           telefone,
           historico: historicoAtual,
           pausado: novoPausado,
           updated_at: new Date().toISOString(),
         }),
-      }
+      },
     ).catch(console.error);
 
-    console.log('[mia-chat] pausado setado para', telefone, '→', novoPausado);
-
-    // Não reenvia via Evolution API — o WhatsApp já entregou a mensagem original ao cliente.
-    // O # é apenas o comando de toggle; envie mensagens ao cliente em separado (sem #).
-
+    console.log('[mia-chat] pausado →', novoPausado, 'para', instancia, '/', telefone);
     return new Response('OK', { status: 200 });
   }
 
   // ── Mensagem do cliente (fromMe: false) ──
-
   const msgObj = (data.message ?? {}) as Record<string, unknown>;
   const texto  = String(
     msgObj.conversation ??
@@ -288,8 +251,8 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
 
   const nome = String(data.pushName ?? '');
 
-  const h       = (new Date().getUTCHours() + 21) % 24; // UTC-3 (Brasília)
-  const periodo = h >= 5 && h < 12 ? 'manhã' : h >= 12 && h < 18 ? 'tarde' : 'noite';
+  const h        = (new Date().getUTCHours() + 21) % 24; // UTC-3 (Brasília)
+  const periodo  = h >= 5 && h < 12 ? 'manhã' : h >= 12 && h < 18 ? 'tarde' : 'noite';
   const saudacao = h >= 6 && h < 12 ? 'Bom dia'
                  : h >= 12 && h < 18 ? 'Boa tarde'
                  : h >= 18 && h < 23 ? 'Boa noite'
@@ -297,13 +260,13 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
 
   const apiKey = Deno.env.get('ANTHROPIC_API_KEY') ?? '';
 
-  // ── Carrega histórico e estado da conversa ──
+  // ── Carrega histórico e estado da conversa (scoped por instancia+telefone) ──
   let historico: Msg[] = [];
   let pausado = false;
   try {
     const histRes = await fetch(
-      `${supabaseUrl}/rest/v1/mia_conversas_whatsapp?telefone=eq.${encodeURIComponent(telefone)}&select=historico,pausado`,
-      { headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` } }
+      `${supabaseUrl}/rest/v1/mia_conversas_whatsapp?instancia=eq.${encodeURIComponent(instancia)}&telefone=eq.${encodeURIComponent(telefone)}&select=historico,pausado`,
+      { headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` } },
     );
     if (histRes.ok) {
       const rows = await histRes.json() as Array<{ historico: Msg[]; pausado: boolean }>;
@@ -314,17 +277,14 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
     }
   } catch (_) { /* começa do zero se o banco falhar */ }
 
-  // Mia pausada para este número — aguarda resposta manual do dono
   if (pausado) return new Response('OK', { status: 200 });
 
   const primeiraMsg = historico.length === 0;
-
-  // Adiciona mensagem do usuário
   historico.push({ role: 'user', content: texto });
 
-  // ── Chama Claude ──
-  const system = buildSystemWhatsApp(periodo, nome, primeiraMsg, saudacao);
-  const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
+  // ── Chama Claude com system prompt vindo do banco ──
+  const system     = buildSystemFromBase(systemPromptBase, periodo, nome, primeiraMsg, saudacao);
+  const claudeRes  = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -346,15 +306,12 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
 
   if (!resposta) return new Response('OK', { status: 200 });
 
-  // Adiciona resposta ao histórico
   historico.push({ role: 'assistant', content: resposta });
-
-  // Mantém histórico em no máximo 40 mensagens
   if (historico.length > 40) historico = historico.slice(-40);
 
-  // ── Salva histórico no Supabase (upsert) ──
+  // ── Salva histórico (upsert por instancia+telefone) ──
   fetch(
-    `${supabaseUrl}/rest/v1/mia_conversas_whatsapp?on_conflict=telefone`,
+    `${supabaseUrl}/rest/v1/mia_conversas_whatsapp?on_conflict=instancia,telefone`,
     {
       method: 'POST',
       headers: {
@@ -363,17 +320,14 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
         Authorization: `Bearer ${serviceKey}`,
         Prefer: 'resolution=merge-duplicates',
       },
-      body: JSON.stringify({ telefone, historico, updated_at: new Date().toISOString() }),
-    }
+      body: JSON.stringify({ instancia, telefone, historico, updated_at: new Date().toISOString() }),
+    },
   ).catch(console.error);
 
-  // ── Envia resposta via Evolution API ──
-  fetch(`${EVOLUTION_URL}/message/sendText/${EVOLUTION_INSTANCE}`, {
+  // ── Envia resposta pela instância correta da Evolution API ──
+  fetch(`${EVOLUTION_URL}/message/sendText/${instancia}`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      apikey: evolutionKey,
-    },
+    headers: { 'Content-Type': 'application/json', apikey: evolutionKey },
     body: JSON.stringify({ number: telefone, text: resposta }),
   }).catch(console.error);
 
@@ -381,11 +335,8 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
   if (isLead) {
     fetch(`${supabaseUrl}/functions/v1/mia-salvar-lead`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${serviceKey}`,
-      },
-      body: JSON.stringify({ nome, historico, canal: 'whatsapp', telefone }),
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${serviceKey}` },
+      body: JSON.stringify({ nome, historico, canal: 'whatsapp', telefone, instancia }),
     }).catch(console.error);
   }
 
@@ -401,15 +352,15 @@ Deno.serve(async (req: Request) => {
   try {
     const body = await req.json();
 
-    // Detecta webhook do Evolution API pela presença de `event` + `instance`
-    if (body.event && body.instance === EVOLUTION_INSTANCE) {
+    // Webhook da Evolution API: qualquer instância registrada no banco
+    if (body.event && body.instance) {
       return await handleWhatsApp(body as Record<string, unknown>);
     }
 
     // ── Fluxo normal do site ──
     const { messages, modo, cliente_nome } = body;
 
-    const h      = (new Date().getUTCHours() + 21) % 24; // UTC-3
+    const h       = (new Date().getUTCHours() + 21) % 24;
     const periodo = h >= 5 && h < 12 ? 'manhã' : h >= 12 && h < 18 ? 'tarde' : 'noite';
 
     const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
