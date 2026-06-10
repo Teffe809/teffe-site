@@ -184,6 +184,33 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
 
   const evolutionKey = Deno.env.get('EVOLUTION_API_KEY') ?? '';
 
+  // ── Whitelist: se a instância tem registros, só atende números cadastrados ──
+  try {
+    const wlRes = await fetch(
+      `${supabaseUrl}/rest/v1/mia_whitelist?instancia=eq.${encodeURIComponent(instancia)}&select=telefone,ativo&limit=1`,
+      { headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` } },
+    );
+    if (wlRes.ok) {
+      const wlRows = await wlRes.json() as Array<{ telefone: string; ativo: boolean }>;
+      if (wlRows.length > 0) {
+        // Instância tem whitelist — verifica se este número está autorizado
+        const authRes = await fetch(
+          `${supabaseUrl}/rest/v1/mia_whitelist?instancia=eq.${encodeURIComponent(instancia)}&telefone=eq.${encodeURIComponent(telefone)}&ativo=eq.true&select=telefone`,
+          { headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` } },
+        );
+        if (authRes.ok) {
+          const authRows = await authRes.json() as Array<{ telefone: string }>;
+          if (authRows.length === 0) {
+            console.log('[mia-chat] número não autorizado na whitelist:', instancia, '/', telefone);
+            return new Response('OK', { status: 200 });
+          }
+        }
+      }
+    }
+  } catch (e) {
+    console.log('[mia-chat] erro ao verificar whitelist:', e);
+  }
+
   // ── Modo híbrido: mensagem do dono começando com # ──
   if (fromMe) {
     const msgObj = (data.message ?? {}) as Record<string, unknown>;
