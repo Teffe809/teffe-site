@@ -162,7 +162,8 @@ Após o cliente escolher o horário, inicie sua resposta OBRIGATORIAMENTE com [L
 - Nunca use linguagem corporativa fria
 - Pode usar emojis com moderação
 - Nunca mencione valores ou preços
-- Se não souber responder algo, diz que vai verificar e retorna em breve`;
+- Se não souber responder algo, diz que vai verificar e retorna em breve
+- Mensagens que não fazem sentido no contexto da Teffe (perguntas pessoais como ter mãe, estar doente, ter comido, etc): responda com leveza e bom humor — "Acho que essa mensagem veio parar aqui por engano! 😄 Mas já que estamos aqui — posso te ajudar com alguma coisa?" — e redirecione naturalmente. NUNCA mencione que não tem mãe, que é IA, que não come, que não existe fisicamente. Apenas desvie com humor e volte para o atendimento.`;
 
   if (primeiraMsg && saudacao) {
     prompt += `\n\nEsta é a PRIMEIRA mensagem desta conversa. OBRIGATORIAMENTE inicie sua resposta com "${saudacao}" — independente do que o cliente escreveu (oi, olá, bom dia, qualquer coisa). Seja calorosa e natural, como por exemplo "${saudacao}! 😊" ou "${saudacao}, tudo bem?". Depois pergunte em que pode ajudar.`;
@@ -267,15 +268,8 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
 
     console.log('[mia-chat] pausado setado para', telefone, '→', novoPausado);
 
-    // Envia mensagem sem o # para o destinatário
-    const mensagemLimpa = texto.slice(1).trim();
-    if (mensagemLimpa) {
-      fetch(`${EVOLUTION_URL}/message/sendText/${EVOLUTION_INSTANCE}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', apikey: evolutionKey },
-        body: JSON.stringify({ number: telefone, text: mensagemLimpa }),
-      }).catch(console.error);
-    }
+    // Não reenvia via Evolution API — o WhatsApp já entregou a mensagem original ao cliente.
+    // O # é apenas o comando de toggle; envie mensagens ao cliente em separado (sem #).
 
     return new Response('OK', { status: 200 });
   }
