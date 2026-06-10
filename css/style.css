@@ -933,8 +933,8 @@ body:has(.orca-bg.open),body:has(.modal-bg.open){overflow:hidden;}
   /* Navbar interno das equip-pages — aparece no mobile para navegação */
   .ep-navbar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 16px;background:#fff;border-bottom:1px solid var(--gray-light);position:sticky;top:0;z-index:10;}
   .ep-navbar svg{display:none;}
+  .ep-navbar .ep-cta-btn{display:none;}
   .ep-back{display:flex;align-items:center;font-size:20px;line-height:1;background:none;border:1.5px solid var(--gray-light);border-radius:8px;cursor:pointer;color:var(--azul);padding:6px 12px;flex-shrink:0;}
-  .ep-cta-btn{font-size:12px;padding:7px 12px;white-space:nowrap;}
 
   /* ep-hero: altura fixa → auto; padding excessivo do hero-left corrigido */
   .ep-hero{min-height:0;}
