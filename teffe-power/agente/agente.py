@@ -115,7 +115,13 @@ async def snmp_get(ip, oid, community="public", versao="2c"):
 async def coletar_impressora(ip, community, versao):
     """Coleta todos os dados de uma impressora via SNMP (concorrente)."""
     def pct(val, max_val):
-        if val is None or max_val is None or max_val <= 0:
+        if val is None:
+            return None
+        if val == -3:   # RFC 1759: at or near full capacity
+            return 100
+        if val < 0:     # -2 = unknown, -1 = no limit
+            return None
+        if max_val is None or max_val <= 0:
             return None
         return max(0, min(100, int(val * 100 / max_val)))
 
