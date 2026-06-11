@@ -4,6 +4,7 @@ Coleta dados das impressoras via SNMP e envia ao Supabase.
 Pode rodar como serviço Windows ou diretamente via python agente.py
 """
 
+import asyncio
 import os
 import sys
 import time
@@ -85,40 +86,58 @@ class Supabase:
         return r.json()
 
 
-# ── SNMP helpers ──────────────────────────────────────────────────────────────
-def snmp_get(ip, oid, community="public", versao="2c"):
+# ── SNMP helpers (pysnmp 7.x — API Slim/asyncio) ─────────────────────────────
+async def snmp_get(ip, oid, community="public", versao="2c"):
     """Busca um OID via SNMP. Retorna valor inteiro ou None."""
     try:
-        from pysnmp.hlapi import (
-            getCmd, SnmpEngine, CommunityData, UdpTransportTarget,
-            ContextData, ObjectType, ObjectIdentity,
+        from pysnmp.hlapi.v1arch.asyncio import (
+            Slim, ObjectType, ObjectIdentity,
         )
         ver = 1 if versao == "1" else 2
-        iterator = getCmd(
-            SnmpEngine(),
-            CommunityData(community, mpModel=ver - 1),
-            UdpTransportTarget((ip, 161), timeout=3, retries=1),
-            ContextData(),
-            ObjectType(ObjectIdentity(oid)),
-        )
-        errorIndication, errorStatus, _, varBinds = next(iterator)
+        with Slim(ver) as slim:
+            errorIndication, errorStatus, _, varBinds = await slim.get(
+                community,
+                ip,
+                161,
+                ObjectType(ObjectIdentity(oid)),
+                timeout=3,
+                retries=1,
+            )
         if errorIndication or errorStatus:
             return None
         for varBind in varBinds:
             return int(varBind[1])
     except Exception as e:
         log.debug(f"SNMP {ip} OID {oid}: {e}")
-        return None
+    return None
 
 
-def coletar_impressora(ip, community, versao):
-    """Coleta todos os dados de uma impressora via SNMP."""
+async def coletar_impressora(ip, community, versao):
+    """Coleta todos os dados de uma impressora via SNMP (concorrente)."""
     def pct(val, max_val):
         if val is None or max_val is None or max_val <= 0:
             return None
         return max(0, min(100, int(val * 100 / max_val)))
 
-    status_raw = snmp_get(ip, OID_STATUS, community, versao)
+    # Dispara todas as queries SNMP ao mesmo tempo
+    (
+        status_raw,
+        toner_preto_raw, toner_max_raw,
+        toner_ciano_raw, toner_magenta_raw, toner_amarelo_raw,
+        papel_raw, papel_max,
+        paginas,
+    ) = await asyncio.gather(
+        snmp_get(ip, OID_STATUS,        community, versao),
+        snmp_get(ip, OID_TONER_PRETO,   community, versao),
+        snmp_get(ip, OID_TONER_MAX,     community, versao),
+        snmp_get(ip, OID_TONER_CIANO,   community, versao),
+        snmp_get(ip, OID_TONER_MAGENTA, community, versao),
+        snmp_get(ip, OID_TONER_AMARELO, community, versao),
+        snmp_get(ip, OID_PAPEL_NIVEL,   community, versao),
+        snmp_get(ip, OID_PAPEL_MAX,     community, versao),
+        snmp_get(ip, OID_PAGINAS,       community, versao),
+    )
+
     if status_raw is None:
         return {"status": "offline"}
 
@@ -130,27 +149,19 @@ def coletar_impressora(ip, community, versao):
     else:
         status_str = "alerta"
 
-    toner_preto_raw = snmp_get(ip, OID_TONER_PRETO, community, versao)
-    toner_max_raw   = snmp_get(ip, OID_TONER_MAX,   community, versao)
     toner_preto_pct = pct(toner_preto_raw, toner_max_raw) if toner_max_raw else (
         max(0, min(100, toner_preto_raw)) if toner_preto_raw is not None else None
     )
 
-    papel_raw  = snmp_get(ip, OID_PAPEL_NIVEL, community, versao)
-    papel_max  = snmp_get(ip, OID_PAPEL_MAX,   community, versao)
-    papel_pct  = pct(papel_raw, papel_max) if papel_max else None
-
-    paginas = snmp_get(ip, OID_PAGINAS, community, versao)
-
     return {
         "status":         status_str,
         "toner_preto":    toner_preto_pct,
-        "toner_ciano":    pct(snmp_get(ip, OID_TONER_CIANO,   community, versao), toner_max_raw),
-        "toner_magenta":  pct(snmp_get(ip, OID_TONER_MAGENTA, community, versao), toner_max_raw),
-        "toner_amarelo":  pct(snmp_get(ip, OID_TONER_AMARELO, community, versao), toner_max_raw),
-        "nivel_papel":    papel_pct,
+        "toner_ciano":    pct(toner_ciano_raw,   toner_max_raw),
+        "toner_magenta":  pct(toner_magenta_raw, toner_max_raw),
+        "toner_amarelo":  pct(toner_amarelo_raw, toner_max_raw),
+        "nivel_papel":    pct(papel_raw, papel_max),
         "paginas_total":  paginas,
-        "paginas_hoje":   None,  # calculado pelo painel a partir das impressoes
+        "paginas_hoje":   None,
         "paginas_pb":     None,
         "paginas_color":  None,
         "ultimo_erro":    None,
@@ -158,11 +169,10 @@ def coletar_impressora(ip, community, versao):
 
 
 # ── Ciclo principal ───────────────────────────────────────────────────────────
-def ciclo(cfg, sb):
+async def ciclo(cfg, sb):
     log.info("=== Iniciando ciclo de coleta ===")
     chave = cfg["chave"]
 
-    # Busca impressoras ativas
     try:
         impressoras = sb.get(
             "teffe_power_impressoras",
@@ -179,7 +189,7 @@ def ciclo(cfg, sb):
         nome = imp["nome"]
         log.info(f"Coletando: {nome} ({ip})")
 
-        dados = coletar_impressora(ip, cfg["community"], cfg["versao"])
+        dados = await coletar_impressora(ip, cfg["community"], cfg["versao"])
         dados["impressora_id"]  = imp["id"]
         dados["licenca_chave"]  = chave
         dados["coletado_em"]    = datetime.now(timezone.utc).isoformat()
@@ -191,7 +201,6 @@ def ciclo(cfg, sb):
             log.error(f"  → Erro ao salvar leitura de {nome}: {e}")
             continue
 
-        # Gerar alertas automáticos
         gerar_alertas(sb, chave, imp["id"], nome, dados, cfg)
 
     log.info("=== Ciclo concluído ===")
@@ -199,13 +208,12 @@ def ciclo(cfg, sb):
 
 def gerar_alertas(sb, chave, imp_id, nome, dados, cfg):
     def criar_alerta(tipo, msg):
-        # Verifica se já existe alerta ativo do mesmo tipo
         existentes = sb.get(
             "teffe_power_alertas",
             f"licenca_chave=eq.{chave}&impressora_id=eq.{imp_id}&tipo=eq.{tipo}&resolvido=eq.false&select=id",
         )
         if existentes:
-            return  # já existe
+            return
         sb.post("teffe_power_alertas", {
             "licenca_chave": chave,
             "impressora_id": imp_id,
@@ -226,20 +234,17 @@ def gerar_alertas(sb, chave, imp_id, nome, dados, cfg):
     toner  = dados.get("toner_preto")
     papel  = dados.get("nivel_papel")
 
-    # Offline
     if status == "offline":
         criar_alerta("offline", f"{nome} — Impressora offline. Verificar conexão de rede.")
     else:
         resolver_alerta("offline")
 
-    # Toner baixo
     if toner is not None:
         if toner <= cfg["al_toner"]:
             criar_alerta("toner_baixo", f"{nome} — Toner preto em {toner}%. {'Substituição urgente' if toner < 10 else 'Reposição necessária'}.")
         elif toner > cfg["al_toner"] + 5:
             resolver_alerta("toner_baixo")
 
-    # Papel baixo
     if papel is not None:
         if papel <= cfg["al_papel"]:
             criar_alerta("papel_baixo", f"{nome} — Papel abaixo de {papel}%. Reabastecer bandeja.")
@@ -252,38 +257,36 @@ SERVICO_NOME = "TeffePowerAgent"
 SERVICO_DESC = "Teffe Power — Agente de Monitoramento SNMP"
 
 def instalar_servico():
-    """Instala o agente como serviço Windows (requer pywin32)."""
     try:
         import win32serviceutil
         win32serviceutil.InstallService(
             None,
             SERVICO_NOME,
             SERVICO_DESC,
-            startType=2,  # auto-start
+            startType=2,
             exeName=sys.executable,
             exeArgs=f'"{__file__}" run',
         )
         print(f"Serviço '{SERVICO_NOME}' instalado com sucesso.")
     except ImportError:
         print("pywin32 não instalado. Rodando em modo contínuo...")
-        main_loop()
+        asyncio.run(main_loop())
     except Exception as e:
         print(f"Erro ao instalar serviço: {e}")
 
 
-def main_loop():
-    """Loop principal do agente."""
+async def main_loop():
     log.info("Teffe Power Agent iniciado")
     cfg = carregar_config()
     sb = Supabase(cfg["sb_url"], cfg["sb_key"])
 
     while True:
         try:
-            ciclo(cfg, sb)
+            await ciclo(cfg, sb)
         except Exception as e:
             log.error(f"Erro no ciclo: {e}")
         log.info(f"Aguardando {cfg['intervalo']}s para próxima coleta...")
-        time.sleep(cfg["intervalo"])
+        await asyncio.sleep(cfg["intervalo"])
 
 
 if __name__ == "__main__":
@@ -293,6 +296,6 @@ if __name__ == "__main__":
     elif cmd == "uma-vez":
         cfg = carregar_config()
         sb = Supabase(cfg["sb_url"], cfg["sb_key"])
-        ciclo(cfg, sb)
+        asyncio.run(ciclo(cfg, sb))
     else:
-        main_loop()
+        asyncio.run(main_loop())
