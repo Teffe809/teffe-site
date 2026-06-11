@@ -229,6 +229,17 @@ td small{color:var(--txt2);font-size:11px;}
 .drawer-field small{display:block;font-size:10px;font-weight:600;color:var(--txt3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px;}
 .drawer-sep{height:1px;background:var(--border2);margin:18px 0;}
 
+/* ── TOGGLE ── */
+.toggle{position:relative;display:inline-block;width:40px;height:22px;flex-shrink:0;}
+.toggle input{opacity:0;width:0;height:0;position:absolute;}
+.toggle-slider{position:absolute;cursor:pointer;inset:0;background:rgba(255,255,255,.08);border:1px solid var(--border2);border-radius:22px;transition:.2s;}
+.toggle-slider:before{position:absolute;content:"";width:16px;height:16px;left:2px;top:2px;background:var(--txt3);border-radius:50%;transition:.2s;}
+.toggle input:checked+.toggle-slider{background:rgba(0,255,136,.15);border-color:rgba(0,255,136,.35);}
+.toggle input:checked+.toggle-slider:before{transform:translateX(18px);background:var(--green);}
+.perm-row{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border-bottom:1px solid var(--border2);}
+.perm-row:last-child{border-bottom:none;}
+.perm-label{font-size:13px;color:var(--txt);}
+
 /* ── FORM ── */
 .field{margin-bottom:14px;}
 .field label{display:block;font-size:11px;font-weight:600;color:var(--txt2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:5px;}
@@ -313,6 +324,10 @@ td small{color:var(--txt2);font-size:11px;}
         <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
         Usuários
       </div>
+      <div class="sb-item" onclick="goTo('perfis')">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        Perfis
+      </div>
       <div class="sb-item" onclick="goTo('relatorios')">
         <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
         Relatórios
@@ -365,6 +380,18 @@ td small{color:var(--txt2);font-size:11px;}
   </div>
 </div>
 
+<!-- DRAWER PERFIL -->
+<div class="drawer-bg" id="drawer-perf">
+  <div class="drawer-overlay" onclick="closePerfDrawer()"></div>
+  <div class="drawer">
+    <div class="drawer-head">
+      <div class="drawer-title" id="drawer-perf-title">Perfil</div>
+      <button class="drawer-close" onclick="closePerfDrawer()">×</button>
+    </div>
+    <div id="drawer-perf-body"></div>
+  </div>
+</div>
+
 <!-- DRAWER USUÁRIO -->
 <div class="drawer-bg" id="drawer-usr">
   <div class="drawer-overlay" onclick="closeDrawer()"></div>
@@ -394,7 +421,7 @@ const del = (path) => fetch(`${SB}/rest/v1/${path}`,{method:'DELETE',headers:H})
 const fmtBRL = v => v==null?'—':'R$ '+Number(v).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.');
 const fmtNum = v => Number(v||0).toLocaleString('pt-BR');
 const timeAgo = d => { const s=Math.floor((Date.now()-new Date(d))/1000); if(s<60)return`${s}s atrás`;if(s<3600)return`${Math.floor(s/60)}min atrás`;if(s<86400)return`${Math.floor(s/3600)}h atrás`;return`${Math.floor(s/86400)}d atrás`; };
-const PAGE_TITLES = {dashboard:'Dashboard',impressoras:'Impressoras',usuarios:'Usuários',relatorios:'Relatórios',alertas:'Alertas',configuracoes:'Configurações'};
+const PAGE_TITLES = {dashboard:'Dashboard',impressoras:'Impressoras',usuarios:'Usuários',perfis:'Perfis',relatorios:'Relatórios',alertas:'Alertas',configuracoes:'Configurações'};
 
 /* ── Clock ── */
 setInterval(()=>{ const n=new Date(); document.getElementById('tp-clock').textContent=n.toLocaleTimeString('pt-BR',{hour12:false}); },1000);
@@ -794,6 +821,173 @@ async function removeUsr(id){
   if(!confirm('Remover este usuário?'))return;
   await patch(`teffe_power_usuarios?id=eq.${id}`,{ativo:false});
   closeDrawer(); pages.usuarios();
+}
+
+/* ────────────────────────────── PERFIS ─────────────────────────────────── */
+pages.perfis = async function(){
+  const [perfis,perms,imps]=await Promise.all([
+    get(`teffe_power_perfis?licenca_chave=eq.${SESSION.chave}&select=*&order=nome.asc`),
+    get(`teffe_power_permissoes?licenca_chave=eq.${SESSION.chave}&select=*`),
+    get(`teffe_power_impressoras?licenca_chave=eq.${SESSION.chave}&ativo=eq.true&select=id,nome&order=nome.asc`)
+  ]);
+  store.perfis=perfis; store._perms=perms; store.impressoras=imps;
+  const permCount={};
+  perms.forEach(p=>{ permCount[p.perfil_id]=(permCount[p.perfil_id]||0)+1; });
+  document.getElementById('page-body').innerHTML=`
+    <div style="display:flex;justify-content:flex-end;margin-bottom:16px">
+      <button class="btn btn-blue" onclick="openAddPerf()">+ Adicionar Perfil</button>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Nome</th><th>Descrição</th><th>Impressoras</th><th>Status</th></tr></thead>
+        <tbody>${perfis.map(p=>`<tr class="tbl-row-click" onclick="openPerfDrawer('${p.id}')">
+          <td><b>${p.nome}</b></td>
+          <td style="color:var(--txt2)">${p.descricao||'—'}</td>
+          <td><span style="color:var(--blue)">${permCount[p.id]||0} impressora(s)</span></td>
+          <td><span class="badge badge-${p.ativo?'green':'red'}">${p.ativo?'Ativo':'Inativo'}</span></td>
+        </tr>`).join('')||'<tr><td colspan="4" class="empty">Nenhum perfil cadastrado</td></tr>'}</tbody>
+      </table>
+    </div>`;
+};
+
+function permFormHtml(d={}){
+  const tog=(id,lbl,val)=>`<div class="perm-row"><span class="perm-label">${lbl}</span><label class="toggle"><input type="checkbox" id="${id}"${val?' checked':''}><span class="toggle-slider"></span></label></div>`;
+  return `<div style="background:rgba(255,255,255,.02);border:1px solid var(--border2);border-radius:8px;margin-bottom:14px">
+    ${tog('pf-pb','Imprimir P&B',d.pode_imprimir_pb??true)}
+    ${tog('pf-color','Imprimir Colorido',d.pode_imprimir_color??false)}
+    ${tog('pf-cop','Copiar',d.pode_copiar??false)}
+    ${tog('pf-dig','Digitalizar',d.pode_digitalizar??false)}
+    ${tog('pf-fv','Frente e Verso',d.pode_frente_verso??true)}
+  </div>
+  <div class="grid-2">
+    <div class="field"><label>Limite páginas/dia <small style="color:var(--txt3)">(0 = ilimitado)</small></label><input type="number" id="pf-ldia" min="0" value="${d.limite_paginas_dia??0}"></div>
+    <div class="field"><label>Limite páginas/mês <small style="color:var(--txt3)">(0 = ilimitado)</small></label><input type="number" id="pf-lmes" min="0" value="${d.limite_paginas_mes??0}"></div>
+  </div>`;
+}
+
+function getPfVals(){
+  return {
+    pode_imprimir_pb:document.getElementById('pf-pb')?.checked??true,
+    pode_imprimir_color:document.getElementById('pf-color')?.checked??false,
+    pode_copiar:document.getElementById('pf-cop')?.checked??false,
+    pode_digitalizar:document.getElementById('pf-dig')?.checked??false,
+    pode_frente_verso:document.getElementById('pf-fv')?.checked??true,
+    limite_paginas_dia:parseInt(document.getElementById('pf-ldia')?.value)||0,
+    limite_paginas_mes:parseInt(document.getElementById('pf-lmes')?.value)||0
+  };
+}
+
+function openPerfDrawer(id){
+  const p=store.perfis?.find(x=>x.id===id);
+  if(!p)return;
+  const perms=(store._perms||[]).filter(x=>x.perfil_id===id);
+  const imps=store.impressoras||[];
+  const icon=v=>`<span style="color:${v?'var(--green)':'var(--txt3)'};font-size:14px">${v?'✓':'✗'}</span>`;
+  const permRows=perms.map(pm=>{
+    const imp=imps.find(i=>i.id===pm.impressora_id);
+    return `<tr>
+      <td style="padding:6px 4px;color:var(--txt);font-size:12px;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${imp?.nome||'—'}</td>
+      <td style="text-align:center;padding:6px 3px">${icon(pm.pode_imprimir_pb)}</td>
+      <td style="text-align:center;padding:6px 3px">${icon(pm.pode_imprimir_color)}</td>
+      <td style="text-align:center;padding:6px 3px">${icon(pm.pode_copiar)}</td>
+      <td style="text-align:center;padding:6px 3px">${icon(pm.pode_digitalizar)}</td>
+      <td style="text-align:center;padding:6px 3px">${icon(pm.pode_frente_verso)}</td>
+      <td style="text-align:center;padding:6px 3px;color:var(--txt);font-size:12px">${pm.limite_paginas_dia||'∞'}</td>
+      <td style="text-align:center;padding:6px 3px;color:var(--txt);font-size:12px">${pm.limite_paginas_mes||'∞'}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('drawer-perf-title').textContent=p.nome;
+  document.getElementById('drawer-perf-body').innerHTML=`
+    <div class="drawer-field"><small>Nome</small><div style="font-size:15px;font-weight:600;color:var(--txt)">${p.nome}</div></div>
+    <div class="drawer-field"><small>Descrição</small><div style="color:var(--txt)">${p.descricao||'—'}</div></div>
+    <div class="drawer-field"><small>Status</small><div><span class="badge badge-${p.ativo?'green':'red'}">${p.ativo?'Ativo':'Inativo'}</span></div></div>
+    <div class="drawer-sep"></div>
+    <div style="font-size:10px;font-weight:700;color:var(--txt3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">Permissões por Impressora</div>
+    ${perms.length?`<div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse">
+        <thead><tr>
+          ${['Impressora','P&B','Cor','Cop','Dig','F/V','Dia','Mês'].map((h,i)=>`<th style="${i===0?'text-align:left;':'text-align:center;'}padding:4px ${i===0?'4px':'3px'};font-size:10px;color:var(--txt3);font-weight:600;border-bottom:1px solid var(--border2)">${h}</th>`).join('')}
+        </tr></thead>
+        <tbody>${permRows}</tbody>
+      </table>
+    </div>`:'<div style="color:var(--txt3);font-size:13px;padding:8px 0">Nenhuma permissão configurada para este perfil</div>'}
+    <div class="drawer-sep"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-blue" onclick="openEditPerf('${p.id}')">Editar</button>
+      <button class="btn btn-${p.ativo?'red':'green'} btn-sm" onclick="togglePerf('${p.id}',${!p.ativo})">${p.ativo?'Desativar':'Ativar'}</button>
+    </div>`;
+  document.getElementById('drawer-perf').classList.add('open');
+}
+
+function closePerfDrawer(){ document.getElementById('drawer-perf').classList.remove('open'); }
+
+function openAddPerf(){
+  document.getElementById('modal-imp-title').textContent='Novo Perfil';
+  document.getElementById('modal-imp-body').innerHTML=`
+    <div class="grid-2" style="margin-bottom:4px">
+      <div class="field"><label>Nome</label><input id="np-nome" placeholder="Funcionário"></div>
+      <div class="field"><label>Descrição</label><input id="np-desc" placeholder="Impressão básica P&B"></div>
+    </div>
+    <div style="font-size:10px;font-weight:700;color:var(--txt3);text-transform:uppercase;letter-spacing:.6px;margin:4px 0 8px">Permissões Padrão</div>
+    ${permFormHtml()}
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn btn-green" onclick="savePerf()">Salvar</button>
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('modal-imp')">Cancelar</button>
+    </div>`;
+  document.getElementById('modal-imp').classList.add('open');
+}
+
+async function savePerf(){
+  const nome=document.getElementById('np-nome').value.trim();
+  const descricao=document.getElementById('np-desc').value.trim();
+  if(!nome){alert('Nome é obrigatório.');return;}
+  const perms=getPfVals();
+  const result=await post('teffe_power_perfis',{licenca_chave:SESSION.chave,nome,descricao});
+  const newId=Array.isArray(result)?result[0]?.id:result?.id;
+  if(newId&&store.impressoras?.length){
+    await Promise.all(store.impressoras.map(imp=>
+      post('teffe_power_permissoes',{perfil_id:newId,impressora_id:imp.id,licenca_chave:SESSION.chave,...perms})
+    ));
+  }
+  closeModal('modal-imp'); pages.perfis();
+}
+
+function openEditPerf(id){
+  const p=store.perfis?.find(x=>x.id===id);
+  if(!p)return;
+  const fp=(store._perms||[]).find(x=>x.perfil_id===id)||{};
+  document.getElementById('modal-imp-title').textContent='Editar Perfil';
+  document.getElementById('modal-imp-body').innerHTML=`
+    <div class="grid-2" style="margin-bottom:4px">
+      <div class="field"><label>Nome</label><input id="ep2-nome" value="${p.nome}"></div>
+      <div class="field"><label>Descrição</label><input id="ep2-desc" value="${p.descricao||''}"></div>
+    </div>
+    <div style="font-size:10px;font-weight:700;color:var(--txt3);text-transform:uppercase;letter-spacing:.6px;margin:4px 0 8px">Permissões Padrão</div>
+    ${permFormHtml(fp)}
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn btn-green" onclick="saveEditPerf('${p.id}')">Salvar</button>
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('modal-imp')">Cancelar</button>
+    </div>`;
+  document.getElementById('modal-imp').classList.add('open');
+}
+
+async function saveEditPerf(id){
+  const nome=document.getElementById('ep2-nome').value.trim();
+  const descricao=document.getElementById('ep2-desc').value.trim();
+  if(!nome){alert('Nome é obrigatório.');return;}
+  const perms=getPfVals();
+  await patch(`teffe_power_perfis?id=eq.${id}`,{nome,descricao});
+  if((store._perms||[]).some(x=>x.perfil_id===id))
+    await patch(`teffe_power_permissoes?perfil_id=eq.${id}`,perms);
+  closeModal('modal-imp');
+  await pages.perfis();
+  openPerfDrawer(id);
+}
+
+async function togglePerf(id,ativo){
+  await patch(`teffe_power_perfis?id=eq.${id}`,{ativo});
+  closePerfDrawer(); pages.perfis();
 }
 
 /* ────────────────────────────── RELATÓRIOS ──────────────────────────────── */
