@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Teffe Power — Gestão de Frota</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#0a0f1a;--sidebar:#0d1526;--card:#111927;--card2:#0f1d2e;
+  --blue:#00d4ff;--green:#00ff88;--orange:#ff9500;--red:#ff3b5c;--purple:#a78bfa;
+  --blue-dim:rgba(0,212,255,.12);--green-dim:rgba(0,255,136,.1);
+  --border:rgba(0,212,255,.18);--border2:rgba(255,255,255,.06);
+  --txt:#e8f0fe;--txt2:#7a8ba8;--txt3:#4a5a72;
+  --sidebar-w:220px;--topbar-h:60px;
+}
+html,body{height:100%;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--txt);background:var(--bg);}
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+
+/* ── ANIMATIONS ── */
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.5;transform:scale(1.5);}}
+@keyframes pulseGlow{0%,100%{box-shadow:0 0 4px currentColor;}50%{box-shadow:0 0 16px currentColor,0 0 32px currentColor;}}
+@keyframes spin{to{transform:rotate(360deg);}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+@keyframes scanline{0%{transform:translateY(-100%);}100%{transform:translateY(100vh);}}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:0;}}
+
+/* ── LOGIN ── */
+#login{display:flex;align-items:center;justify-content:center;min-height:100vh;
+  background:radial-gradient(ellipse at 30% 50%,rgba(0,212,255,.06) 0%,transparent 60%),
+             radial-gradient(ellipse at 70% 50%,rgba(0,255,136,.04) 0%,transparent 60%),
+             var(--bg);
+  position:relative;overflow:hidden;}
+#login::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,212,255,.015) 2px,rgba(0,212,255,.015) 4px);pointer-events:none;}
+.login-box{width:400px;padding:40px;background:var(--card);border:1px solid var(--border);border-radius:16px;
+  box-shadow:0 0 60px rgba(0,212,255,.08),0 0 120px rgba(0,212,255,.04);
+  position:relative;z-index:1;animation:fadeIn .5s ease;}
+.lbrand{text-align:center;margin-bottom:32px;}
+.lbrand-name{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;letter-spacing:2px;
+  background:linear-gradient(90deg,var(--blue),var(--green));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.lbrand-sub{font-size:11px;color:var(--txt2);letter-spacing:4px;text-transform:uppercase;margin-top:4px;}
+.lfield{margin-bottom:16px;}
+.lfield label{display:block;font-size:11px;font-weight:600;color:var(--txt2);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px;}
+.lfield input{width:100%;padding:11px 14px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;
+  color:var(--txt);font-family:'DM Sans',sans-serif;font-size:14px;transition:border .2s,box-shadow .2s;outline:none;}
+.lfield input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(0,212,255,.12);}
+.lfield input.key{font-family:monospace;letter-spacing:1px;text-transform:uppercase;}
+.lbtn{width:100%;padding:13px;background:linear-gradient(90deg,var(--blue),#0099cc);border:none;border-radius:8px;
+  font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:#000;cursor:pointer;margin-top:8px;
+  transition:all .2s;letter-spacing:.5px;}
+.lbtn:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(0,212,255,.3);}
+.lerr{background:rgba(255,59,92,.12);border:1px solid rgba(255,59,92,.3);color:#ff3b5c;padding:10px 14px;border-radius:8px;font-size:13px;margin-top:12px;display:none;}
+
+/* ── APP ── */
+#app{display:none;height:100vh;overflow:hidden;}
+.layout{display:flex;height:100%;}
+
+/* ── SIDEBAR ── */
+.sidebar{width:var(--sidebar-w);background:var(--sidebar);display:flex;flex-direction:column;flex-shrink:0;
+  border-right:1px solid var(--border2);overflow-y:auto;}
+.sb-logo{padding:20px 20px 16px;border-bottom:1px solid var(--border2);}
+.sb-brand{font-family:'Syne',sans-serif;font-size:17px;font-weight:800;letter-spacing:1.5px;
+  background:linear-gradient(90deg,var(--blue),var(--green));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.sb-tagline{font-size:10px;color:var(--txt3);letter-spacing:2px;text-transform:uppercase;margin-top:2px;}
+.sb-empresa{padding:10px 20px;background:rgba(0,212,255,.05);border-bottom:1px solid var(--border2);}
+.sb-empresa small{font-size:10px;color:var(--txt3);text-transform:uppercase;letter-spacing:.5px;}
+.sb-empresa strong{display:block;font-size:12px;color:var(--blue);margin-top:1px;}
+.sb-nav{flex:1;padding:12px 0;}
+.sb-section{font-size:9px;font-weight:700;color:var(--txt3);text-transform:uppercase;letter-spacing:1px;padding:10px 20px 4px;}
+.sb-item{display:flex;align-items:center;gap:10px;padding:9px 20px;color:var(--txt2);cursor:pointer;
+  transition:all .15s;font-size:13px;border-left:2px solid transparent;position:relative;}
+.sb-item:hover{background:rgba(0,212,255,.06);color:var(--txt);}
+.sb-item.active{background:rgba(0,212,255,.1);color:var(--blue);border-left-color:var(--blue);}
+.sb-item svg{flex-shrink:0;}
+.sb-badge{background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:10px;margin-left:auto;}
+.sb-footer{padding:16px 20px;border-top:1px solid var(--border2);}
+.sb-status{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--txt2);}
+.sb-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulseGlow 2s ease-in-out infinite;}
+.logout{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--txt3);cursor:pointer;margin-top:8px;transition:color .2s;}
+.logout:hover{color:var(--red);}
+
+/* ── MAIN ── */
+.main{flex:1;overflow-y:auto;display:flex;flex-direction:column;background:var(--bg);}
+.topbar{height:var(--topbar-h);background:var(--sidebar);border-bottom:1px solid var(--border2);
+  display:flex;align-items:center;justify-content:space-between;padding:0 28px;flex-shrink:0;}
+.tp-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:var(--txt);}
+.tp-right{display:flex;align-items:center;gap:16px;}
+.tp-time{font-size:12px;color:var(--txt2);font-family:monospace;letter-spacing:.5px;}
+.tp-live{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--green);}
+.tp-live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 1.5s ease-in-out infinite;}
+.page{padding:24px 28px;animation:fadeIn .3s ease;}
+
+/* ── CARDS ── */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;}
+.stat{background:var(--card);border:1px solid var(--border2);border-radius:12px;padding:20px;
+  position:relative;overflow:hidden;transition:transform .2s,border-color .2s;}
+.stat:hover{transform:translateY(-2px);border-color:var(--border);}
+.stat::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+.stat.blue::before{background:linear-gradient(90deg,var(--blue),transparent);}
+.stat.green::before{background:linear-gradient(90deg,var(--green),transparent);}
+.stat.orange::before{background:linear-gradient(90deg,var(--orange),transparent);}
+.stat.red::before{background:linear-gradient(90deg,var(--red),transparent);}
+.stat-ico{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:12px;}
+.stat.blue .stat-ico{background:rgba(0,212,255,.12);}
+.stat.green .stat-ico{background:rgba(0,255,136,.1);}
+.stat.orange .stat-ico{background:rgba(255,149,0,.1);}
+.stat.red .stat-ico{background:rgba(255,59,92,.1);}
+.stat-label{font-size:11px;color:var(--txt2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;}
+.stat-value{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;line-height:1;}
+.stat.blue .stat-value{color:var(--blue);}
+.stat.green .stat-value{color:var(--green);}
+.stat.orange .stat-value{color:var(--orange);}
+.stat.red .stat-value{color:var(--red);}
+.stat-sub{font-size:11px;color:var(--txt3);margin-top:5px;}
+
+/* ── CHARTS ── */
+.charts-row{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:24px;}
+.panel{background:var(--card);border:1px solid var(--border2);border-radius:12px;padding:20px;}
+.panel-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--txt);margin-bottom:16px;
+  display:flex;align-items:center;gap:8px;}
+.panel-title::before{content:'';width:3px;height:14px;background:linear-gradient(var(--blue),var(--green));border-radius:2px;}
+.two-cols{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;}
+
+/* ── PRINTER CARDS ── */
+.printer-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;}
+.pcard{background:var(--card);border:1px solid var(--border2);border-radius:12px;padding:20px;
+  cursor:pointer;transition:all .2s;position:relative;overflow:hidden;}
+.pcard:hover{border-color:var(--border);transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,212,255,.08);}
+.pcard-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px;}
+.pcard-name{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--txt);}
+.pcard-model{font-size:11px;color:var(--txt2);margin-top:2px;}
+.pcard-loc{font-size:10px;color:var(--txt3);margin-top:1px;}
+.status-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:3px;}
+.status-dot.online{background:var(--green);animation:pulseGlow 2s ease-in-out infinite;color:var(--green);}
+.status-dot.offline{background:var(--red);animation:pulseGlow 2s ease-in-out infinite;color:var(--red);}
+.status-dot.alerta{background:var(--orange);animation:pulseGlow 2s ease-in-out infinite;color:var(--orange);}
+.status-label{font-size:11px;font-weight:600;text-align:right;}
+.status-label.online{color:var(--green);}
+.status-label.offline{color:var(--red);}
+.status-label.alerta{color:var(--orange);}
+.bar-row{margin-bottom:8px;}
+.bar-label{display:flex;justify-content:space-between;font-size:11px;color:var(--txt2);margin-bottom:4px;}
+.bar-track{height:5px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden;}
+.bar-fill{height:100%;border-radius:3px;transition:width .5s ease;}
+.bar-fill.toner-high{background:var(--green);}
+.bar-fill.toner-mid{background:var(--orange);}
+.bar-fill.toner-low{background:var(--red);}
+.bar-fill.paper{background:linear-gradient(90deg,var(--blue),#0077aa);}
+.pcard-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border2);}
+.pcard-stat{text-align:center;}
+.pcard-stat-val{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--txt);}
+.pcard-stat-lbl{font-size:10px;color:var(--txt3);text-transform:uppercase;letter-spacing:.4px;}
+.pcard-ip{font-size:10px;color:var(--txt3);font-family:monospace;margin-bottom:12px;}
+
+/* ── TABLE ── */
+.tbl-wrap{background:var(--card);border:1px solid var(--border2);border-radius:12px;overflow:hidden;}
+.tbl-head{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border2);}
+.tbl-head .panel-title{margin:0;}
+table{width:100%;border-collapse:collapse;}
+thead th{padding:10px 16px;text-align:left;font-size:10px;font-weight:700;color:var(--txt3);text-transform:uppercase;letter-spacing:.6px;
+  background:rgba(255,255,255,.02);border-bottom:1px solid var(--border2);}
+tbody tr{border-bottom:1px solid rgba(255,255,255,.03);transition:background .1s;cursor:pointer;}
+tbody tr:hover{background:rgba(0,212,255,.04);}
+tbody tr:last-child{border-bottom:none;}
+td{padding:12px 16px;font-size:13px;color:var(--txt);}
+td small{color:var(--txt2);font-size:11px;}
+
+/* ── BADGES ── */
+.badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;}
+.badge-online{background:rgba(0,255,136,.1);color:var(--green);border:1px solid rgba(0,255,136,.2);}
+.badge-offline{background:rgba(255,59,92,.1);color:var(--red);border:1px solid rgba(255,59,92,.2);}
+.badge-alerta{background:rgba(255,149,0,.1);color:var(--orange);border:1px solid rgba(255,149,0,.2);}
+.badge-toner{background:rgba(255,59,92,.1);color:var(--red);border:1px solid rgba(255,59,92,.2);}
+.badge-papel{background:rgba(167,139,250,.1);color:var(--purple);border:1px solid rgba(167,139,250,.2);}
+.badge-ok{background:rgba(0,255,136,.08);color:var(--green);border:1px solid rgba(0,255,136,.15);}
+
+/* ── ALERT CARDS ── */
+.alert-list{display:flex;flex-direction:column;gap:10px;}
+.alert-card{background:var(--card);border:1px solid var(--border2);border-radius:10px;padding:16px 18px;
+  display:flex;align-items:flex-start;gap:12px;position:relative;transition:border-color .2s;}
+.alert-card.toner_baixo{border-left:3px solid var(--orange);}
+.alert-card.offline{border-left:3px solid var(--red);}
+.alert-card.papel_baixo{border-left:3px solid var(--purple);}
+.alert-ico{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px;}
+.alert-ico.toner_baixo{background:rgba(255,149,0,.12);}
+.alert-ico.offline{background:rgba(255,59,92,.12);}
+.alert-ico.papel_baixo{background:rgba(167,139,250,.12);}
+.alert-msg{font-size:13px;color:var(--txt);line-height:1.5;}
+.alert-time{font-size:11px;color:var(--txt3);margin-top:3px;}
+.alert-resolved{opacity:.4;}
+
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-family:'DM Sans',sans-serif;
+  font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all .15s;}
+.btn-blue{background:linear-gradient(90deg,rgba(0,212,255,.2),rgba(0,212,255,.1));color:var(--blue);border:1px solid rgba(0,212,255,.3);}
+.btn-blue:hover{background:linear-gradient(90deg,rgba(0,212,255,.3),rgba(0,212,255,.15));box-shadow:0 0 16px rgba(0,212,255,.2);}
+.btn-green{background:linear-gradient(90deg,rgba(0,255,136,.15),rgba(0,255,136,.08));color:var(--green);border:1px solid rgba(0,255,136,.25);}
+.btn-green:hover{box-shadow:0 0 16px rgba(0,255,136,.15);}
+.btn-red{background:rgba(255,59,92,.1);color:var(--red);border:1px solid rgba(255,59,92,.2);}
+.btn-sm{padding:5px 10px;font-size:12px;}
+.btn-ghost{background:none;color:var(--txt2);border:1px solid var(--border2);}
+.btn-ghost:hover{border-color:var(--border);color:var(--txt);}
+.filter-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;}
+
+/* ── FORM ── */
+.field{margin-bottom:14px;}
+.field label{display:block;font-size:11px;font-weight:600;color:var(--txt2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:5px;}
+.field input,.field select,.field textarea{width:100%;padding:9px 12px;background:rgba(255,255,255,.04);border:1px solid var(--border2);
+  border-radius:8px;color:var(--txt);font-family:'DM Sans',sans-serif;font-size:13px;transition:border .2s;outline:none;}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--blue);box-shadow:0 0 0 2px rgba(0,212,255,.08);}
+.field select option{background:var(--card);}
+.settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+.settings-panel{background:var(--card);border:1px solid var(--border2);border-radius:12px;padding:20px;}
+.settings-panel h3{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--txt);margin-bottom:16px;
+  padding-bottom:10px;border-bottom:1px solid var(--border2);}
+
+/* ── MODAL ── */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:100;backdrop-filter:blur(4px);}
+.modal-bg.open{display:flex;}
+.modal{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:28px;width:100%;max-width:600px;
+  max-height:90vh;overflow-y:auto;box-shadow:0 0 60px rgba(0,212,255,.1);}
+.modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
+.modal-title{font-family:'Syne',sans-serif;font-size:17px;font-weight:700;color:var(--blue);}
+.modal-close{background:none;border:none;color:var(--txt2);font-size:22px;cursor:pointer;line-height:1;transition:color .2s;}
+.modal-close:hover{color:var(--red);}
+
+/* ── LOADER ── */
+.loader{display:flex;align-items:center;justify-content:center;padding:60px;}
+.spinner{width:32px;height:32px;border:2px solid var(--border2);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite;}
+
+/* ── GRID UTILS ── */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;}
+.empty{text-align:center;padding:48px;color:var(--txt3);}
+.empty p{font-size:15px;margin-top:8px;}
+
+/* ── COST BADGE ── */
+.cost{font-family:monospace;font-size:13px;color:var(--green);}
+
+@media(max-width:1100px){.stats-grid{grid-template-columns:repeat(2,1fr);}.charts-row{grid-template-columns:1fr;}.settings-grid{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login">
+  <div class="login-box">
+    <div class="lbrand">
+      <div class="lbrand-name">TEFFE POWER</div>
+      <div class="lbrand-sub">Fleet Management System</div>
+    </div>
+    <div class="lfield"><label>E-mail</label><input type="email" id="l-email" placeholder="seu@empresa.com"></div>
+    <div class="lfield"><label>Senha</label><input type="password" id="l-senha" placeholder="••••••••"></div>
+    <div class="lfield"><label>Chave de Licença</label><input type="text" id="l-chave" class="key" placeholder="TEFFE-POWER-XXXX-0000"></div>
+    <button class="lbtn" onclick="doLogin()">ACESSAR SISTEMA</button>
+    <div class="lerr" id="lerr"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sb-logo">
+      <div class="sb-brand">TEFFE POWER</div>
+      <div class="sb-tagline">Fleet Management</div>
+    </div>
+    <div class="sb-empresa">
+      <small>Empresa</small>
+      <strong id="sb-empresa">—</strong>
+    </div>
+    <nav class="sb-nav">
+      <div class="sb-section">Monitor</div>
+      <div class="sb-item active" onclick="goTo('dashboard')">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        Dashboard
+      </div>
+      <div class="sb-item" onclick="goTo('impressoras')">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        Impressoras
+      </div>
+      <div class="sb-section">Gestão</div>
+      <div class="sb-item" onclick="goTo('usuarios')">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+        Usuários
+      </div>
+      <div class="sb-item" onclick="goTo('relatorios')">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        Relatórios
+      </div>
+      <div class="sb-section">Sistema</div>
+      <div class="sb-item" onclick="goTo('alertas')">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+        Alertas
+        <span class="sb-badge" id="sb-alert-count">0</span>
+      </div>
+      <div class="sb-item" onclick="goTo('configuracoes')">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        Configurações
+      </div>
+    </nav>
+    <div class="sb-footer">
+      <div class="sb-status"><div class="sb-dot"></div> Sistema online</div>
+      <div class="logout" onclick="doLogout()">
+        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Sair
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="topbar">
+      <div class="tp-title" id="tp-title">Dashboard</div>
+      <div class="tp-right">
+        <div class="tp-live"><div class="tp-live-dot"></div> AO VIVO</div>
+        <div class="tp-time" id="tp-clock"></div>
+      </div>
+    </div>
+    <div class="page" id="page-body">
+      <div class="loader"><div class="spinner"></div></div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- MODAL IMPRESSORA -->
+<div class="modal-bg" id="modal-imp">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title" id="modal-imp-title">Impressora</div>
+      <button class="modal-close" onclick="closeModal('modal-imp')">×</button>
+    </div>
+    <div id="modal-imp-body"></div>
+  </div>
+</div>
+
+<script>
+/* ── Config ── */
+const SB = 'https://hlfjcpgrxiktgctozilk.supabase.co';
+const KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhsZmpjcGdyeGlrdGdjdG96aWxrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAxOTIzNDgsImV4cCI6MjA5NTc2ODM0OH0.VlUw_Akg_XtxWoQgCujPkFB9QFSNARMFDWUMSkg_OGA';
+let SESSION = null;
+const H = {apikey:KEY, Authorization:`Bearer ${KEY}`, Accept:'application/json'};
+
+/* ── API ── */
+const get = (path) => fetch(`${SB}/rest/v1/${path}`,{headers:H}).then(r=>r.json());
+const post = (path,d) => fetch(`${SB}/rest/v1/${path}`,{method:'POST',headers:{...H,'Content-Type':'application/json',Prefer:'return=representation'},body:JSON.stringify(d)}).then(r=>r.json());
+const patch = (path,d) => fetch(`${SB}/rest/v1/${path}`,{method:'PATCH',headers:{...H,'Content-Type':'application/json',Prefer:'return=representation'},body:JSON.stringify(d)}).then(r=>r.json());
+const del = (path) => fetch(`${SB}/rest/v1/${path}`,{method:'DELETE',headers:H});
+
+/* ── Helpers ── */
+const fmtBRL = v => v==null?'—':'R$ '+Number(v).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.');
+const fmtNum = v => Number(v||0).toLocaleString('pt-BR');
+const timeAgo = d => { const s=Math.floor((Date.now()-new Date(d))/1000); if(s<60)return`${s}s atrás`;if(s<3600)return`${Math.floor(s/60)}min atrás`;if(s<86400)return`${Math.floor(s/3600)}h atrás`;return`${Math.floor(s/86400)}d atrás`; };
+const PAGE_TITLES = {dashboard:'Dashboard',impressoras:'Impressoras',usuarios:'Usuários',relatorios:'Relatórios',alertas:'Alertas',configuracoes:'Configurações'};
+
+/* ── Clock ── */
+setInterval(()=>{ const n=new Date(); document.getElementById('tp-clock').textContent=n.toLocaleTimeString('pt-BR',{hour12:false}); },1000);
+
+/* ── Login ── */
+async function doLogin(){
+  const chave = document.getElementById('l-chave').value.trim().toUpperCase();
+  const email = document.getElementById('l-email').value.trim();
+  const senha = document.getElementById('l-senha').value;
+  const err = document.getElementById('lerr');
+  err.style.display='none';
+  if(!email||!senha||!chave){ err.textContent='Preencha todos os campos.'; err.style.display='block'; return; }
+  const r = await get(`teffe_power_licencas?chave=eq.${encodeURIComponent(chave)}&ativo=eq.true&select=empresa,plano,max_impressoras`);
+  if(!Array.isArray(r)||r.length===0){ err.textContent='Chave de licença inválida ou expirada.'; err.style.display='block'; return; }
+  SESSION={chave,email,empresa:r[0].empresa,plano:r[0].plano,max:r[0].max_impressoras};
+  localStorage.setItem('tpSess',JSON.stringify(SESSION));
+  startApp();
+}
+function doLogout(){ localStorage.removeItem('tpSess'); SESSION=null; document.getElementById('app').style.display='none'; document.getElementById('login').style.display='flex'; }
+
+/* ── App start ── */
+async function startApp(){
+  document.getElementById('login').style.display='none';
+  document.getElementById('app').style.display='block';
+  document.getElementById('sb-empresa').textContent=SESSION.empresa;
+  await loadAlertCount();
+  goTo('dashboard');
+  setInterval(()=>{ loadAlertCount(); if(currentPage==='dashboard') pages.dashboard(); },30000);
+}
+
+async function loadAlertCount(){
+  const r=await get(`teffe_power_alertas?licenca_chave=eq.${SESSION.chave}&resolvido=eq.false&select=id`);
+  const n=Array.isArray(r)?r.length:0;
+  document.getElementById('sb-alert-count').textContent=n;
+  document.getElementById('sb-alert-count').style.display=n>0?'':'none';
+}
+
+/* ── Navigation ── */
+let currentPage='dashboard';
+function goTo(p){
+  currentPage=p;
+  document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));
+  document.querySelector(`.sb-item[onclick="goTo('${p}')"]`)?.classList.add('active');
+  document.getElementById('tp-title').textContent=PAGE_TITLES[p];
+  document.getElementById('page-body').innerHTML='<div class="loader"><div class="spinner"></div></div>';
+  pages[p]();
+}
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+
+/* ── DATA STORE ── */
+let store={impressoras:[],leituras:[],usuarios:[],impressoes:[],alertas:[]};
+
+/* ────────────────────────────── DASHBOARD ────────────────────────────────── */
+const pages = {};
+pages.dashboard = async function(){
+  const [imps,leis,imps2,alertas] = await Promise.all([
+    get(`teffe_power_impressoras?licenca_chave=eq.${SESSION.chave}&ativo=eq.true&select=*`),
+    get(`teffe_power_leituras?licenca_chave=eq.${SESSION.chave}&select=*&order=coletado_em.desc`),
+    get(`teffe_power_impressoes?licenca_chave=eq.${SESSION.chave}&select=*&order=impresso_em.desc`),
+    get(`teffe_power_alertas?licenca_chave=eq.${SESSION.chave}&resolvido=eq.false&select=*&order=criado_em.desc`)
+  ]);
+  store.impressoras=imps; store.leituras=leis; store.impressoes=imps2; store.alertas=alertas;
+
+  // Latest reading per printer
+  const latestByImp={};
+  leis.forEach(l=>{ if(!latestByImp[l.impressora_id]||l.coletado_em>latestByImp[l.impressora_id].coletado_em) latestByImp[l.impressora_id]=l; });
+  const latest=Object.values(latestByImp);
+
+  const online=latest.filter(l=>l.status==='online').length;
+  const offline=latest.filter(l=>l.status==='offline').length;
+  const alerta=latest.filter(l=>l.status==='alerta').length;
+  const totalPags=latest.reduce((s,l)=>s+(l.paginas_hoje||0),0);
+  const avgToner=latest.length?Math.round(latest.reduce((s,l)=>s+(l.toner_preto||0),0)/latest.length):0;
+
+  // Pages per hour last 24h
+  const now=new Date(); const hrs=[]; const labHrs=[];
+  for(let i=23;i>=0;i--){ const h=new Date(now); h.setHours(h.getHours()-i,0,0,0); hrs.push(h); labHrs.push(i===0?'Agora':h.getHours()+'h'); }
+  const pgsPerHr=hrs.map(h=>{ const hEnd=new Date(h); hEnd.setHours(h.getHours()+1); return imps2.filter(p=>{ const d=new Date(p.impresso_em); return d>=h&&d<hEnd; }).reduce((s,p)=>s+(p.paginas||0),0); });
+
+  // Pages per day last 30 days
+  const days30=[]; const labDays=[]; for(let i=29;i>=0;i--){ const d=new Date(); d.setDate(d.getDate()-i); days30.push(d.toISOString().slice(0,10)); labDays.push(d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})); }
+  const pgsPerDay=days30.map(d=>imps2.filter(p=>p.impresso_em?.slice(0,10)===d).reduce((s,p)=>s+(p.paginas||0),0));
+
+  // Top 5 impressoras
+  const byImp={};
+  imps2.forEach(p=>{ byImp[p.impressora_id]=(byImp[p.impressora_id]||0)+(p.paginas||0); });
+  const top5=Object.entries(byImp).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([id,v])=>({nome:imps.find(x=>x.id===id)?.nome||'Desconhecida',val:v}));
+
+  document.getElementById('page-body').innerHTML=`
+    <div class="stats-grid">
+      <div class="stat blue"><div class="stat-ico"><svg width="18" height="18" fill="none" stroke="var(--blue)" stroke-width="1.8" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg></div><div class="stat-label">Impressoras</div><div class="stat-value">${imps.length}</div><div class="stat-sub">${online} online · ${offline} offline · ${alerta} alerta</div></div>
+      <div class="stat green"><div class="stat-ico"><svg width="18" height="18" fill="none" stroke="var(--green)" stroke-width="1.8" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div><div class="stat-label">Páginas Hoje</div><div class="stat-value">${fmtNum(totalPags)}</div><div class="stat-sub">Total da frota</div></div>
+      <div class="stat orange"><div class="stat-ico"><svg width="18" height="18" fill="none" stroke="var(--orange)" stroke-width="1.8" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div><div class="stat-label">Alertas Ativos</div><div class="stat-value">${alertas.length}</div><div class="stat-sub">Requerem atenção</div></div>
+      <div class="stat ${avgToner<20?'red':avgToner<40?'orange':'blue'}"><div class="stat-ico"><svg width="18" height="18" fill="none" stroke="${avgToner<20?'var(--red)':avgToner<40?'var(--orange)':'var(--blue)'}" stroke-width="1.8" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/></svg></div><div class="stat-label">Toner Médio</div><div class="stat-value">${avgToner}%</div><div class="stat-sub">Média da frota</div></div>
+    </div>
+    <div class="charts-row">
+      <div class="panel"><div class="panel-title">Impressões por Hora — Últimas 24h</div><canvas id="ch-hrs" height="120"></canvas></div>
+      <div class="panel"><div class="panel-title">Top 5 Impressoras</div><canvas id="ch-top" height="180"></canvas></div>
+    </div>
+    <div class="two-cols">
+      <div class="panel"><div class="panel-title">Impressões por Dia — Últimos 30 dias</div><canvas id="ch-days" height="120"></canvas></div>
+      <div class="panel"><div class="panel-title">Alertas Ativos</div>
+        <div class="alert-list">${alertas.slice(0,4).map(a=>alertCard(a)).join('')||'<div class="empty"><p>Nenhum alerta ativo</p></div>'}</div>
+        ${alertas.length>4?`<div style="text-align:center;margin-top:10px"><button class="btn btn-ghost btn-sm" onclick="goTo('alertas')">Ver todos (${alertas.length})</button></div>`:''}
+      </div>
+    </div>`;
+
+  const co={responsive:true,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#4a5a72',maxTicksLimit:12},grid:{color:'rgba(255,255,255,.03)'}},y:{ticks:{color:'#4a5a72'},grid:{color:'rgba(255,255,255,.04)'},beginAtZero:true}}};
+  new Chart('ch-hrs',{type:'bar',data:{labels:labHrs,datasets:[{data:pgsPerHr,backgroundColor:'rgba(0,212,255,.25)',borderColor:'var(--blue)',borderWidth:1,borderRadius:3}]},options:co});
+  new Chart('ch-days',{type:'line',data:{labels:labDays,datasets:[{data:pgsPerDay,borderColor:'var(--green)',backgroundColor:'rgba(0,255,136,.06)',fill:true,tension:.4,pointRadius:0,borderWidth:2}]},options:{...co,scales:{x:{...co.scales.x,ticks:{...co.scales.x.ticks,maxTicksLimit:10}},y:co.scales.y}}});
+  new Chart('ch-top',{type:'bar',data:{labels:top5.map(x=>x.nome.split(' ').slice(0,2).join(' ')),datasets:[{data:top5.map(x=>x.val),backgroundColor:['rgba(0,212,255,.6)','rgba(0,255,136,.5)','rgba(167,139,250,.5)','rgba(255,149,0,.5)','rgba(255,59,92,.4)'],borderWidth:0,borderRadius:4}]},options:{indexAxis:'y',responsive:true,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#4a5a72'},grid:{color:'rgba(255,255,255,.03)'}},y:{ticks:{color:'#7a8ba8'},grid:{display:false}}}}});
+};
+
+/* ────────────────────────────── IMPRESSORAS ─────────────────────────────── */
+pages.impressoras = async function(){
+  const [imps,leis]=await Promise.all([
+    get(`teffe_power_impressoras?licenca_chave=eq.${SESSION.chave}&ativo=eq.true&select=*&order=nome.asc`),
+    get(`teffe_power_leituras?licenca_chave=eq.${SESSION.chave}&select=*&order=coletado_em.desc`)
+  ]);
+  store.impressoras=imps; store.leituras=leis;
+  const latestByImp={};
+  leis.forEach(l=>{ if(!latestByImp[l.impressora_id]||l.coletado_em>latestByImp[l.impressora_id].coletado_em) latestByImp[l.impressora_id]=l; });
+
+  document.getElementById('page-body').innerHTML=`
+    <div style="display:flex;justify-content:flex-end;margin-bottom:16px">
+      <button class="btn btn-blue" onclick="openAddImp()">+ Adicionar Impressora</button>
+    </div>
+    <div class="printer-grid">${imps.map(p=>printerCard(p,latestByImp[p.id])).join('')}</div>`;
+};
+
+function printerCard(p,l){
+  const st=l?.status||'offline';
+  const tn=l?.toner_preto??null;
+  const tnClass=tn===null?'toner-mid':tn>40?'toner-high':tn>20?'toner-mid':'toner-low';
+  const pa=l?.nivel_papel??null;
+  return `<div class="pcard" onclick="openImp('${p.id}')">
+    <div class="pcard-header">
+      <div>
+        <div class="pcard-name">${p.nome}</div>
+        <div class="pcard-model">${p.fabricante||''} ${p.modelo||''}</div>
+        <div class="pcard-loc">${p.localizacao||''}</div>
+      </div>
+      <div style="text-align:right">
+        <div style="display:flex;align-items:center;gap:6px;justify-content:flex-end">
+          <div class="status-dot ${st}"></div>
+        </div>
+        <div class="status-label ${st}" style="margin-top:4px">${{online:'Online',offline:'Offline',alerta:'Alerta'}[st]||st}</div>
+      </div>
+    </div>
+    <div class="pcard-ip">IP: ${p.ip}</div>
+    <div class="bar-row"><div class="bar-label"><span>Toner Preto</span><span>${tn!==null?tn+'%':'—'}</span></div><div class="bar-track"><div class="bar-fill ${tnClass}" style="width:${tn||0}%"></div></div></div>
+    <div class="bar-row"><div class="bar-label"><span>Papel</span><span>${pa!==null?pa+'%':'—'}</span></div><div class="bar-track"><div class="bar-fill paper" style="width:${pa||0}%"></div></div></div>
+    <div class="pcard-stats">
+      <div class="pcard-stat"><div class="pcard-stat-val">${fmtNum(l?.paginas_hoje||0)}</div><div class="pcard-stat-lbl">Hoje</div></div>
+      <div class="pcard-stat"><div class="pcard-stat-val">${fmtNum(l?.paginas_total||0)}</div><div class="pcard-stat-lbl">Total</div></div>
+    </div>
+  </div>`;
+}
+
+async function openImp(id){
+  const p=store.impressoras.find(x=>x.id===id);
+  if(!p)return;
+  const l=store.leituras.filter(x=>x.impressora_id===id).sort((a,b)=>b.coletado_em.localeCompare(a.coletado_em))[0];
+  const st=l?.status||'offline';
+  document.getElementById('modal-imp-title').textContent=p.nome;
+  document.getElementById('modal-imp-body').innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+      <div><small style="color:var(--txt3)">Fabricante</small><div>${p.fabricante||'—'}</div></div>
+      <div><small style="color:var(--txt3)">Modelo</small><div>${p.modelo||'—'}</div></div>
+      <div><small style="color:var(--txt3)">IP</small><div style="font-family:monospace">${p.ip}</div></div>
+      <div><small style="color:var(--txt3)">Localização</small><div>${p.localizacao||'—'}</div></div>
+    </div>
+    <div style="margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <span style="font-size:12px;font-weight:600;color:var(--txt2)">STATUS</span>
+        <span class="badge badge-${st}">${{online:'● Online',offline:'● Offline',alerta:'● Alerta'}[st]||st}</span>
+      </div>
+    </div>
+    ${l?`<div style="margin-bottom:16px">
+      ${renderBar('Toner Preto',l.toner_preto)}
+      ${renderBar('Toner Ciano',l.toner_ciano,'paper')}
+      ${renderBar('Toner Magenta',l.toner_magenta,'paper')}
+      ${renderBar('Toner Amarelo',l.toner_amarelo,'paper')}
+      ${renderBar('Nível Papel',l.nivel_papel,'paper')}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px">
+      ${[['Hoje',l.paginas_hoje],['Total',l.paginas_total],['P&B',l.paginas_pb],['Color',l.paginas_color]].map(([k,v])=>`<div style="background:rgba(255,255,255,.03);border:1px solid var(--border2);border-radius:8px;padding:10px;text-align:center"><div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:var(--blue)">${fmtNum(v||0)}</div><div style="font-size:10px;color:var(--txt3);text-transform:uppercase">${k}</div></div>`).join('')}
+    </div>
+    ${l.ultimo_erro?`<div style="background:rgba(255,59,92,.08);border:1px solid rgba(255,59,92,.2);border-radius:8px;padding:10px;font-size:12px;color:var(--red)">Último erro: ${l.ultimo_erro}</div>`:''}
+    <div style="font-size:11px;color:var(--txt3);margin-top:12px">Última leitura: ${timeAgo(l.coletado_em)}</div>`:'<div style="color:var(--txt3);font-size:13px">Nenhuma leitura disponível</div>'}
+    <div style="display:flex;gap:8px;margin-top:20px;flex-wrap:wrap">
+      <button class="btn btn-blue btn-sm" onclick="closeModal('modal-imp')">Fechar</button>
+      <button class="btn btn-red btn-sm" onclick="removeImp('${p.id}')">Remover</button>
+    </div>`;
+  document.getElementById('modal-imp').classList.add('open');
+}
+
+function renderBar(label,val,cls=''){
+  const v=val??0;
+  const c=cls||( v>40?'toner-high':v>20?'toner-mid':'toner-low');
+  return `<div class="bar-row"><div class="bar-label"><span>${label}</span><span>${val!==null&&val!==undefined?v+'%':'—'}</span></div><div class="bar-track"><div class="bar-fill ${c}" style="width:${v}%"></div></div></div>`;
+}
+
+async function removeImp(id){
+  if(!confirm('Remover esta impressora?'))return;
+  await patch(`teffe_power_impressoras?id=eq.${id}`,{ativo:false});
+  closeModal('modal-imp'); pages.impressoras();
+}
+
+function openAddImp(){
+  document.getElementById('modal-imp-title').textContent='Nova Impressora';
+  document.getElementById('modal-imp-body').innerHTML=`
+    <div class="grid-2">
+      <div class="field"><label>Nome</label><input id="ni-nome" placeholder="Brother DCP-L5652DN"></div>
+      <div class="field"><label>IP</label><input id="ni-ip" placeholder="192.168.1.100"></div>
+      <div class="field"><label>Fabricante</label><input id="ni-fab" placeholder="Brother"></div>
+      <div class="field"><label>Modelo</label><input id="ni-mod" placeholder="DCP-L5652DN"></div>
+      <div class="field"><label>Localização</label><input id="ni-loc" placeholder="Escritório"></div>
+      <div class="field"><label>Custo P&B (R$/pág)</label><input id="ni-cpb" type="number" step="0.01" value="0.05"></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn btn-green" onclick="saveImp()">Salvar</button>
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('modal-imp')">Cancelar</button>
+    </div>`;
+  document.getElementById('modal-imp').classList.add('open');
+}
+
+async function saveImp(){
+  const d={licenca_chave:SESSION.chave, nome:document.getElementById('ni-nome').value, ip:document.getElementById('ni-ip').value,
+    fabricante:document.getElementById('ni-fab').value, modelo:document.getElementById('ni-mod').value,
+    localizacao:document.getElementById('ni-loc').value, custo_pb:parseFloat(document.getElementById('ni-cpb').value)||0.05};
+  if(!d.nome||!d.ip){alert('Nome e IP são obrigatórios.');return;}
+  await post('teffe_power_impressoras',d);
+  closeModal('modal-imp'); pages.impressoras();
+}
+
+/* ────────────────────────────── USUÁRIOS ───────────────────────────────── */
+pages.usuarios = async function(){
+  const [usrs,imps2]=await Promise.all([
+    get(`teffe_power_usuarios?licenca_chave=eq.${SESSION.chave}&ativo=eq.true&select=*&order=nome.asc`),
+    get(`teffe_power_impressoes?licenca_chave=eq.${SESSION.chave}&select=*`)
+  ]);
+  store.impressoes=imps2;
+  const byUsr={};
+  imps2.forEach(p=>{ if(!byUsr[p.usuario_id]) byUsr[p.usuario_id]={pags:0,custo:0}; byUsr[p.usuario_id].pags+=(p.paginas||0); byUsr[p.usuario_id].custo+=(parseFloat(p.custo)||0); });
+
+  document.getElementById('page-body').innerHTML=`
+    <div style="display:flex;justify-content:flex-end;margin-bottom:16px">
+      <button class="btn btn-blue" onclick="openAddUsr()">+ Adicionar Usuário</button>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Nome</th><th>E-mail</th><th>Departamento</th><th>Páginas</th><th>Custo</th><th>Ações</th></tr></thead>
+        <tbody>${usrs.map(u=>`<tr>
+          <td><b>${u.nome}</b></td>
+          <td><small>${u.email||'—'}</small></td>
+          <td>${u.departamento||'—'}</td>
+          <td><span style="color:var(--blue);font-weight:600">${fmtNum(byUsr[u.id]?.pags||0)}</span></td>
+          <td><span class="cost">${fmtBRL(byUsr[u.id]?.custo||0)}</span></td>
+          <td><button class="btn btn-red btn-sm" onclick="removeUsr('${u.id}')">Remover</button></td>
+        </tr>`).join('')}</tbody>
+      </table>
+    </div>`;
+};
+
+async function openAddUsr(){
+  document.getElementById('modal-imp-title').textContent='Novo Usuário';
+  document.getElementById('modal-imp-body').innerHTML=`
+    <div class="grid-2">
+      <div class="field"><label>Nome</label><input id="nu-nome" placeholder="Ana Costa"></div>
+      <div class="field"><label>E-mail</label><input id="nu-email" type="email" placeholder="ana@empresa.com"></div>
+      <div class="field"><label>Departamento</label><input id="nu-dep" placeholder="Financeiro"></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn btn-green" onclick="saveUsr()">Salvar</button>
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('modal-imp')">Cancelar</button>
+    </div>`;
+  document.getElementById('modal-imp').classList.add('open');
+}
+
+async function saveUsr(){
+  const d={licenca_chave:SESSION.chave, nome:document.getElementById('nu-nome').value, email:document.getElementById('nu-email').value, departamento:document.getElementById('nu-dep').value};
+  if(!d.nome){alert('Nome é obrigatório.');return;}
+  await post('teffe_power_usuarios',d);
+  closeModal('modal-imp'); pages.usuarios();
+}
+
+async function removeUsr(id){
+  if(!confirm('Remover este usuário?'))return;
+  await patch(`teffe_power_usuarios?id=eq.${id}`,{ativo:false});
+  pages.usuarios();
+}
+
+/* ────────────────────────────── RELATÓRIOS ──────────────────────────────── */
+pages.relatorios = async function(){
+  const hoje=new Date(); const ini=new Date(hoje.getFullYear(),hoje.getMonth(),1).toISOString().slice(0,10);
+  const fim=hoje.toISOString().slice(0,10);
+
+  document.getElementById('page-body').innerHTML=`
+    <div class="panel" style="margin-bottom:20px">
+      <div class="panel-title">Filtro de Período</div>
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        <div class="field" style="margin:0"><label>De</label><input type="date" id="rel-ini" value="${ini}"></div>
+        <div class="field" style="margin:0"><label>Até</label><input type="date" id="rel-fim" value="${fim}"></div>
+        <button class="btn btn-blue" style="margin-top:16px" onclick="loadRelatorio()">Gerar</button>
+        <button class="btn btn-green btn-sm" style="margin-top:16px" onclick="exportCSVRel()">Exportar CSV</button>
+      </div>
+    </div>
+    <div id="rel-content"><div class="loader"><div class="spinner"></div></div></div>`;
+  loadRelatorio();
+};
+
+async function loadRelatorio(){
+  const ini=document.getElementById('rel-ini')?.value; const fim=document.getElementById('rel-fim')?.value;
+  if(!ini||!fim)return;
+  const [imps2,imps,usrs]=await Promise.all([
+    get(`teffe_power_impressoes?licenca_chave=eq.${SESSION.chave}&impresso_em=gte.${ini}T00:00:00&impresso_em=lte.${fim}T23:59:59&select=*`),
+    get(`teffe_power_impressoras?licenca_chave=eq.${SESSION.chave}&select=*`),
+    get(`teffe_power_usuarios?licenca_chave=eq.${SESSION.chave}&select=*`)
+  ]);
+  store.impressoes=imps2;
+  const totalPags=imps2.reduce((s,p)=>s+(p.paginas||0),0);
+  const totalCusto=imps2.reduce((s,p)=>s+parseFloat(p.custo||0),0);
+  const colorPags=imps2.filter(p=>p.colorido).reduce((s,p)=>s+(p.paginas||0),0);
+  const pbPags=totalPags-colorPags;
+
+  // By printer
+  const byImp={};
+  imps2.forEach(p=>{ if(!byImp[p.impressora_id])byImp[p.impressora_id]={pags:0,custo:0}; byImp[p.impressora_id].pags+=(p.paginas||0); byImp[p.impressora_id].custo+=parseFloat(p.custo||0); });
+
+  // By user
+  const byUsr={};
+  imps2.forEach(p=>{ if(!byUsr[p.usuario_id])byUsr[p.usuario_id]={pags:0,custo:0}; byUsr[p.usuario_id].pags+=(p.paginas||0); byUsr[p.usuario_id].custo+=parseFloat(p.custo||0); });
+
+  document.getElementById('rel-content').innerHTML=`
+    <div class="stats-grid" style="margin-bottom:20px">
+      <div class="stat blue"><div class="stat-label">Total de Páginas</div><div class="stat-value">${fmtNum(totalPags)}</div><div class="stat-sub">${fmtNum(pbPags)} P&B · ${fmtNum(colorPags)} color</div></div>
+      <div class="stat green"><div class="stat-label">Custo Total</div><div class="stat-value" style="font-size:22px">${fmtBRL(totalCusto)}</div><div class="stat-sub">Período selecionado</div></div>
+      <div class="stat orange"><div class="stat-label">Ticket Médio / Job</div><div class="stat-value" style="font-size:22px">${imps2.length?fmtBRL(totalCusto/imps2.length):'—'}</div><div class="stat-sub">${imps2.length} jobs</div></div>
+      <div class="stat red"><div class="stat-label">Custo P&B vs Color</div><div class="stat-value" style="font-size:22px">${totalPags?Math.round(colorPags/totalPags*100):0}%</div><div class="stat-sub">páginas coloridas</div></div>
+    </div>
+    <div class="two-cols">
+      <div class="tbl-wrap">
+        <div class="tbl-head"><div class="panel-title">Por Impressora</div></div>
+        <table><thead><tr><th>Impressora</th><th>Páginas</th><th>Custo</th></tr></thead>
+        <tbody>${Object.entries(byImp).sort((a,b)=>b[1].pags-a[1].pags).map(([id,v])=>`<tr><td>${imps.find(x=>x.id===id)?.nome||'—'}</td><td><span style="color:var(--blue)">${fmtNum(v.pags)}</span></td><td class="cost">${fmtBRL(v.custo)}</td></tr>`).join('')||'<tr><td colspan="3" class="empty">Sem dados</td></tr>'}</tbody>
+        </table>
+      </div>
+      <div class="tbl-wrap">
+        <div class="tbl-head"><div class="panel-title">Por Usuário</div></div>
+        <table><thead><tr><th>Usuário</th><th>Páginas</th><th>Custo</th></tr></thead>
+        <tbody>${Object.entries(byUsr).sort((a,b)=>b[1].pags-a[1].pags).map(([id,v])=>`<tr><td>${usrs.find(x=>x.id===id)?.nome||'—'}</td><td><span style="color:var(--blue)">${fmtNum(v.pags)}</span></td><td class="cost">${fmtBRL(v.custo)}</td></tr>`).join('')||'<tr><td colspan="3" class="empty">Sem dados</td></tr>'}</tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+function exportCSVRel(){
+  const imps2=store.impressoes||[];
+  const rows=imps2.map(p=>`${p.impresso_em||''},${p.paginas||0},${p.colorido?'Color':'P&B'},${fmtBRL(p.custo)}`);
+  const csv=['Data,Páginas,Tipo,Custo',...rows].join('\n');
+  const blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`relatorio-teffe-power-${new Date().toISOString().slice(0,10)}.csv`;a.click();
+}
+
+/* ────────────────────────────── ALERTAS ────────────────────────────────── */
+function alertCard(a){
+  const icons={'toner_baixo':'🖨️','offline':'📡','papel_baixo':'📄'};
+  return `<div class="alert-card ${a.tipo} ${a.resolvido?'alert-resolved':''}">
+    <div class="alert-ico ${a.tipo}">${icons[a.tipo]||'⚠️'}</div>
+    <div style="flex:1">
+      <div class="alert-msg">${a.mensagem}</div>
+      <div class="alert-time">${timeAgo(a.criado_em)} · ${a.resolvido?'<span style="color:var(--green)">Resolvido</span>':'<span style="color:var(--orange)">Ativo</span>'}</div>
+    </div>
+    ${!a.resolvido?`<button class="btn btn-green btn-sm" onclick="resolveAlert('${a.id}')">Resolver</button>`:''}
+  </div>`;
+}
+
+pages.alertas = async function(){
+  const alertas=await get(`teffe_power_alertas?licenca_chave=eq.${SESSION.chave}&select=*&order=criado_em.desc`);
+  store.alertas=alertas;
+  const ativos=alertas.filter(a=>!a.resolvido);
+  const resolvidos=alertas.filter(a=>a.resolvido);
+
+  document.getElementById('page-body').innerHTML=`
+    <div class="filter-row">
+      <button class="btn btn-ghost btn-sm active" id="af-todos" onclick="filterAlerts('todos')">Todos (${alertas.length})</button>
+      <button class="btn btn-ghost btn-sm" id="af-ativos" onclick="filterAlerts('ativos')">Ativos (${ativos.length})</button>
+      <button class="btn btn-ghost btn-sm" id="af-resolvidos" onclick="filterAlerts('resolvidos')">Resolvidos (${resolvidos.length})</button>
+    </div>
+    <div class="alert-list" id="alert-list">${alertas.map(alertCard).join('')||'<div class="empty"><p>Nenhum alerta</p></div>'}</div>`;
+};
+
+function filterAlerts(f){
+  document.querySelectorAll('[id^=af-]').forEach(b=>b.classList.remove('active'));
+  document.getElementById('af-'+f)?.classList.add('active');
+  const list=f==='ativos'?store.alertas.filter(a=>!a.resolvido):f==='resolvidos'?store.alertas.filter(a=>a.resolvido):store.alertas;
+  document.getElementById('alert-list').innerHTML=list.map(alertCard).join('')||'<div class="empty"><p>Nenhum alerta</p></div>';
+}
+
+async function resolveAlert(id){
+  await patch(`teffe_power_alertas?id=eq.${id}`,{resolvido:true});
+  await loadAlertCount();
+  pages.alertas();
+}
+
+/* ────────────────────────────── CONFIGURAÇÕES ───────────────────────────── */
+pages.configuracoes = async function(){
+  document.getElementById('page-body').innerHTML=`
+    <div class="settings-grid">
+      <div class="settings-panel">
+        <h3>Dados da Empresa</h3>
+        <div class="field"><label>Nome da Empresa</label><input value="${SESSION.empresa}" readonly style="opacity:.6"></div>
+        <div class="field"><label>Plano</label><input value="${SESSION.plano}" readonly style="opacity:.6"></div>
+        <div class="field"><label>Máx. Impressoras</label><input value="${SESSION.max}" readonly style="opacity:.6"></div>
+        <div class="field"><label>Licença</label><input value="${SESSION.chave}" readonly style="opacity:.6;font-family:monospace;letter-spacing:1px"></div>
+      </div>
+      <div class="settings-panel">
+        <h3>Custos por Página</h3>
+        <p style="font-size:12px;color:var(--txt2);margin-bottom:14px">Configure os custos padrão ao adicionar novas impressoras.</p>
+        <div class="field"><label>P&B — R$/página</label><input type="number" id="cfg-cpb" step="0.001" value="0.050" placeholder="0.050"></div>
+        <div class="field"><label>Colorido — R$/página</label><input type="number" id="cfg-ccol" step="0.001" value="0.150" placeholder="0.150"></div>
+        <button class="btn btn-blue btn-sm" onclick="alert('Custos padrão salvos localmente.')">Salvar</button>
+      </div>
+      <div class="settings-panel">
+        <h3>Limites de Alerta</h3>
+        <div class="field"><label>Alerta toner abaixo de (%)</label><input type="number" id="cfg-toner" value="20" min="1" max="100"></div>
+        <div class="field"><label>Alerta papel abaixo de (%)</label><input type="number" id="cfg-papel" value="15" min="1" max="100"></div>
+        <div class="field"><label>E-mail para alertas</label><input type="email" id="cfg-email" value="${SESSION.email}" placeholder="alertas@empresa.com"></div>
+        <button class="btn btn-blue btn-sm" onclick="alert('Configurações salvas.')">Salvar</button>
+      </div>
+      <div class="settings-panel">
+        <h3>Sobre o Sistema</h3>
+        <p style="font-size:13px;color:var(--txt2);line-height:1.8">
+          <b style="color:var(--blue)">Teffe Power</b> v1.0<br>
+          Fleet Management System<br><br>
+          Monitoramento SNMP em tempo real<br>
+          Gestão de toner, papel e custos<br><br>
+          <b style="color:var(--txt)">Powered by Teffe Tecnologia</b><br>
+          <a href="https://teffe.com.br" target="_blank" style="color:var(--blue)">teffe.com.br</a>
+        </p>
+      </div>
+    </div>`;
+};
+
+/* ── Boot ── */
+window.addEventListener('keydown',e=>{ if(e.key==='Enter'&&document.getElementById('login').style.display!=='none') doLogin(); });
+const saved=localStorage.getItem('tpSess');
+if(saved){ try{ SESSION=JSON.parse(saved); startApp(); }catch{} }
+</script>
+</body>
+</html>
