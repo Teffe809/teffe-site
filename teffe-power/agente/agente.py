@@ -4,6 +4,7 @@ Coleta dados das impressoras via SNMP e envia ao Supabase.
 Pode rodar como serviço Windows ou diretamente via python agente.py
 """
 
+import os
 import sys
 import time
 import logging
@@ -36,7 +37,9 @@ STATUS_MAP = {1: "outro", 2: "desconhecido", 3: "idle", 4: "printing",
               5: "warmup", 6: "offline", 7: "standby"}
 
 
-def carregar_config(path="config.ini"):
+def carregar_config(path=None):
+    if path is None:
+        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.ini")
     cfg = configparser.ConfigParser()
     cfg.read(path, encoding="utf-8")
     s = cfg["teffe_power"]
