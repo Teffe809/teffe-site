@@ -95,7 +95,7 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;font-size:14px;color:var(
 .page{padding:24px 28px;animation:fadeIn .3s ease;}
 
 /* ── CARDS ── */
-.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;}
+.stats-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:16px;margin-bottom:24px;}
 .stat{background:var(--card);border:1px solid var(--border2);border-radius:12px;padding:20px;
   position:relative;overflow:hidden;transition:transform .2s,border-color .2s;}
 .stat:hover{transform:translateY(-2px);border-color:var(--border);}
@@ -241,6 +241,7 @@ td small{color:var(--txt2);font-size:11px;}
 /* ── COST BADGE ── */
 .cost{font-family:monospace;font-size:13px;color:var(--green);}
 
+@media(max-width:1400px){.stats-grid{grid-template-columns:repeat(3,1fr);}}
 @media(max-width:1100px){.stats-grid{grid-template-columns:repeat(2,1fr);}.charts-row{grid-template-columns:1fr;}.settings-grid{grid-template-columns:1fr;}}
 </style>
 </head>
@@ -289,6 +290,10 @@ td small{color:var(--txt2);font-size:11px;}
       <div class="sb-item" onclick="goTo('usuarios')">
         <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
         Usuários
+      </div>
+      <div class="sb-item" onclick="goTo('perfis')">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+        Perfis &amp; Permissões
       </div>
       <div class="sb-item" onclick="goTo('relatorios')">
         <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
@@ -359,7 +364,7 @@ const del = (path) => fetch(`${SB}/rest/v1/${path}`,{method:'DELETE',headers:H})
 const fmtBRL = v => v==null?'—':'R$ '+Number(v).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.');
 const fmtNum = v => Number(v||0).toLocaleString('pt-BR');
 const timeAgo = d => { const s=Math.floor((Date.now()-new Date(d))/1000); if(s<60)return`${s}s atrás`;if(s<3600)return`${Math.floor(s/60)}min atrás`;if(s<86400)return`${Math.floor(s/3600)}h atrás`;return`${Math.floor(s/86400)}d atrás`; };
-const PAGE_TITLES = {dashboard:'Dashboard',impressoras:'Impressoras',usuarios:'Usuários',relatorios:'Relatórios',alertas:'Alertas',configuracoes:'Configurações'};
+const PAGE_TITLES = {dashboard:'Dashboard',impressoras:'Impressoras',usuarios:'Usuários',perfis:'Perfis & Permissões',relatorios:'Relatórios',alertas:'Alertas',configuracoes:'Configurações'};
 
 /* ── Clock ── */
 setInterval(()=>{ const n=new Date(); document.getElementById('tp-clock').textContent=n.toLocaleTimeString('pt-BR',{hour12:false}); },1000);
@@ -410,18 +415,20 @@ function goTo(p){
 function closeModal(id){ document.getElementById(id).classList.remove('open'); }
 
 /* ── DATA STORE ── */
-let store={impressoras:[],leituras:[],usuarios:[],impressoes:[],alertas:[]};
+let store={impressoras:[],leituras:[],usuarios:[],impressoes:[],alertas:[],perfis:[],bloqueios:[]};
 
 /* ────────────────────────────── DASHBOARD ────────────────────────────────── */
 const pages = {};
 pages.dashboard = async function(){
-  const [imps,leis,imps2,alertas] = await Promise.all([
+  const hoje=new Date().toISOString().slice(0,10);
+  const [imps,leis,imps2,alertas,bloqueios] = await Promise.all([
     get(`teffe_power_impressoras?licenca_chave=eq.${SESSION.chave}&ativo=eq.true&select=*`),
     get(`teffe_power_leituras?licenca_chave=eq.${SESSION.chave}&select=*&order=coletado_em.desc`),
     get(`teffe_power_impressoes?licenca_chave=eq.${SESSION.chave}&select=*&order=impresso_em.desc`),
-    get(`teffe_power_alertas?licenca_chave=eq.${SESSION.chave}&resolvido=eq.false&select=*&order=criado_em.desc`)
+    get(`teffe_power_alertas?licenca_chave=eq.${SESSION.chave}&resolvido=eq.false&select=*&order=criado_em.desc`),
+    get(`teffe_power_bloqueios?licenca_chave=eq.${SESSION.chave}&tentado_em=gte.${hoje}T00:00:00&select=id,motivo`)
   ]);
-  store.impressoras=imps; store.leituras=leis; store.impressoes=imps2; store.alertas=alertas;
+  store.impressoras=imps; store.leituras=leis; store.impressoes=imps2; store.alertas=alertas; store.bloqueios=bloqueios;
 
   // Latest reading per printer
   const latestByImp={};
@@ -433,6 +440,7 @@ pages.dashboard = async function(){
   const alerta=latest.filter(l=>l.status==='alerta').length;
   const totalPags=latest.reduce((s,l)=>s+(l.paginas_hoje||0),0);
   const avgToner=latest.length?Math.round(latest.reduce((s,l)=>s+(l.toner_preto||0),0)/latest.length):0;
+  const blqHoje=bloqueios.length;
 
   // Pages per hour last 24h
   const now=new Date(); const hrs=[]; const labHrs=[];
@@ -454,6 +462,7 @@ pages.dashboard = async function(){
       <div class="stat green"><div class="stat-ico"><svg width="18" height="18" fill="none" stroke="var(--green)" stroke-width="1.8" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div><div class="stat-label">Páginas Hoje</div><div class="stat-value">${fmtNum(totalPags)}</div><div class="stat-sub">Total da frota</div></div>
       <div class="stat orange"><div class="stat-ico"><svg width="18" height="18" fill="none" stroke="var(--orange)" stroke-width="1.8" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div><div class="stat-label">Alertas Ativos</div><div class="stat-value">${alertas.length}</div><div class="stat-sub">Requerem atenção</div></div>
       <div class="stat ${avgToner<20?'red':avgToner<40?'orange':'blue'}"><div class="stat-ico"><svg width="18" height="18" fill="none" stroke="${avgToner<20?'var(--red)':avgToner<40?'var(--orange)':'var(--blue)'}" stroke-width="1.8" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/></svg></div><div class="stat-label">Toner Médio</div><div class="stat-value">${avgToner}%</div><div class="stat-sub">Média da frota</div></div>
+      <div class="stat ${blqHoje>0?'red':'blue'}"><div class="stat-ico"><svg width="18" height="18" fill="none" stroke="${blqHoje>0?'var(--red)':'var(--blue)'}" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg></div><div class="stat-label">Bloqueios Hoje</div><div class="stat-value">${blqHoje}</div><div class="stat-sub">Tentativas negadas</div></div>
     </div>
     <div class="charts-row">
       <div class="panel"><div class="panel-title">Impressões por Hora — Últimas 24h</div><canvas id="ch-hrs" height="120"></canvas></div>
@@ -626,12 +635,18 @@ pages.usuarios = async function(){
 };
 
 async function openAddUsr(){
+  const perfis = store.perfis.length ? store.perfis : await get(`teffe_power_perfis?licenca_chave=eq.${SESSION.chave}&ativo=eq.true&select=id,nome&order=nome.asc`);
+  store.perfis = perfis;
+  const perfisOpts = perfis.map(p=>`<option value="${p.id}">${p.nome}</option>`).join('');
   document.getElementById('modal-imp-title').textContent='Novo Usuário';
   document.getElementById('modal-imp-body').innerHTML=`
     <div class="grid-2">
       <div class="field"><label>Nome</label><input id="nu-nome" placeholder="Ana Costa"></div>
       <div class="field"><label>E-mail</label><input id="nu-email" type="email" placeholder="ana@empresa.com"></div>
       <div class="field"><label>Departamento</label><input id="nu-dep" placeholder="Financeiro"></div>
+      <div class="field"><label>Perfil</label><select id="nu-perfil"><option value="">— sem perfil —</option>${perfisOpts}</select></div>
+      <div class="field"><label>PIN (4 dígitos)</label><input id="nu-pin" type="password" maxlength="4" placeholder="••••" inputmode="numeric"></div>
+      <div class="field"><label>ID Crachá</label><input id="nu-cracha" placeholder="RFID / código"></div>
     </div>
     <div style="display:flex;gap:8px;margin-top:8px">
       <button class="btn btn-green" onclick="saveUsr()">Salvar</button>
@@ -641,7 +656,18 @@ async function openAddUsr(){
 }
 
 async function saveUsr(){
-  const d={licenca_chave:SESSION.chave, nome:document.getElementById('nu-nome').value, email:document.getElementById('nu-email').value, departamento:document.getElementById('nu-dep').value};
+  const perfilId=document.getElementById('nu-perfil')?.value||null;
+  const pin=document.getElementById('nu-pin')?.value||null;
+  const cracha=document.getElementById('nu-cracha')?.value||null;
+  const d={
+    licenca_chave:SESSION.chave,
+    nome:document.getElementById('nu-nome').value,
+    email:document.getElementById('nu-email').value,
+    departamento:document.getElementById('nu-dep').value,
+    ...(perfilId?{perfil_id:perfilId}:{}),
+    ...(pin?{pin}:{}),
+    ...(cracha?{cracha_id:cracha}:{})
+  };
   if(!d.nome){alert('Nome é obrigatório.');return;}
   await post('teffe_power_usuarios',d);
   closeModal('modal-imp'); pages.usuarios();
@@ -651,6 +677,158 @@ async function removeUsr(id){
   if(!confirm('Remover este usuário?'))return;
   await patch(`teffe_power_usuarios?id=eq.${id}`,{ativo:false});
   pages.usuarios();
+}
+
+/* ────────────────────────────── PERFIS ─────────────────────────────────── */
+pages.perfis = async function(){
+  const [perfis, imps] = await Promise.all([
+    get(`teffe_power_perfis?licenca_chave=eq.${SESSION.chave}&ativo=eq.true&select=*&order=nome.asc`),
+    get(`teffe_power_impressoras?licenca_chave=eq.${SESSION.chave}&ativo=eq.true&select=id,nome,modelo&order=nome.asc`)
+  ]);
+  store.perfis=perfis;
+
+  document.getElementById('page-body').innerHTML=`
+    <div style="display:flex;justify-content:flex-end;margin-bottom:16px">
+      <button class="btn btn-blue" onclick="openAddPerfil()">+ Novo Perfil</button>
+    </div>
+    <div id="perfis-list">
+      ${perfis.length?perfis.map(p=>`
+        <div class="panel" style="margin-bottom:16px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <div>
+              <div style="font-size:15px;font-weight:600;color:var(--text)">${p.nome}</div>
+              <div style="font-size:12px;color:var(--text2);margin-top:2px">${p.descricao||'—'}</div>
+            </div>
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-ghost btn-sm" onclick="openPermsModal('${p.id}','${p.nome.replace(/'/g,"\\'")}')">Permissões</button>
+              <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="removePerfil('${p.id}')">Remover</button>
+            </div>
+          </div>
+        </div>`).join(''):'<div class="panel" style="text-align:center;color:var(--text2);padding:40px">Nenhum perfil cadastrado</div>'}
+    </div>
+    <div class="modal" id="modal-perms">
+      <div class="modal-box" style="max-width:700px">
+        <div class="modal-header"><span id="modal-perms-title">Permissões</span><button class="btn-close" onclick="closeModal(\'modal-perms\')">✕</button></div>
+        <div id="modal-perms-body"></div>
+      </div>
+    </div>
+    <div class="modal" id="modal-perfil">
+      <div class="modal-box">
+        <div class="modal-header"><span>Novo Perfil</span><button class="btn-close" onclick="closeModal(\'modal-perfil\')">✕</button></div>
+        <div class="field"><label>Nome</label><input id="np-nome" placeholder="Funcionário"></div>
+        <div class="field" style="margin-top:8px"><label>Descrição</label><input id="np-desc" placeholder="Descreva as permissões deste perfil"></div>
+        <div style="display:flex;gap:8px;margin-top:16px">
+          <button class="btn btn-green" onclick="savePerfil()">Salvar</button>
+          <button class="btn btn-ghost btn-sm" onclick="closeModal(\'modal-perfil\')">Cancelar</button>
+        </div>
+      </div>
+    </div>`;
+
+  window._perfsImps=imps;
+};
+
+function openAddPerfil(){
+  document.getElementById('np-nome').value='';
+  document.getElementById('np-desc').value='';
+  document.getElementById('modal-perfil').classList.add('open');
+}
+
+async function savePerfil(){
+  const nome=document.getElementById('np-nome').value.trim();
+  if(!nome){alert('Nome é obrigatório.');return;}
+  await post('teffe_power_perfis',{licenca_chave:SESSION.chave,nome,descricao:document.getElementById('np-desc').value});
+  closeModal('modal-perfil'); pages.perfis();
+}
+
+async function removePerfil(id){
+  if(!confirm('Remover este perfil?'))return;
+  await patch(`teffe_power_perfis?id=eq.${id}`,{ativo:false});
+  pages.perfis();
+}
+
+async function openPermsModal(perfilId, perfilNome){
+  document.getElementById('modal-perms-title').textContent=`Permissões — ${perfilNome}`;
+  document.getElementById('modal-perms-body').innerHTML=`<div style="color:var(--text2);padding:16px">Carregando...</div>`;
+  document.getElementById('modal-perms').classList.add('open');
+
+  const imps=window._perfsImps||[];
+  const perms=await get(`teffe_power_permissoes?perfil_id=eq.${perfilId}&select=*`);
+  const permsMap={};
+  perms.forEach(p=>permsMap[p.impressora_id]=p);
+
+  const fields=[
+    {key:'pode_imprimir_pb',   label:'Imprimir P&B'},
+    {key:'pode_imprimir_color',label:'Imprimir Color'},
+    {key:'pode_copiar',        label:'Copiar'},
+    {key:'pode_digitalizar',   label:'Digitalizar'},
+    {key:'pode_frente_verso',  label:'Frente/Verso'},
+  ];
+
+  const rows=imps.map(imp=>{
+    const p=permsMap[imp.id]||{};
+    const chks=fields.map(f=>`
+      <label style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--text2);white-space:nowrap">
+        <input type="checkbox" data-imp="${imp.id}" data-field="${f.key}" ${p[f.key]?'checked':''}>
+        ${f.label}
+      </label>`).join('');
+    return `<tr>
+      <td style="font-size:13px">${imp.nome}<div style="font-size:11px;color:var(--text2)">${imp.modelo||''}</div></td>
+      <td><div style="display:flex;flex-wrap:wrap;gap:6px">${chks}</div></td>
+      <td><div style="display:flex;gap:4px;align-items:center">
+        <input type="number" min="0" placeholder="0" style="width:60px;background:var(--card2);border:1px solid var(--border2);border-radius:6px;padding:4px 6px;color:var(--text);font-size:12px" data-imp="${imp.id}" data-field="limite_paginas_dia" value="${p.limite_paginas_dia||0}">
+        <span style="font-size:11px;color:var(--text2)">/dia</span>
+        <input type="number" min="0" placeholder="0" style="width:65px;background:var(--card2);border:1px solid var(--border2);border-radius:6px;padding:4px 6px;color:var(--text);font-size:12px" data-imp="${imp.id}" data-field="limite_paginas_mes" value="${p.limite_paginas_mes||0}">
+        <span style="font-size:11px;color:var(--text2)">/mês</span>
+      </div></td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('modal-perms-body').innerHTML=`
+    <div style="max-height:420px;overflow-y:auto">
+      <table style="width:100%;border-collapse:collapse">
+        <thead><tr>
+          <th style="text-align:left;padding:8px;font-size:12px;color:var(--text2);border-bottom:1px solid var(--border2)">Impressora</th>
+          <th style="text-align:left;padding:8px;font-size:12px;color:var(--text2);border-bottom:1px solid var(--border2)">Permissões</th>
+          <th style="text-align:left;padding:8px;font-size:12px;color:var(--text2);border-bottom:1px solid var(--border2)">Limites</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end">
+      <button class="btn btn-green" onclick="savePerms('${perfilId}')">Salvar Permissões</button>
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('modal-perms')">Fechar</button>
+    </div>`;
+}
+
+async function savePerms(perfilId){
+  const imps=window._perfsImps||[];
+  const fields=['pode_imprimir_pb','pode_imprimir_color','pode_copiar','pode_digitalizar','pode_frente_verso'];
+  const saves=imps.map(imp=>{
+    const rec={perfil_id:perfilId, impressora_id:imp.id, licenca_chave:SESSION.chave};
+    fields.forEach(f=>{
+      const el=document.querySelector(`input[data-imp="${imp.id}"][data-field="${f}"]`);
+      if(el) rec[f]=el.checked;
+    });
+    ['limite_paginas_dia','limite_paginas_mes'].forEach(f=>{
+      const el=document.querySelector(`input[data-imp="${imp.id}"][data-field="${f}"]`);
+      if(el) rec[f]=parseInt(el.value)||0;
+    });
+    return rec;
+  });
+  await fetch(`${SB}/rest/v1/teffe_power_permissoes?on_conflict=perfil_id,impressora_id`,{
+    method:'POST',
+    headers:{'Content-Type':'application/json','apikey':KEY,'Authorization':'Bearer '+KEY,'Prefer':'resolution=merge-duplicates,return=minimal'},
+    body:JSON.stringify(saves)
+  });
+  closeModal('modal-perms');
+  showToast('Permissões salvas com sucesso!');
+}
+
+function showToast(msg){
+  let t=document.getElementById('toast');
+  if(!t){t=document.createElement('div');t.id='toast';t.style.cssText='position:fixed;bottom:24px;right:24px;background:var(--green);color:#000;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:600;z-index:9999;transition:opacity .3s';document.body.appendChild(t);}
+  t.textContent=msg; t.style.opacity='1';
+  setTimeout(()=>{t.style.opacity='0';},2500);
 }
 
 /* ────────────────────────────── RELATÓRIOS ──────────────────────────────── */
