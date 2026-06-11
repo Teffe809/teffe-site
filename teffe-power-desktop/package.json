@@ -1,0 +1,67 @@
+{
+  "name": "teffe-power",
+  "version": "1.0.0",
+  "description": "Teffe Power — Fleet Management System",
+  "author": "Teffe Tecnologia <contato@teffe.com.br>",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win --x64"
+  },
+  "build": {
+    "appId": "com.teffe.power",
+    "productName": "Teffe Power",
+    "copyright": "Copyright © 2026 Teffe Tecnologia",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "index.html",
+      "build/icon.png"
+    ],
+    "extraFiles": [
+      {
+        "from": "agente",
+        "to": "agente",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "start-agente.bat",
+        "to": "start-agente.bat"
+      },
+      {
+        "from": "README.txt",
+        "to": "README.txt"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "build/icon.ico",
+      "artifactName": "TeffePower-Setup.exe",
+      "requestedExecutionLevel": "asInvoker"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Teffe Power",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico",
+      "deleteAppDataOnUninstall": false,
+      "include": "build/installer.nsh"
+    }
+  },
+  "devDependencies": {
+    "electron": "^31.7.7",
+    "electron-builder": "^24.13.3",
+    "png-to-ico": "^2.1.8"
+  }
+}
