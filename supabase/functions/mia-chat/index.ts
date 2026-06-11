@@ -266,15 +266,24 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
   }
 
   // ── Mensagem do cliente (fromMe: false) ──
-  const msgObj = (data.message ?? {}) as Record<string, unknown>;
-  const texto  = String(
+  const msgObj  = (data.message ?? {}) as Record<string, unknown>;
+  const isMedia = !!(
+    msgObj.imageMessage    ||
+    msgObj.audioMessage    ||
+    msgObj.documentMessage ||
+    msgObj.videoMessage    ||
+    msgObj.stickerMessage
+  );
+  const texto = String(
     msgObj.conversation ??
     ((msgObj.extendedTextMessage as Record<string, unknown>)?.text) ??
     ((msgObj.imageMessage as Record<string, unknown>)?.caption) ??
     ''
   ).trim();
 
-  if (!texto) return new Response('OK', { status: 200 });
+  // Mensagem de mídia sem legenda — injeta placeholder para Claude responder
+  const textoFinal = texto || (isMedia ? '[arquivo recebido]' : '');
+  if (!textoFinal) return new Response('OK', { status: 200 });
 
   const nome = String(data.pushName ?? '');
 
@@ -307,7 +316,7 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
   if (pausado) return new Response('OK', { status: 200 });
 
   const primeiraMsg = historico.length === 0;
-  historico.push({ role: 'user', content: texto });
+  historico.push({ role: 'user', content: textoFinal });
 
   // ── Chama Claude com system prompt vindo do banco ──
   const system     = buildSystemFromBase(systemPromptBase, periodo, nome, primeiraMsg, saudacao);
