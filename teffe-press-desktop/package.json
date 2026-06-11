@@ -1,0 +1,51 @@
+{
+  "name": "teffe-press",
+  "version": "1.0.0",
+  "description": "Teffe Press — Painel Administrativo para Gráficas",
+  "author": "Teffe Tecnologia <contato@teffe.com.br>",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win --x64"
+  },
+  "build": {
+    "appId": "com.teffe.press",
+    "productName": "Teffe Press",
+    "copyright": "Copyright © 2026 Teffe Tecnologia",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "teffe-press-admin.html",
+      "build/icon.png"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "build/icon.ico",
+      "artifactName": "TeffePress-Setup.exe",
+      "requestedExecutionLevel": "asInvoker"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Teffe Press",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico",
+      "deleteAppDataOnUninstall": false
+    }
+  },
+  "devDependencies": {
+    "electron": "^31.7.7",
+    "electron-builder": "^24.13.3",
+    "png-to-ico": "^2.1.8"
+  }
+}
