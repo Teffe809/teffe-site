@@ -205,6 +205,29 @@ td small{color:var(--txt2);font-size:11px;}
 .btn-ghost{background:none;color:var(--txt2);border:1px solid var(--border2);}
 .btn-ghost:hover{border-color:var(--border);color:var(--txt);}
 .filter-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;}
+.tbl-row-click{cursor:pointer;transition:background .15s;}
+.tbl-row-click:hover{background:rgba(0,212,255,.05);}
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;}
+.badge-green{background:rgba(0,255,136,.12);color:var(--green);border:1px solid rgba(0,255,136,.2);}
+.badge-red{background:rgba(255,59,92,.12);color:var(--red);border:1px solid rgba(255,59,92,.2);}
+.badge-blue{background:var(--blue-dim);color:var(--blue);border:1px solid rgba(0,212,255,.2);}
+.badge-orange{background:rgba(255,149,0,.12);color:var(--orange);border:1px solid rgba(255,149,0,.2);}
+
+/* ── DRAWER ── */
+.drawer-bg{position:fixed;inset:0;z-index:90;display:none;}
+.drawer-bg.open{display:block;}
+.drawer-overlay{position:absolute;inset:0;background:rgba(0,0,0,.45);backdrop-filter:blur(2px);}
+.drawer{position:absolute;right:0;top:0;bottom:0;width:380px;background:var(--card);border-left:1px solid var(--border);
+  overflow-y:auto;padding:28px;}
+@keyframes slideInRight{from{transform:translateX(100%);}to{transform:translateX(0);}}
+.drawer-bg.open .drawer{animation:slideInRight .22s ease;}
+.drawer-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;}
+.drawer-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--blue);}
+.drawer-close{background:none;border:none;color:var(--txt2);font-size:22px;cursor:pointer;line-height:1;transition:color .2s;}
+.drawer-close:hover{color:var(--red);}
+.drawer-field{margin-bottom:16px;}
+.drawer-field small{display:block;font-size:10px;font-weight:600;color:var(--txt3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px;}
+.drawer-sep{height:1px;background:var(--border2);margin:18px 0;}
 
 /* ── FORM ── */
 .field{margin-bottom:14px;}
@@ -342,6 +365,18 @@ td small{color:var(--txt2);font-size:11px;}
   </div>
 </div>
 
+<!-- DRAWER USUÁRIO -->
+<div class="drawer-bg" id="drawer-usr">
+  <div class="drawer-overlay" onclick="closeDrawer()"></div>
+  <div class="drawer">
+    <div class="drawer-head">
+      <div class="drawer-title" id="drawer-usr-title">Usuário</div>
+      <button class="drawer-close" onclick="closeDrawer()">×</button>
+    </div>
+    <div id="drawer-usr-body"></div>
+  </div>
+</div>
+
 <script>
 /* ── Config ── */
 const SB = 'https://hlfjcpgrxiktgctozilk.supabase.co';
@@ -410,7 +445,7 @@ function goTo(p){
 function closeModal(id){ document.getElementById(id).classList.remove('open'); }
 
 /* ── DATA STORE ── */
-let store={impressoras:[],leituras:[],usuarios:[],impressoes:[],alertas:[]};
+let store={impressoras:[],leituras:[],usuarios:[],impressoes:[],alertas:[],perfis:[]};
 
 /* ────────────────────────────── DASHBOARD ────────────────────────────────── */
 const pages = {};
@@ -598,13 +633,15 @@ async function saveImp(){
 
 /* ────────────────────────────── USUÁRIOS ───────────────────────────────── */
 pages.usuarios = async function(){
-  const [usrs,imps2]=await Promise.all([
+  const [usrs,imps2,perfis]=await Promise.all([
     get(`teffe_power_usuarios?licenca_chave=eq.${SESSION.chave}&ativo=eq.true&select=*&order=nome.asc`),
-    get(`teffe_power_impressoes?licenca_chave=eq.${SESSION.chave}&select=*`)
+    get(`teffe_power_impressoes?licenca_chave=eq.${SESSION.chave}&select=*`),
+    get(`teffe_power_perfis?licenca_chave=eq.${SESSION.chave}&ativo=eq.true&select=*&order=nome.asc`)
   ]);
-  store.impressoes=imps2;
+  store.usuarios=usrs; store.impressoes=imps2; store.perfis=perfis;
   const byUsr={};
   imps2.forEach(p=>{ if(!byUsr[p.usuario_id]) byUsr[p.usuario_id]={pags:0,custo:0}; byUsr[p.usuario_id].pags+=(p.paginas||0); byUsr[p.usuario_id].custo+=(parseFloat(p.custo)||0); });
+  store._byUsr=byUsr;
 
   document.getElementById('page-body').innerHTML=`
     <div style="display:flex;justify-content:flex-end;margin-bottom:16px">
@@ -612,26 +649,125 @@ pages.usuarios = async function(){
     </div>
     <div class="tbl-wrap">
       <table>
-        <thead><tr><th>Nome</th><th>E-mail</th><th>Departamento</th><th>Páginas</th><th>Custo</th><th>Ações</th></tr></thead>
-        <tbody>${usrs.map(u=>`<tr>
-          <td><b>${u.nome}</b></td>
-          <td><small>${u.email||'—'}</small></td>
-          <td>${u.departamento||'—'}</td>
-          <td><span style="color:var(--blue);font-weight:600">${fmtNum(byUsr[u.id]?.pags||0)}</span></td>
-          <td><span class="cost">${fmtBRL(byUsr[u.id]?.custo||0)}</span></td>
-          <td><button class="btn btn-red btn-sm" onclick="removeUsr('${u.id}')">Remover</button></td>
-        </tr>`).join('')}</tbody>
+        <thead><tr><th>Nome</th><th>E-mail</th><th>Departamento</th><th>Perfil</th><th>Páginas</th><th>Custo</th></tr></thead>
+        <tbody>${usrs.map(u=>{
+          const perf=perfis.find(p=>p.id===u.perfil_id);
+          return `<tr class="tbl-row-click" onclick="openUsrDrawer('${u.id}')">
+            <td><b>${u.nome}</b></td>
+            <td><small>${u.email||'—'}</small></td>
+            <td>${u.departamento||'—'}</td>
+            <td>${perf?`<span class="badge badge-blue">${perf.nome}</span>`:'<span style="color:var(--txt3)">—</span>'}</td>
+            <td><span style="color:var(--blue);font-weight:600">${fmtNum(byUsr[u.id]?.pags||0)}</span></td>
+            <td><span class="cost">${fmtBRL(byUsr[u.id]?.custo||0)}</span></td>
+          </tr>`;
+        }).join('')}</tbody>
       </table>
     </div>`;
 };
 
+function openUsrDrawer(id){
+  const u=store.usuarios.find(x=>x.id===id);
+  if(!u)return;
+  const perf=store.perfis?.find(p=>p.id===u.perfil_id);
+  const stats=store._byUsr?.[u.id]||{pags:0,custo:0};
+
+  document.getElementById('drawer-usr-title').textContent=u.nome;
+  document.getElementById('drawer-usr-body').innerHTML=`
+    <div class="drawer-field"><small>Nome</small><div style="font-size:15px;font-weight:600;color:var(--txt)">${u.nome}</div></div>
+    <div class="drawer-field"><small>E-mail</small><div style="color:var(--txt)">${u.email||'—'}</div></div>
+    <div class="drawer-field"><small>Departamento</small><div style="color:var(--txt)">${u.departamento||'—'}</div></div>
+    <div class="drawer-field">
+      <small>PIN</small>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span id="drawer-pin-val" style="font-family:monospace;font-size:15px;letter-spacing:3px;color:var(--txt)">${u.pin?'••••':'—'}</span>
+        ${u.pin?`<button class="btn btn-ghost btn-sm" style="padding:3px 8px;font-size:11px" onclick="toggleDrawerPin('${u.pin}')">Revelar</button>`:''}
+      </div>
+    </div>
+    <div class="drawer-field"><small>Perfil</small><div>${perf?`<span class="badge badge-blue">${perf.nome}</span>`:'<span style="color:var(--txt3)">—</span>'}</div></div>
+    <div class="drawer-field"><small>Status</small><div><span class="badge badge-${u.ativo?'green':'red'}">${u.ativo?'Ativo':'Inativo'}</span></div></div>
+    <div class="drawer-sep"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px">
+      <div style="background:rgba(0,212,255,.06);border:1px solid var(--border2);border-radius:10px;padding:14px;text-align:center">
+        <div style="font-family:'Syne',sans-serif;font-size:24px;font-weight:700;color:var(--blue)">${fmtNum(stats.pags)}</div>
+        <div style="font-size:10px;color:var(--txt3);text-transform:uppercase;margin-top:3px">Total de Páginas</div>
+      </div>
+      <div style="background:rgba(0,255,136,.06);border:1px solid rgba(0,255,136,.12);border-radius:10px;padding:14px;text-align:center">
+        <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:var(--green)">${fmtBRL(stats.custo)}</div>
+        <div style="font-size:10px;color:var(--txt3);text-transform:uppercase;margin-top:3px">Custo Total</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-blue" onclick="openEditUsr('${u.id}')">Editar</button>
+      <button class="btn btn-red btn-sm" onclick="removeUsr('${u.id}')">Remover</button>
+    </div>`;
+  document.getElementById('drawer-usr').classList.add('open');
+}
+
+function toggleDrawerPin(pin){
+  const el=document.getElementById('drawer-pin-val');
+  const btn=el.nextElementSibling;
+  if(el.textContent.includes('•')){ el.textContent=pin; btn.textContent='Ocultar'; }
+  else{ el.textContent='••••'; btn.textContent='Revelar'; }
+}
+
+function closeDrawer(){ document.getElementById('drawer-usr').classList.remove('open'); }
+
+function openEditUsr(id){
+  const u=store.usuarios.find(x=>x.id===id);
+  if(!u)return;
+  const perfis=store.perfis||[];
+  document.getElementById('modal-imp-title').textContent='Editar Usuário';
+  document.getElementById('modal-imp-body').innerHTML=`
+    <div class="grid-2">
+      <div class="field"><label>Nome</label><input id="eu-nome" value="${u.nome}"></div>
+      <div class="field"><label>E-mail</label><input id="eu-email" type="email" value="${u.email||''}"></div>
+      <div class="field"><label>Departamento</label><input id="eu-dep" value="${u.departamento||''}"></div>
+      <div class="field"><label>PIN (4 dígitos)</label><input id="eu-pin" type="password" maxlength="4" inputmode="numeric" value="${u.pin||''}" placeholder="0000"></div>
+      <div class="field" style="grid-column:1/-1"><label>Perfil</label>
+        <select id="eu-perfil">
+          <option value="">— Sem perfil —</option>
+          ${perfis.map(p=>`<option value="${p.id}"${u.perfil_id===p.id?' selected':''}>${p.nome}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn btn-green" onclick="saveEditUsr('${u.id}')">Salvar</button>
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('modal-imp')">Cancelar</button>
+    </div>`;
+  document.getElementById('modal-imp').classList.add('open');
+}
+
+async function saveEditUsr(id){
+  const nome=document.getElementById('eu-nome').value.trim();
+  const email=document.getElementById('eu-email').value.trim();
+  const departamento=document.getElementById('eu-dep').value.trim();
+  const pin=document.getElementById('eu-pin').value.trim();
+  const perfil_id=document.getElementById('eu-perfil').value||null;
+  if(!nome){alert('Nome é obrigatório.');return;}
+  if(pin&&!/^\d{4}$/.test(pin)){alert('PIN deve ter exatamente 4 dígitos numéricos.');return;}
+  const d={nome,email,departamento,perfil_id};
+  if(pin) d.pin=pin; else d.pin=null;
+  await patch(`teffe_power_usuarios?id=eq.${id}`,d);
+  closeModal('modal-imp');
+  await pages.usuarios();
+  openUsrDrawer(id);
+}
+
 async function openAddUsr(){
+  const perfis=store.perfis||[];
   document.getElementById('modal-imp-title').textContent='Novo Usuário';
   document.getElementById('modal-imp-body').innerHTML=`
     <div class="grid-2">
       <div class="field"><label>Nome</label><input id="nu-nome" placeholder="Ana Costa"></div>
       <div class="field"><label>E-mail</label><input id="nu-email" type="email" placeholder="ana@empresa.com"></div>
       <div class="field"><label>Departamento</label><input id="nu-dep" placeholder="Financeiro"></div>
+      <div class="field"><label>PIN (4 dígitos)</label><input id="nu-pin" type="password" maxlength="4" inputmode="numeric" placeholder="0000"></div>
+      <div class="field" style="grid-column:1/-1"><label>Perfil</label>
+        <select id="nu-perfil">
+          <option value="">— Sem perfil —</option>
+          ${perfis.map(p=>`<option value="${p.id}">${p.nome}</option>`).join('')}
+        </select>
+      </div>
     </div>
     <div style="display:flex;gap:8px;margin-top:8px">
       <button class="btn btn-green" onclick="saveUsr()">Salvar</button>
@@ -641,8 +777,15 @@ async function openAddUsr(){
 }
 
 async function saveUsr(){
-  const d={licenca_chave:SESSION.chave, nome:document.getElementById('nu-nome').value, email:document.getElementById('nu-email').value, departamento:document.getElementById('nu-dep').value};
-  if(!d.nome){alert('Nome é obrigatório.');return;}
+  const nome=document.getElementById('nu-nome').value.trim();
+  const email=document.getElementById('nu-email').value.trim();
+  const departamento=document.getElementById('nu-dep').value.trim();
+  const pin=document.getElementById('nu-pin').value.trim();
+  const perfil_id=document.getElementById('nu-perfil').value||null;
+  if(!nome){alert('Nome é obrigatório.');return;}
+  if(pin&&!/^\d{4}$/.test(pin)){alert('PIN deve ter exatamente 4 dígitos numéricos.');return;}
+  const d={licenca_chave:SESSION.chave,nome,email,departamento,perfil_id};
+  if(pin) d.pin=pin;
   await post('teffe_power_usuarios',d);
   closeModal('modal-imp'); pages.usuarios();
 }
@@ -650,7 +793,7 @@ async function saveUsr(){
 async function removeUsr(id){
   if(!confirm('Remover este usuário?'))return;
   await patch(`teffe_power_usuarios?id=eq.${id}`,{ativo:false});
-  pages.usuarios();
+  closeDrawer(); pages.usuarios();
 }
 
 /* ────────────────────────────── RELATÓRIOS ──────────────────────────────── */
