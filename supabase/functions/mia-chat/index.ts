@@ -156,6 +156,55 @@ async function chamarGerarArte(
   }
 }
 
+// ── Extrai dados do cartão da conversa via Claude Haiku ──────────────────────
+async function extrairDadosCartao(
+  historico: { role: string; content: string }[],
+  apiKey: string,
+): Promise<Record<string, string>> {
+  try {
+    const msgs = historico
+      .filter(m => m.role === 'user')
+      .map(m => m.content)
+      .join('\n---\n');
+
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 300,
+        messages: [{
+          role: 'user',
+          content: `Analise as mensagens do cliente e extraia os dados para um cartão de visita.
+Responda APENAS com JSON válido, sem markdown, sem texto extra.
+Use "" para campos não encontrados.
+
+Campos: nome (da pessoa), cargo (função/título), empresa, telefone (com DDD), email, site,
+logo_url (URL exata que aparece em "[logo recebido: URL]" nas mensagens).
+
+Mensagens do cliente:
+${msgs}
+
+JSON:`,
+        }],
+      }),
+    });
+
+    if (!res.ok) return {};
+    const data = await res.json() as { content?: Array<{ text: string }> };
+    const text = (data.content?.[0]?.text ?? '').trim();
+    const m = text.match(/\{[\s\S]*\}/);
+    return m ? (JSON.parse(m[0]) as Record<string, string>) : {};
+  } catch (e) {
+    console.log('[extrair-dados] erro:', e);
+    return {};
+  }
+}
+
 // ── Gera PDF de ordem de produção (exclusivo teffe-press) ────────────────────
 async function gerarOrdemProducaoPDF(dados: {
   cliente: string; telefone: string; resumo: string; arteUrl: string;
@@ -496,8 +545,28 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
     }).catch(console.error);
 
     if (arteJson) {
-      let dadosArte: Record<string, string> = {};
-      try { dadosArte = JSON.parse(arteJson); } catch { /* JSON inválido — mantém vazio */ }
+      // Parse do JSON emitido pela Maya no [ARTE_PRONTA]
+      let dadosJson: Record<string, string> = {};
+      try { dadosJson = JSON.parse(arteJson); } catch { /* continua com extração */ }
+
+      // Extração inteligente via Haiku — garante campos mesmo se o JSON vier incompleto
+      const extraido = await extrairDadosCartao(historico, apiKey);
+
+      // Merge: texto extraído tem prioridade para campos de texto; JSON mantém cores/estilo
+      const dadosArte: Record<string, string> = {
+        nome:           extraido.nome           || dadosJson.nome           || '',
+        cargo:          extraido.cargo          || dadosJson.cargo          || '',
+        empresa:        extraido.empresa        || dadosJson.empresa        || '',
+        telefone:       extraido.telefone       || dadosJson.telefone       || '',
+        email:          extraido.email          || dadosJson.email          || '',
+        site:           extraido.site           || dadosJson.site           || '',
+        logo_url:       extraido.logo_url       || dadosJson.logo_url       || '',
+        cor_primaria:   dadosJson.cor_primaria   || '#1B3A6B',
+        cor_secundaria: dadosJson.cor_secundaria || '#C9A84C',
+        estilo:         dadosJson.estilo         || 'moderno',
+        observacoes:    dadosJson.observacoes    || '',
+      };
+      console.log('[mia-chat] dados cartão:', JSON.stringify(dadosArte));
 
       const imageUrl = await chamarGerarArte(dadosArte, supabaseUrl, serviceKey);
       if (imageUrl) {
