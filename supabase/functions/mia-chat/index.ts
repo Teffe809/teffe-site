@@ -560,22 +560,24 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
       // Extração inteligente via Haiku — garante campos mesmo se o JSON vier incompleto
       const extraido = await extrairDadosProduto(historico, apiKey);
 
-      // Merge: texto extraído tem prioridade para campos de texto; JSON mantém tipo/cores/estilo
+      // Merge: texto extraído tem prioridade para campos de texto; JSON mantém tipo/modo/cores
       const dadosArte: Record<string, string> = {
-        tipo_produto:    dadosJson.tipo_produto    || 'cartao_visita',
-        nome:            extraido.nome             || dadosJson.nome             || '',
-        cargo:           extraido.cargo            || dadosJson.cargo            || '',
-        empresa:         extraido.empresa          || dadosJson.empresa          || '',
-        telefone:        extraido.telefone         || dadosJson.telefone         || '',
-        email:           extraido.email            || dadosJson.email            || '',
-        site:            extraido.site             || dadosJson.site             || '',
-        logo_url:        extraido.logo_url         || dadosJson.logo_url         || '',
-        texto_principal: extraido.texto_principal  || dadosJson.texto_principal  || '',
-        texto_secundario:extraido.texto_secundario || dadosJson.texto_secundario || '',
-        cor_primaria:    dadosJson.cor_primaria    || '#1B3A6B',
-        cor_secundaria:  dadosJson.cor_secundaria  || '#C9A84C',
-        estilo:          dadosJson.estilo          || 'moderno',
-        observacoes:     dadosJson.observacoes     || '',
+        tipo_produto:     dadosJson.tipo_produto     || 'cartao_visita',
+        modo:             dadosJson.modo             || 'texto',
+        ilustracao_prompt:dadosJson.ilustracao_prompt|| '',
+        nome:             extraido.nome              || dadosJson.nome              || '',
+        cargo:            extraido.cargo             || dadosJson.cargo             || '',
+        empresa:          extraido.empresa           || dadosJson.empresa           || '',
+        telefone:         extraido.telefone          || dadosJson.telefone          || '',
+        email:            extraido.email             || dadosJson.email             || '',
+        site:             extraido.site              || dadosJson.site              || '',
+        logo_url:         extraido.logo_url          || dadosJson.logo_url          || '',
+        texto_principal:  extraido.texto_principal   || dadosJson.texto_principal   || '',
+        texto_secundario: extraido.texto_secundario  || dadosJson.texto_secundario  || '',
+        cor_primaria:     dadosJson.cor_primaria     || '#1B3A6B',
+        cor_secundaria:   dadosJson.cor_secundaria   || '#C9A84C',
+        estilo:           dadosJson.estilo           || 'moderno',
+        observacoes:      dadosJson.observacoes      || '',
       };
       console.log('[mia-chat] dados arte:', JSON.stringify(dadosArte));
 

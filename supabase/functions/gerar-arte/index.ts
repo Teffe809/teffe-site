@@ -5,20 +5,22 @@ const corsHeaders = {
 
 // ── Interface de entrada ──────────────────────────────────────────────────────
 interface ProdutoInput {
-  tipo_produto:      string;   // "cartao_visita" | "adesivo_redondo" | ...
-  nome?:             string;
-  cargo?:            string;
-  empresa?:          string;
-  telefone?:         string;
-  email?:            string;
-  site?:             string;
-  logo_url?:         string;
-  cor_primaria:      string;
-  cor_secundaria:    string;
-  texto_principal?:  string;
-  texto_secundario?: string;
-  estilo?:           string;
-  observacoes?:      string;
+  tipo_produto:       string;   // "cartao_visita" | "adesivo_redondo" | ...
+  modo?:              string;   // "texto" | "ilustracao" | "combinado"
+  ilustracao_prompt?: string;   // prompt em inglês para o Replicate (flux-schnell)
+  nome?:              string;
+  cargo?:             string;
+  empresa?:           string;
+  telefone?:          string;
+  email?:             string;
+  site?:              string;
+  logo_url?:          string;
+  cor_primaria:       string;
+  cor_secundaria:     string;
+  texto_principal?:   string;
+  texto_secundario?:  string;
+  estilo?:            string;
+  observacoes?:       string;
 }
 
 // ── Utilitários ───────────────────────────────────────────────────────────────
@@ -36,6 +38,59 @@ async function logoParaBase64(url: string): Promise<string> {
 function pick(n: number): number { return Math.floor(Math.random() * n); }
 
 function esc(s: string | undefined): string { return (s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ── Replicate flux-schnell ────────────────────────────────────────────────────
+function replicateDims(w: number, h: number): [number, number] {
+  const snap = (v: number) => Math.max(256, Math.min(1440, Math.round(v / 16) * 16));
+  const MAX = 1440;
+  if (w <= MAX && h <= MAX) return [snap(w), snap(h)];
+  const r = w / h;
+  if (w > h) return [MAX, snap(MAX / r)];
+  return [snap(MAX * r), MAX];
+}
+
+async function gerarIlustracaoReplicate(prompt: string, pw: number, ph: number): Promise<string | null> {
+  const token = Deno.env.get('REPLICATE_API_TOKEN') ?? '';
+  if (!token) { console.log('[replicate] REPLICATE_API_TOKEN não configurado'); return null; }
+
+  const [rw, rh] = replicateDims(pw, ph);
+  console.log('[replicate] gerando', rw, 'x', rh, '|', prompt.substring(0, 60));
+
+  try {
+    const res = await fetch('https://api.replicate.com/v1/models/black-forest-labs/flux-schnell/predictions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'Prefer': 'wait=60',
+      },
+      body: JSON.stringify({
+        input: { prompt, width: rw, height: rh, num_inference_steps: 4, output_format: 'png' },
+      }),
+      signal: AbortSignal.timeout(70000),
+    });
+
+    if (!res.ok) { console.log('[replicate] erro:', res.status, await res.text()); return null; }
+
+    const data = await res.json() as { status: string; output?: string[] | null; id?: string; urls?: { get: string } };
+    if (data.status === 'succeeded' && data.output?.[0]) return data.output[0];
+
+    // Polling fallback caso Prefer:wait não retorne imediatamente
+    if (data.id && data.urls?.get) {
+      for (let i = 0; i < 15; i++) {
+        await new Promise(r => setTimeout(r, 3000));
+        const poll = await fetch(data.urls.get, { headers: { Authorization: `Bearer ${token}` } });
+        if (!poll.ok) continue;
+        const pd = await poll.json() as { status: string; output?: string[] | null };
+        if (pd.status === 'succeeded' && pd.output?.[0]) { console.log('[replicate] ok via polling'); return pd.output[0]; }
+        if (pd.status === 'failed') { console.log('[replicate] falhou'); return null; }
+      }
+    }
+
+    console.log('[replicate] timeout / sem output');
+    return null;
+  } catch (e) { console.log('[replicate] exceção:', e); return null; }
+}
 
 function icons(stroke: string) {
   const a = `stroke="${stroke}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"`;
@@ -71,15 +126,19 @@ function gerarCSSObservacoes(obs: string): string {
   return r.length ? `\n<style id="obs">${r.join('')}</style>` : '';
 }
 
-function wrapHTML(inner: string, obs: string, w: number, h: number): string {
+function wrapHTML(inner: string, obs: string, w: number, h: number, bgUrl?: string): string {
   const css = gerarCSSObservacoes(obs);
+  // Camadas de fundo para modo "combinado": imagem gerada pelo Replicate + overlay escuro
+  const bgLayer = bgUrl
+    ? `<div style="position:absolute;top:0;left:0;width:${w}px;height:${h}px;background-image:url('${bgUrl}');background-size:cover;background-position:center;z-index:0;"></div><div style="position:absolute;top:0;left:0;width:${w}px;height:${h}px;background:rgba(0,0,0,0.48);z-index:1;"></div>`
+    : '';
   return `<!DOCTYPE html><html><head><meta charset="UTF-8">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
 <style>*{margin:0;padding:0;box-sizing:border-box;}body{background:#0a0a14;font-family:'Poppins',sans-serif;}</style>${css}
 </head><body>
 <div id="wrapper" style="width:${w}px;background:#0a0a14;">
-<div id="produto" style="width:${w}px;height:${h}px;overflow:hidden;position:relative;">${inner}
+<div id="produto" style="width:${w}px;height:${h}px;overflow:hidden;position:relative;">${bgLayer}${inner}
 </div>
 <div style="width:${w}px;height:30px;background:#0a0a14;display:flex;align-items:center;justify-content:center;gap:10px;">
 <span style="font-size:9px;font-weight:300;color:rgba(255,255,255,.28);letter-spacing:2.5px;text-transform:uppercase;">Arte gerada por Maya</span>
@@ -729,54 +788,54 @@ function normalizarTipo(t: string): string {
   return m[(t||'').toLowerCase().trim()] ?? 'cartao_visita';
 }
 
-function buildHTML(d: ProdutoInput, logo: string): RenderResult {
+function buildHTML(d: ProdutoInput, logo: string, bgUrl?: string): RenderResult {
   const tipo = normalizarTipo(d.tipo_produto ?? 'cartao_visita');
   const obs  = d.observacoes ?? '';
 
   if (tipo === 'adesivo_redondo') {
     const inner = pick(2) === 0 ? adRedondoMinimalista(d,logo) : adRedondoColorido(d,logo);
-    return { html: wrapHTML(inner, obs, 800, 800), w: 800, h: 830 };
+    return { html: wrapHTML(inner, obs, 800, 800, bgUrl), w: 800, h: 830 };
   }
   if (tipo === 'adesivo_retangular') {
     const inner = pick(2) === 0 ? adRetangularClean(d,logo) : adRetangularBold(d,logo);
-    return { html: wrapHTML(inner, obs, 1050, 400), w: 1050, h: 430 };
+    return { html: wrapHTML(inner, obs, 1050, 400, bgUrl), w: 1050, h: 430 };
   }
   if (tipo === 'flyer_a5') {
     const inner = pick(2) === 0 ? flyerModerno(d,logo) : flyerElegante(d,logo);
-    return { html: wrapHTML(inner, obs, 750, 1050), w: 750, h: 1080 };
+    return { html: wrapHTML(inner, obs, 750, 1050, bgUrl), w: 750, h: 1080 };
   }
   if (tipo === 'banner_vertical') {
     const inner = pick(2) === 0 ? bannerVerticalCorporativo(d,logo) : bannerVerticalVibrante(d,logo);
-    return { html: wrapHTML(inner, obs, 600, 1800), w: 600, h: 1830 };
+    return { html: wrapHTML(inner, obs, 600, 1800, bgUrl), w: 600, h: 1830 };
   }
   if (tipo === 'banner_horizontal') {
     const inner = pick(2) === 0 ? bannerHorizontalClean(d,logo) : bannerHorizontalImpactante(d,logo);
-    return { html: wrapHTML(inner, obs, 1800, 600), w: 1800, h: 630 };
+    return { html: wrapHTML(inner, obs, 1800, 600, bgUrl), w: 1800, h: 630 };
   }
   if (tipo === 'panfleto') {
     const inner = pick(2) === 0 ? panfletoModerno(d,logo) : panfletoElegante(d,logo);
-    return { html: wrapHTML(inner, obs, 2100, 1500), w: 2100, h: 1530 };
+    return { html: wrapHTML(inner, obs, 2100, 1500, bgUrl), w: 2100, h: 1530 };
   }
   if (tipo === 'caneca') {
     const inner = pick(2) === 0 ? canecaBasico(d,logo) : canecaColorido(d,logo);
-    return { html: wrapHTML(inner, obs, 2100, 800), w: 2100, h: 830 };
+    return { html: wrapHTML(inner, obs, 2100, 800, bgUrl), w: 2100, h: 830 };
   }
   if (tipo === 'camiseta') {
     const inner = pick(2) === 0 ? camisetaBasico(d,logo) : camisetaBold(d,logo);
-    return { html: wrapHTML(inner, obs, 1200, 1200), w: 1200, h: 1230 };
+    return { html: wrapHTML(inner, obs, 1200, 1200, bgUrl), w: 1200, h: 1230 };
   }
   if (tipo === 'envelope_a4') {
     const inner = pick(2) === 0 ? envelopeFormal(d,logo) : envelopeModerno(d,logo);
-    return { html: wrapHTML(inner, obs, 1240, 877), w: 1240, h: 907 };
+    return { html: wrapHTML(inner, obs, 1240, 877, bgUrl), w: 1240, h: 907 };
   }
   if (tipo === 'folder_a4') {
     const inner = pick(2) === 0 ? folderCorporativo(d,logo) : folderCriativo(d,logo);
-    return { html: wrapHTML(inner, obs, 2480, 1748), w: 2480, h: 1778 };
+    return { html: wrapHTML(inner, obs, 2480, 1748, bgUrl), w: 2480, h: 1778 };
   }
   // cartao_visita (default)
   const v = pick(3);
   const inner = v === 0 ? tplCartaoClassico(d,logo) : v === 1 ? tplCartaoExecutivo(d,logo) : tplCartaoBold(d,logo);
-  return { html: wrapHTML(inner, obs, 2100, 600), w: 2100, h: 630 };
+  return { html: wrapHTML(inner, obs, 2100, 600, bgUrl), w: 2100, h: 630 };
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -839,15 +898,90 @@ Deno.serve(async (req: Request) => {
     d.cor_primaria   = d.cor_primaria   || '#1B3A6B';
     d.cor_secundaria = d.cor_secundaria || '#C9A84C';
     d.tipo_produto   = normalizarTipo(d.tipo_produto ?? 'cartao_visita');
+    const modo       = (d.modo ?? 'texto').toLowerCase();
 
+    console.log('[gerar-arte] tipo:', d.tipo_produto, '| modo:', modo, '| empresa:', d.empresa);
+
+    // ── MODO ILUSTRAÇÃO: gera imagem artística via Replicate, sem template HTML ──
+    if (modo === 'ilustracao') {
+      if (!d.ilustracao_prompt) {
+        return new Response(
+          JSON.stringify({ error: 'Campo ilustracao_prompt é obrigatório para modo "ilustracao".' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+      // Dimensões padrão por produto para a ilustração
+      const dimMap: Record<string, [number, number]> = {
+        adesivo_redondo: [800, 800], camiseta: [1200, 1200],
+        flyer_a5: [750, 1050], banner_vertical: [600, 1800],
+        banner_horizontal: [1800, 600], caneca: [1024, 512],
+        panfleto: [1050, 1500], folder_a4: [1240, 874],
+        envelope_a4: [1240, 877], adesivo_retangular: [1050, 400],
+      };
+      const [pw, ph] = dimMap[d.tipo_produto] ?? [1024, 1024];
+      const imageUrl = await gerarIlustracaoReplicate(d.ilustracao_prompt, pw, ph);
+
+      if (!imageUrl) {
+        return new Response(
+          JSON.stringify({ error: 'Replicate indisponível. Configure REPLICATE_API_TOKEN.' }),
+          { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+      return new Response(
+        JSON.stringify({ url: imageUrl, tipo_produto: d.tipo_produto, modo: 'ilustracao' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+
+    // ── MODO COMBINADO: gera ilustração de fundo + template HTML com texto ──
+    if (modo === 'combinado') {
+      if (!d.empresa && !d.nome && !d.texto_principal) {
+        return new Response(
+          JSON.stringify({ error: 'Informe ao menos empresa, nome ou texto_principal.' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+      // Dimensões do produto para o fundo
+      const dimMap: Record<string, [number, number]> = {
+        adesivo_redondo: [800, 800], camiseta: [1200, 1200],
+        flyer_a5: [750, 1050], banner_vertical: [600, 1800],
+        banner_horizontal: [1800, 600], caneca: [2100, 800],
+        panfleto: [2100, 1500], folder_a4: [2480, 1748],
+        envelope_a4: [1240, 877], adesivo_retangular: [1050, 400],
+        cartao_visita: [2100, 600],
+      };
+      const [pw, ph] = dimMap[d.tipo_produto] ?? [1024, 1024];
+
+      let bgUrl: string | undefined;
+      if (d.ilustracao_prompt) {
+        console.log('[gerar-arte] combinado: gerando fundo com Replicate...');
+        bgUrl = (await gerarIlustracaoReplicate(d.ilustracao_prompt, pw, ph)) ?? undefined;
+        if (!bgUrl) console.log('[gerar-arte] Replicate falhou — usando template sem fundo');
+      }
+
+      const logo = d.logo_url ? await logoParaBase64(d.logo_url) : '';
+      const { html, w, h } = buildHTML(d, logo, bgUrl);
+      const imageUrl = await renderizarHCTI(html, w, h) ?? await renderizarBrowserless(html, w, h);
+
+      if (!imageUrl) {
+        return new Response(
+          JSON.stringify({ error: 'Renderização indisponível.' }),
+          { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+      return new Response(
+        JSON.stringify({ url: imageUrl, tipo_produto: d.tipo_produto, modo: 'combinado', background_gerado: !!bgUrl }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+
+    // ── MODO TEXTO (padrão): template HTML puro ──
     if (!d.empresa && !d.nome && !d.texto_principal) {
       return new Response(
         JSON.stringify({ error: 'Informe ao menos empresa, nome ou texto_principal.' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }
-
-    console.log('[gerar-arte] tipo:', d.tipo_produto, '| empresa:', d.empresa);
     if (d.observacoes) console.log('[gerar-arte] observacoes:', d.observacoes);
 
     const logo = d.logo_url ? await logoParaBase64(d.logo_url) : '';
@@ -862,7 +996,7 @@ Deno.serve(async (req: Request) => {
     }
 
     return new Response(
-      JSON.stringify({ url: imageUrl, tipo_produto: d.tipo_produto, dimensoes: `${w}x${h}` }),
+      JSON.stringify({ url: imageUrl, tipo_produto: d.tipo_produto, modo: 'texto', dimensoes: `${w}x${h}` }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
   } catch (err) {
