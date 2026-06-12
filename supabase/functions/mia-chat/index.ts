@@ -360,8 +360,11 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
   // Mensagem de mídia sem legenda — injeta placeholder para Claude responder
   let logoUrl = '';
   if (instancia === 'teffe-press' && msgObj.imageMessage) {
+    // Evolution API armazena a mídia baixada em data.mediaUrl (URL acessível).
+    // imageMessage.url é o CDN criptografado do WhatsApp — nem sempre acessível.
+    const dataMediaUrl = String((data as Record<string, unknown>).mediaUrl ?? '');
     const img = msgObj.imageMessage as Record<string, unknown>;
-    logoUrl = String(img.url ?? img.mediaUrl ?? '');
+    logoUrl = dataMediaUrl || String(img.url ?? img.mediaUrl ?? '');
   }
   const textoFinal = texto
     || (logoUrl ? `[logo recebido: ${logoUrl}]` : '')

@@ -13,7 +13,8 @@ interface CartaoInput {
   logo_url?:      string;
   cor_primaria:   string;   // ex: "#6C63FF"
   cor_secundaria: string;   // ex: "#3ECFCF"
-  estilo?:        string;   // "moderno" | "elegante" | "minimalista" (futuro)
+  estilo?:        string;   // "moderno" | "elegante" | "minimalista"
+  observacoes?:   string;   // ajustes solicitados pelo cliente após prévia
 }
 
 // ── Converte logo_url para base64 embutível ──────────────────────────────────
@@ -56,10 +57,11 @@ function gerarHTML(d: CartaoInput, logo: string): string {
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;800&display=swap" rel="stylesheet">
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
-  body { background:#111; }
+  body { background:#0a0a14; }
 </style>
 </head>
 <body>
+<div id="cartao-wrapper" style="width:2100px;background:#0a0a14;">
 <div id="cartao-container" style="display:flex;width:2100px;height:600px;font-family:'Poppins',sans-serif;">
 
   <!-- ══════════════ FRENTE ══════════════ -->
@@ -131,12 +133,15 @@ function gerarHTML(d: CartaoInput, logo: string): string {
                   </div>` : ''}
     </div>
 
-    <!-- Rodapé -->
-    <div style="position:absolute;bottom:28px;left:0;right:0;text-align:center;">
-      <div style="font-size:10px;font-weight:300;color:rgba(255,255,255,.35);letter-spacing:2.5px;text-transform:uppercase;">Arte gerada por Maya · Gráfica Damasceno</div>
-    </div>
   </div>
 
+</div>
+<!-- ── Rodapé global — marca d'água em toda a largura da imagem ── -->
+<div style="width:2100px;height:30px;background:#0a0a14;display:flex;align-items:center;justify-content:center;gap:10px;">
+  <span style="font-size:9px;font-weight:300;color:rgba(255,255,255,.28);letter-spacing:2.5px;text-transform:uppercase;font-family:'Poppins',sans-serif;">Arte gerada por Maya</span>
+  <span style="font-size:9px;color:rgba(255,255,255,.18);font-family:'Poppins',sans-serif;">•</span>
+  <span style="font-size:9px;font-weight:300;color:rgba(255,255,255,.28);letter-spacing:2.5px;text-transform:uppercase;font-family:'Poppins',sans-serif;">Gráfica Damasceno</span>
+</div>
 </div>
 </body>
 </html>`;
@@ -159,8 +164,8 @@ async function renderizarHCTI(html: string): Promise<string | null> {
         html,
         google_fonts:    'Poppins:300,400,600,700,800',
         viewport_width:  2100,
-        viewport_height: 600,
-        selector:        '#cartao-container',
+        viewport_height: 630,
+        selector:        '#cartao-wrapper',
       }),
     });
     if (res.ok) {
@@ -187,7 +192,7 @@ async function renderizarBrowserless(html: string): Promise<string | null> {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         html,
-        options:     { type: 'png', clip: { x: 0, y: 0, width: 2100, height: 600 } },
+        options:     { type: 'png', clip: { x: 0, y: 0, width: 2100, height: 630 } },
         gotoOptions: { waitUntil: 'networkidle2' },
       }),
     });
@@ -236,6 +241,7 @@ Deno.serve(async (req: Request) => {
     }
 
     console.log('[gerar-arte] iniciando para:', dados.empresa, '/', dados.nome);
+    if (dados.observacoes) console.log('[gerar-arte] observacoes:', dados.observacoes);
 
     const logo     = dados.logo_url ? await logoParaBase64(dados.logo_url) : '';
     const html     = gerarHTML(dados, logo);
