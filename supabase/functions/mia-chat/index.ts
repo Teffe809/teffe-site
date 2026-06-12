@@ -129,39 +129,29 @@ function buildSystemFromBase(
   return prompt;
 }
 
-// ── Replicate: gera arte via flux-schnell (exclusivo teffe-press) ───────────
-async function gerarArteReplicate(prompt: string, token: string): Promise<string | null> {
+// ── gerar-arte: gera cartão de visita HTML→PNG (exclusivo teffe-press) ──────
+async function chamarGerarArte(
+  dados: Record<string, string>,
+  supabaseUrl: string,
+  serviceKey: string,
+): Promise<string | null> {
   try {
-    const res = await fetch(
-      'https://api.replicate.com/v1/models/black-forest-labs/flux-schnell/predictions',
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Token ${token}`,
-          Prefer: 'wait=30',
-        },
-        body: JSON.stringify({ input: { prompt, num_outputs: 1, output_format: 'webp' } }),
+    const res = await fetch(`${supabaseUrl}/functions/v1/gerar-arte`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${serviceKey}`,
       },
-    );
+      body: JSON.stringify(dados),
+    });
     if (!res.ok) {
-      console.log('[replicate] erro:', res.status, await res.text());
+      console.log('[gerar-arte] erro:', res.status, await res.text());
       return null;
     }
-    const pred = await res.json() as { status: string; output?: string[]; urls?: { get: string } };
-    if (pred.status === 'succeeded') return pred.output?.[0] ?? null;
-    if (!pred.urls?.get) return null;
-    for (let i = 0; i < 20; i++) {
-      await new Promise(r => setTimeout(r, 2000));
-      const poll = await fetch(pred.urls.get, { headers: { Authorization: `Token ${token}` } });
-      if (!poll.ok) continue;
-      const p = await poll.json() as { status: string; output?: string[] };
-      if (p.status === 'succeeded') return p.output?.[0] ?? null;
-      if (p.status === 'failed') return null;
-    }
-    return null;
+    const data = await res.json() as { url: string };
+    return data.url ?? null;
   } catch (e) {
-    console.log('[replicate] exceção:', e);
+    console.log('[gerar-arte] exceção:', e);
     return null;
   }
 }
@@ -480,13 +470,12 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
     return new Response('OK', { status: 200 });
   }
 
-  // ── teffe-press: [ARTE_PRONTA] → chama Replicate e envia imagem ──
+  // ── teffe-press: [ARTE_PRONTA] → chama gerar-arte e envia imagem ──
   if (isArte) {
-    const arteMatch      = raw.match(/\[ARTE_PRONTA\]\s*([\s\S]+)/);
-    const artePrompt     = arteMatch?.[1]?.trim() ?? '';
-    const replicateToken = Deno.env.get('REPLICATE_API_TOKEN') ?? '';
-    const msgEspera      = raw.replace(/\[ARTE_PRONTA\][\s\S]*/, '').trim()
-      || 'Deixa eu preparar uma prévia para você! Já te mando 🎨';
+    const arteMatch = raw.match(/\[ARTE_PRONTA\]\s*([\s\S]+)/);
+    const arteJson  = arteMatch?.[1]?.trim() ?? '';
+    const msgEspera = raw.replace(/\[ARTE_PRONTA\][\s\S]*/, '').trim()
+      || 'Deixa eu preparar seu cartão de visita! Já te mando 🎨';
 
     historico.push({ role: 'assistant', content: msgEspera });
     if (historico.length > 40) historico = historico.slice(-40);
@@ -503,18 +492,21 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
       body: JSON.stringify({ number: telefone, text: msgEspera }),
     }).catch(console.error);
 
-    if (artePrompt && replicateToken) {
-      const imageUrl = await gerarArteReplicate(artePrompt, replicateToken);
+    if (arteJson) {
+      let dadosArte: Record<string, string> = {};
+      try { dadosArte = JSON.parse(arteJson); } catch { /* JSON inválido — mantém vazio */ }
+
+      const imageUrl = await chamarGerarArte(dadosArte, supabaseUrl, serviceKey);
       if (imageUrl) {
-        const msgArte = 'Aqui está a prévia da sua arte! 😊 O que acha? Precisa de algum ajuste?';
+        const msgArte = 'Aqui está o seu cartão de visita! 😊 O que acha? Precisa de algum ajuste?';
         fetch(`${EVOLUTION_URL}/message/sendMedia/${instancia}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', apikey: evolutionKey },
-          body: JSON.stringify({ number: telefone, mediatype: 'image', mimetype: 'image/webp', caption: msgArte, media: imageUrl, fileName: 'arte.webp' }),
+          body: JSON.stringify({ number: telefone, mediatype: 'image', mimetype: 'image/png', caption: msgArte, media: imageUrl, fileName: 'cartao.png' }),
         }).catch(console.error);
         historico.push({ role: 'assistant', content: `[Arte gerada e enviada: ${imageUrl}] ${msgArte}` });
       } else {
-        const msgFalha = 'Tive um probleminha ao gerar a arte agora. 😅 Nossa equipe vai preparar e te envia em breve!';
+        const msgFalha = 'Tive um probleminha ao gerar o cartão agora. 😅 Nossa equipe vai preparar e te envia em breve!';
         fetch(`${EVOLUTION_URL}/message/sendText/${instancia}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', apikey: evolutionKey },
