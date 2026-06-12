@@ -156,8 +156,8 @@ async function chamarGerarArte(
   }
 }
 
-// ── Extrai dados do cartão da conversa via Claude Haiku ──────────────────────
-async function extrairDadosCartao(
+// ── Extrai dados do produto da conversa via Claude Haiku ─────────────────────
+async function extrairDadosProduto(
   historico: { role: string; content: string }[],
   apiKey: string,
 ): Promise<Record<string, string>> {
@@ -176,15 +176,23 @@ async function extrairDadosCartao(
       },
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
-        max_tokens: 300,
+        max_tokens: 400,
         messages: [{
           role: 'user',
-          content: `Analise as mensagens do cliente e extraia os dados para um cartão de visita.
+          content: `Analise as mensagens do cliente e extraia os dados para criação de arte gráfica.
 Responda APENAS com JSON válido, sem markdown, sem texto extra.
 Use "" para campos não encontrados.
 
-Campos: nome (da pessoa), cargo (função/título), empresa, telefone (com DDD), email, site,
-logo_url (URL exata que aparece em "[logo recebido: URL]" nas mensagens).
+Campos:
+- nome: nome completo da pessoa
+- cargo: função/título/profissão
+- empresa: nome da empresa ou negócio
+- telefone: com DDD
+- email: endereço de e-mail
+- site: URL do site
+- logo_url: URL exata que aparece em "[logo recebido: URL]" nas mensagens
+- texto_principal: slogan, frase principal, chamada principal para o produto (ex: banner, flyer)
+- texto_secundario: descrição, subtítulo ou texto de apoio (ex: serviços oferecidos, endereço)
 
 Mensagens do cliente:
 ${msgs}
@@ -527,7 +535,7 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
     const arteMatch = raw.match(/\[ARTE_PRONTA\]\s*([\s\S]+)/);
     const arteJson  = arteMatch?.[1]?.trim() ?? '';
     const msgEspera = raw.replace(/\[ARTE_PRONTA\][\s\S]*/, '').trim()
-      || 'Deixa eu preparar seu cartão de visita! Já te mando 🎨';
+      || 'Deixa eu preparar sua arte! Já te mando 🎨';
 
     historico.push({ role: 'assistant', content: msgEspera });
     if (historico.length > 40) historico = historico.slice(-40);
@@ -550,27 +558,31 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
       try { dadosJson = JSON.parse(arteJson); } catch { /* continua com extração */ }
 
       // Extração inteligente via Haiku — garante campos mesmo se o JSON vier incompleto
-      const extraido = await extrairDadosCartao(historico, apiKey);
+      const extraido = await extrairDadosProduto(historico, apiKey);
 
-      // Merge: texto extraído tem prioridade para campos de texto; JSON mantém cores/estilo
+      // Merge: texto extraído tem prioridade para campos de texto; JSON mantém tipo/cores/estilo
       const dadosArte: Record<string, string> = {
-        nome:           extraido.nome           || dadosJson.nome           || '',
-        cargo:          extraido.cargo          || dadosJson.cargo          || '',
-        empresa:        extraido.empresa        || dadosJson.empresa        || '',
-        telefone:       extraido.telefone       || dadosJson.telefone       || '',
-        email:          extraido.email          || dadosJson.email          || '',
-        site:           extraido.site           || dadosJson.site           || '',
-        logo_url:       extraido.logo_url       || dadosJson.logo_url       || '',
-        cor_primaria:   dadosJson.cor_primaria   || '#1B3A6B',
-        cor_secundaria: dadosJson.cor_secundaria || '#C9A84C',
-        estilo:         dadosJson.estilo         || 'moderno',
-        observacoes:    dadosJson.observacoes    || '',
+        tipo_produto:    dadosJson.tipo_produto    || 'cartao_visita',
+        nome:            extraido.nome             || dadosJson.nome             || '',
+        cargo:           extraido.cargo            || dadosJson.cargo            || '',
+        empresa:         extraido.empresa          || dadosJson.empresa          || '',
+        telefone:        extraido.telefone         || dadosJson.telefone         || '',
+        email:           extraido.email            || dadosJson.email            || '',
+        site:            extraido.site             || dadosJson.site             || '',
+        logo_url:        extraido.logo_url         || dadosJson.logo_url         || '',
+        texto_principal: extraido.texto_principal  || dadosJson.texto_principal  || '',
+        texto_secundario:extraido.texto_secundario || dadosJson.texto_secundario || '',
+        cor_primaria:    dadosJson.cor_primaria    || '#1B3A6B',
+        cor_secundaria:  dadosJson.cor_secundaria  || '#C9A84C',
+        estilo:          dadosJson.estilo          || 'moderno',
+        observacoes:     dadosJson.observacoes     || '',
       };
-      console.log('[mia-chat] dados cartão:', JSON.stringify(dadosArte));
+      console.log('[mia-chat] dados arte:', JSON.stringify(dadosArte));
 
       const imageUrl = await chamarGerarArte(dadosArte, supabaseUrl, serviceKey);
       if (imageUrl) {
-        const msgArte = 'Aqui está o seu cartão de visita! 😊 O que acha? Precisa de algum ajuste?';
+        const tipoProd = dadosArte.tipo_produto.replace(/_/g,' ');
+        const msgArte = `Aqui está a prévia do seu ${tipoProd}! 😊 O que acha? Precisa de algum ajuste?`;
         fetch(`${EVOLUTION_URL}/message/sendMedia/${instancia}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', apikey: evolutionKey },
