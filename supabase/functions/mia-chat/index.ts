@@ -129,6 +129,43 @@ function buildSystemFromBase(
   return prompt;
 }
 
+// ── Replicate: gera arte via flux-schnell (exclusivo teffe-press) ───────────
+async function gerarArteReplicate(prompt: string, token: string): Promise<string | null> {
+  try {
+    const res = await fetch(
+      'https://api.replicate.com/v1/models/black-forest-labs/flux-schnell/predictions',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Token ${token}`,
+          Prefer: 'wait=30',
+        },
+        body: JSON.stringify({ input: { prompt, num_outputs: 1, output_format: 'webp' } }),
+      },
+    );
+    if (!res.ok) {
+      console.log('[replicate] erro:', res.status, await res.text());
+      return null;
+    }
+    const pred = await res.json() as { status: string; output?: string[]; urls?: { get: string } };
+    if (pred.status === 'succeeded') return pred.output?.[0] ?? null;
+    if (!pred.urls?.get) return null;
+    for (let i = 0; i < 20; i++) {
+      await new Promise(r => setTimeout(r, 2000));
+      const poll = await fetch(pred.urls.get, { headers: { Authorization: `Token ${token}` } });
+      if (!poll.ok) continue;
+      const p = await poll.json() as { status: string; output?: string[] };
+      if (p.status === 'succeeded') return p.output?.[0] ?? null;
+      if (p.status === 'failed') return null;
+    }
+    return null;
+  } catch (e) {
+    console.log('[replicate] exceção:', e);
+    return null;
+  }
+}
+
 // ── Handler WhatsApp (webhook Evolution API) ───────────────────────────────
 async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> {
   console.log('[mia-chat] payload recebido:', JSON.stringify(body));
@@ -282,7 +319,14 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
   ).trim();
 
   // Mensagem de mídia sem legenda — injeta placeholder para Claude responder
-  const textoFinal = texto || (isMedia ? '[arquivo recebido]' : '');
+  let logoUrl = '';
+  if (instancia === 'teffe-press' && msgObj.imageMessage) {
+    const img = msgObj.imageMessage as Record<string, unknown>;
+    logoUrl = String(img.url ?? img.mediaUrl ?? '');
+  }
+  const textoFinal = texto
+    || (logoUrl ? `[logo recebido: ${logoUrl}]` : '')
+    || (isMedia ? '[arquivo recebido]' : '');
   if (!textoFinal) return new Response('OK', { status: 200 });
 
   const nome = String(data.pushName ?? '');
@@ -338,9 +382,62 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
   const claudeData = await claudeRes.json() as { content?: Array<{ text: string }> };
   const raw        = claudeData.content?.[0]?.text ?? '';
   const isLead     = raw.startsWith('[LEAD_PRONTO]');
+  const isArte     = instancia === 'teffe-press' && raw.includes('[ARTE_PRONTA]');
   const resposta   = isLead ? raw.replace('[LEAD_PRONTO]', '').trim() : raw;
 
   if (!resposta) return new Response('OK', { status: 200 });
+
+  // ── teffe-press: [ARTE_PRONTA] → chama Replicate e envia imagem ──
+  if (isArte) {
+    const arteMatch      = raw.match(/\[ARTE_PRONTA\]\s*([\s\S]+)/);
+    const artePrompt     = arteMatch?.[1]?.trim() ?? '';
+    const replicateToken = Deno.env.get('REPLICATE_API_TOKEN') ?? '';
+    const msgEspera      = raw.replace(/\[ARTE_PRONTA\][\s\S]*/, '').trim()
+      || 'Deixa eu preparar uma prévia para você! Já te mando 🎨';
+
+    historico.push({ role: 'assistant', content: msgEspera });
+    if (historico.length > 40) historico = historico.slice(-40);
+
+    fetch(`${supabaseUrl}/rest/v1/mia_conversas_whatsapp?on_conflict=instancia,telefone`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, Prefer: 'resolution=merge-duplicates' },
+      body: JSON.stringify({ instancia, telefone, historico, updated_at: new Date().toISOString() }),
+    }).catch(console.error);
+
+    fetch(`${EVOLUTION_URL}/message/sendText/${instancia}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: evolutionKey },
+      body: JSON.stringify({ number: telefone, text: msgEspera }),
+    }).catch(console.error);
+
+    if (artePrompt && replicateToken) {
+      const imageUrl = await gerarArteReplicate(artePrompt, replicateToken);
+      if (imageUrl) {
+        const msgArte = 'Aqui está a prévia da sua arte! 😊 O que acha? Precisa de algum ajuste?';
+        fetch(`${EVOLUTION_URL}/message/sendMedia/${instancia}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', apikey: evolutionKey },
+          body: JSON.stringify({ number: telefone, mediatype: 'image', mimetype: 'image/webp', caption: msgArte, media: imageUrl, fileName: 'arte.webp' }),
+        }).catch(console.error);
+        historico.push({ role: 'assistant', content: `[Arte gerada e enviada] ${msgArte}` });
+      } else {
+        const msgFalha = 'Tive um probleminha ao gerar a arte agora. 😅 Nossa equipe vai preparar e te envia em breve!';
+        fetch(`${EVOLUTION_URL}/message/sendText/${instancia}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', apikey: evolutionKey },
+          body: JSON.stringify({ number: telefone, text: msgFalha }),
+        }).catch(console.error);
+        historico.push({ role: 'assistant', content: msgFalha });
+      }
+      fetch(`${supabaseUrl}/rest/v1/mia_conversas_whatsapp?on_conflict=instancia,telefone`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, Prefer: 'resolution=merge-duplicates' },
+        body: JSON.stringify({ instancia, telefone, historico, updated_at: new Date().toISOString() }),
+      }).catch(console.error);
+    }
+
+    return new Response('OK', { status: 200 });
+  }
 
   historico.push({ role: 'assistant', content: resposta });
   if (historico.length > 40) historico = historico.slice(-40);
