@@ -166,6 +166,55 @@ async function gerarArteReplicate(prompt: string, token: string): Promise<string
   }
 }
 
+// ── Gera PDF de ordem de produção (exclusivo teffe-press) ────────────────────
+async function gerarOrdemProducaoPDF(dados: {
+  cliente: string; telefone: string; resumo: string; arteUrl: string;
+}): Promise<string | null> {
+  try {
+    const { PDFDocument, StandardFonts, rgb } = await import('npm:pdf-lib');
+    const doc  = await PDFDocument.create();
+    const page = doc.addPage([595, 842]);
+    const font = await doc.embedFont(StandardFonts.Helvetica);
+    const bold = await doc.embedFont(StandardFonts.HelveticaBold);
+    const { width, height } = page.getSize();
+    let y = height - 55;
+
+    const ln = (txt: string, sz = 11, f = font, c = rgb(0.1, 0.1, 0.1)) => {
+      if (y < 60) return;
+      page.drawText(txt.substring(0, 90), { x: 50, y, size: sz, font: f, color: c });
+      y -= sz + 7;
+    };
+    const sep = () => {
+      y -= 4;
+      page.drawLine({ start: { x: 50, y }, end: { x: width - 50, y }, thickness: 0.5, color: rgb(0.75, 0.75, 0.75) });
+      y -= 14;
+    };
+
+    ln('GRÁFICA DAMASCENO', 18, bold);
+    ln('Ordem de Produção', 13, font, rgb(0.35, 0.35, 0.35));
+    ln(`Data: ${new Date().toLocaleDateString('pt-BR')}`, 10, font, rgb(0.5, 0.5, 0.5));
+    sep();
+    ln('CLIENTE', 12, bold);
+    ln(`Nome: ${dados.cliente}`);
+    ln(`WhatsApp: ${dados.telefone}`);
+    sep();
+    ln('DETALHES DO PEDIDO', 12, bold);
+    for (const campo of dados.resumo.split('|')) { ln(campo.trim()); }
+    sep();
+    ln('ARTE', 12, bold);
+    ln('Prévia aprovada pelo cliente via WhatsApp');
+    if (dados.arteUrl) ln(`URL: ${dados.arteUrl}`, 9, font, rgb(0.2, 0.2, 0.75));
+    sep();
+    ln('Gerado por Maya — Gráfica Damasceno', 9, font, rgb(0.6, 0.6, 0.6));
+
+    const bytes  = await doc.save();
+    return btoa(bytes.reduce((acc: string, b: number) => acc + String.fromCharCode(b), ''));
+  } catch (e) {
+    console.log('[pdf] erro:', e);
+    return null;
+  }
+}
+
 // ── Handler WhatsApp (webhook Evolution API) ───────────────────────────────
 async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> {
   console.log('[mia-chat] payload recebido:', JSON.stringify(body));
@@ -383,9 +432,53 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
   const raw        = claudeData.content?.[0]?.text ?? '';
   const isLead     = raw.startsWith('[LEAD_PRONTO]');
   const isArte     = instancia === 'teffe-press' && raw.includes('[ARTE_PRONTA]');
+  const isAprovada = instancia === 'teffe-press' && raw.includes('[ARTE_APROVADA]');
   const resposta   = isLead ? raw.replace('[LEAD_PRONTO]', '').trim() : raw;
 
   if (!resposta) return new Response('OK', { status: 200 });
+
+  // ── teffe-press: [ARTE_APROVADA] → gera PDF de ordem de produção ──
+  if (isAprovada) {
+    const aprovMatch   = raw.match(/\[ARTE_APROVADA\]\s*([\s\S]+)/);
+    const resumoPedido = aprovMatch?.[1]?.trim() ?? '';
+    const msgConfirm   = raw.replace(/\[ARTE_APROVADA\][\s\S]*/, '').trim()
+      || 'Ótimo! Pedido confirmado! Gerando a ordem de produção agora 📄';
+
+    const arteEntry    = [...historico].reverse().find(m => m.content.includes('[Arte gerada e enviada:'));
+    const arteUrlMatch = arteEntry?.content.match(/\[Arte gerada e enviada:\s*([^\]]+)\]/);
+    const arteUrl      = arteUrlMatch?.[1]?.trim() ?? '';
+
+    historico.push({ role: 'assistant', content: msgConfirm });
+    if (historico.length > 40) historico = historico.slice(-40);
+
+    fetch(`${EVOLUTION_URL}/message/sendText/${instancia}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: evolutionKey },
+      body: JSON.stringify({ number: telefone, text: msgConfirm }),
+    }).catch(console.error);
+
+    const pdfBase64 = await gerarOrdemProducaoPDF({ cliente: nome, telefone, resumo: resumoPedido, arteUrl });
+    if (pdfBase64) {
+      fetch(`${EVOLUTION_URL}/message/sendMedia/${instancia}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', apikey: evolutionKey },
+        body: JSON.stringify({
+          number: telefone, mediatype: 'document', mimetype: 'application/pdf',
+          caption: '📋 Ordem de produção gerada!',
+          media: `data:application/pdf;base64,${pdfBase64}`,
+          fileName: 'ordem-producao.pdf',
+        }),
+      }).catch(console.error);
+    }
+
+    fetch(`${supabaseUrl}/rest/v1/mia_conversas_whatsapp?on_conflict=instancia,telefone`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, Prefer: 'resolution=merge-duplicates' },
+      body: JSON.stringify({ instancia, telefone, historico, updated_at: new Date().toISOString() }),
+    }).catch(console.error);
+
+    return new Response('OK', { status: 200 });
+  }
 
   // ── teffe-press: [ARTE_PRONTA] → chama Replicate e envia imagem ──
   if (isArte) {
@@ -419,7 +512,7 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
           headers: { 'Content-Type': 'application/json', apikey: evolutionKey },
           body: JSON.stringify({ number: telefone, mediatype: 'image', mimetype: 'image/webp', caption: msgArte, media: imageUrl, fileName: 'arte.webp' }),
         }).catch(console.error);
-        historico.push({ role: 'assistant', content: `[Arte gerada e enviada] ${msgArte}` });
+        historico.push({ role: 'assistant', content: `[Arte gerada e enviada: ${imageUrl}] ${msgArte}` });
       } else {
         const msgFalha = 'Tive um probleminha ao gerar a arte agora. 😅 Nossa equipe vai preparar e te envia em breve!';
         fetch(`${EVOLUTION_URL}/message/sendText/${instancia}`, {
