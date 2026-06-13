@@ -407,7 +407,7 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
     const dataMediaUrl = String((data as Record<string, unknown>).mediaUrl ?? '');
     const imgObj = (msgObj.imageMessage ?? msgObj.documentMessage) as Record<string, unknown>;
     const urlBruta = dataMediaUrl || String(imgObj.url ?? imgObj.mediaUrl ?? '');
-    const base64Direto = String((msgObj.imageMessage as Record<string, unknown>)?.base64 ?? '');
+    const base64Direto = String((msgObj.imageMessage as Record<string, unknown>)?.jpegThumbnail ?? '');
 
     console.log('[mia-chat] mídia recebida:', urlBruta.substring(0, 100), '| base64 direto:', !!base64Direto);
 
