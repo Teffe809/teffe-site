@@ -175,177 +175,247 @@ function wrapHTML(inner: string, obs: string, w: number, h: number, bgUrl?: stri
 // ════════════════════════════════════════════════════════════════════════════
 // CARTÃO DE VISITA  1050×600 cada lado  → produto: 2100×600
 // ════════════════════════════════════════════════════════════════════════════
-// branco clean: fundo branco puro, única faixa gradiente de 5px na lateral esquerda
-function tplCartaoBrancoLinha(d: ProdutoInput, logo: string): string {
-  const cp=d.cor_primaria, cs=d.cor_secundaria, ico=icons('#888');
-  const emp=esc(d.empresa), nom=esc(d.nome), car=esc(d.cargo);
-  const contatos=[
-    d.telefone?`<div style="display:flex;align-items:center;gap:9px;">${ico.tel}<span class="contact-text" style="font-size:12px;color:#555;">${esc(d.telefone)}</span></div>`:'',
-    d.email?`<div style="display:flex;align-items:center;gap:9px;">${ico.mail}<span class="contact-text" style="font-size:12px;color:#555;">${esc(d.email)}</span></div>`:'',
-    d.site?`<div style="display:flex;align-items:center;gap:9px;">${ico.web}<span class="contact-text" style="font-size:12px;color:${cp};font-weight:500;">${esc(d.site)}</span></div>`:'',
-  ].filter(Boolean).join('');
-  return `<div style="display:flex;width:2100px;height:600px;">
-<div id="frente" style="width:1050px;height:600px;background:#fff;position:relative;overflow:hidden;flex-shrink:0;">
-  <div style="position:absolute;left:0;top:0;width:5px;height:100%;background:linear-gradient(180deg,${cp},${cs});"></div>
-  <div style="position:absolute;bottom:92px;left:40px;right:40px;height:1px;background:#ebebeb;"></div>
-  <div class="logo-area" style="position:absolute;top:44px;left:44px;">${logo?`<img src="${logo}" style="max-height:40px;max-width:130px;object-fit:contain;">`:`<span style="font-size:10px;font-weight:700;color:#aaa;letter-spacing:3.5px;text-transform:uppercase;">${emp}</span>`}</div>
-  <div style="position:absolute;top:44px;right:44px;width:7px;height:7px;border-radius:50%;background:${cp};"></div>
-  <div style="position:absolute;top:50%;left:44px;transform:translateY(-60%);max-width:600px;">
-    <div class="nome-text" style="font-size:48px;font-weight:800;color:#0a0a0a;line-height:1.0;letter-spacing:-.5px;">${nom}</div>
-    <div style="display:flex;align-items:center;gap:10px;margin-top:12px;"><div style="width:28px;height:2px;background:${cp};border-radius:1px;"></div><div class="cargo-text" style="font-size:11px;font-weight:600;color:${cp};letter-spacing:2.5px;text-transform:uppercase;">${car}</div></div>
-    <div style="margin-top:5px;font-size:11px;color:#bbb;letter-spacing:.5px;">${emp}</div>
-  </div>
-  <div style="position:absolute;bottom:26px;left:44px;display:flex;flex-direction:column;gap:8px;">${contatos}</div>
-</div>
-<div id="verso" style="width:1050px;height:600px;background:#f7f8fa;position:relative;overflow:hidden;flex-shrink:0;">
-  <div style="position:absolute;top:0;left:0;right:0;height:5px;background:linear-gradient(90deg,${cp},${cs});"></div>
-  <div style="position:absolute;bottom:0;left:0;right:0;height:3px;background:linear-gradient(90deg,${cs},${cp});opacity:.45;"></div>
-  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;">
-    ${logo?`<div class="logo-area" style="margin-bottom:22px;"><img src="${logo}" style="max-height:100px;max-width:310px;object-fit:contain;display:inline-block;"></div>`:''}
-    <div style="font-size:${logo?'26px':'40px'};font-weight:800;color:#111;letter-spacing:5px;text-transform:uppercase;">${emp.toUpperCase()}</div>
-    ${d.cargo?`<div style="margin-top:8px;font-size:11px;color:#999;letter-spacing:2px;text-transform:uppercase;">${car}</div>`:''}
-    ${d.site?`<div style="margin-top:18px;display:inline-flex;align-items:center;border:1px solid ${cp}44;padding:8px 22px;border-radius:30px;"><span style="font-size:12px;color:${cp};font-weight:500;">${esc(d.site)}</span></div>`:''}
-  </div>
-</div></div>`;
+
+function cktBg(color: string, opacity: number): string {
+  return `<svg xmlns="http://www.w3.org/2000/svg" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;" viewBox="0 0 1050 600" preserveAspectRatio="xMidYMid slice"><g stroke="${color}" stroke-width="1.2" fill="none" opacity="${opacity}"><path d="M0 150 h80 v-40 h60 v40 h120 v80 h-40 v60"/><path d="M200 0 v80 h40 v60 h-40 v80 h80 v-40 h60"/><path d="M500 100 h60 v-60 h80 v60 h60 v120 h-40 v40"/><path d="M700 0 v120 h-60 v60 h60 v80 h80 v-60 h40"/><path d="M900 200 h80 v-80 h60 v180 h-60 v60"/><path d="M0 400 h100 v-40 h80 v80 h-40 v60 h100"/><path d="M300 500 h80 v-80 h60 v80 h100 v-40 h80"/><path d="M700 400 h80 v80 h60 v-100 h80 v40"/><circle cx="80" cy="150" r="4" fill="${color}"/><circle cx="200" cy="80" r="4" fill="${color}"/><circle cx="560" cy="100" r="4" fill="${color}"/><circle cx="760" cy="120" r="4" fill="${color}"/><circle cx="100" cy="400" r="4" fill="${color}"/><circle cx="380" cy="500" r="4" fill="${color}"/><circle cx="780" cy="400" r="4" fill="${color}"/></g></svg>`;
 }
 
-// logo em destaque: painel esquerdo com fundo levemente tintado exibe o logo em tamanho grande; informações à direita em branco
-function tplCartaoLogoDest(d: ProdutoInput, logo: string): string {
-  const cp=d.cor_primaria, cs=d.cor_secundaria, ico=icons('#777');
+function ekgLine(color: string): string {
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 50" style="display:block;width:380px;height:50px;"><polyline points="0,25 50,25 70,25 88,5 105,45 122,2 140,48 158,25 200,25 380,25" stroke="${color}" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+}
+
+function circIco(bg: string, svgInner: string): string {
+  return `<div style="width:28px;height:28px;border-radius:50%;background:${bg};display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">${svgInner}</div>`;
+}
+function icoTel(c: string): string { return circIco(c,`<svg viewBox="0 0 24 24" style="width:13px;height:13px;" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.4 1.14 2 2 0 012 1h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 8.91a16 16 0 006.18 6.18l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>`); }
+function icoMail(c: string): string { return circIco(c,`<svg viewBox="0 0 24 24" style="width:13px;height:13px;" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 01-2.06 0L2 7"/></svg>`); }
+function icoWeb(c: string): string  { return circIco(c,`<svg viewBox="0 0 24 24" style="width:13px;height:13px;" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>`); }
+
+// ── tplTecnologico1: navy diagonal left + circuits, orange accent ────────────
+function tplTecnologico1(d: ProdutoInput, logo: string): string {
+  const cp=d.cor_primaria||'#f97316', cs=d.cor_secundaria||'#1a2e4a';
   const emp=esc(d.empresa), nom=esc(d.nome), car=esc(d.cargo);
-  const inicial=(d.empresa||'G').charAt(0).toUpperCase();
-  const contatos=[
-    d.telefone?`<div style="display:flex;align-items:center;gap:9px;">${ico.tel}<span class="contact-text" style="font-size:12px;color:#555;">${esc(d.telefone)}</span></div>`:'',
-    d.email?`<div style="display:flex;align-items:center;gap:9px;">${ico.mail}<span class="contact-text" style="font-size:12px;color:#555;">${esc(d.email)}</span></div>`:'',
-    d.site?`<div style="display:flex;align-items:center;gap:9px;">${ico.web}<span class="contact-text" style="font-size:12px;color:${cp};font-weight:500;">${esc(d.site)}</span></div>`:'',
+  const ct=[
+    d.telefone?`<div style="display:flex;align-items:center;gap:11px;margin-bottom:11px;">${icoTel(cp)}<span style="font-size:13px;color:#333;">${esc(d.telefone)}</span></div>`:'',
+    d.email?`<div style="display:flex;align-items:center;gap:11px;margin-bottom:11px;">${icoMail(cp)}<span style="font-size:13px;color:#333;">${esc(d.email)}</span></div>`:'',
+    d.site?`<div style="display:flex;align-items:center;gap:11px;">${icoWeb(cp)}<span style="font-size:13px;color:${cp};font-weight:500;">${esc(d.site)}</span></div>`:'',
   ].filter(Boolean).join('');
-  return `<div style="display:flex;width:2100px;height:600px;">
+  const bct=[
+    d.telefone?`<div style="display:flex;align-items:center;gap:11px;margin-bottom:10px;">${icoTel('#fff')}<span style="font-size:13px;color:#fff;">${esc(d.telefone)}</span></div>`:'',
+    d.email?`<div style="display:flex;align-items:center;gap:11px;margin-bottom:10px;">${icoMail('#fff')}<span style="font-size:13px;color:#fff;">${esc(d.email)}</span></div>`:'',
+    d.site?`<div style="display:flex;align-items:center;gap:11px;">${icoWeb('#fff')}<span style="font-size:13px;color:${cp};">${esc(d.site)}</span></div>`:'',
+  ].filter(Boolean).join('');
+  return `<div style="display:flex;width:2100px;height:600px;font-family:'Poppins',sans-serif;">
 <div id="frente" style="width:1050px;height:600px;background:#fff;position:relative;overflow:hidden;flex-shrink:0;display:flex;">
-  <div style="width:340px;height:600px;background:${cp}0d;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;position:relative;flex-shrink:0;">
-    <div style="position:absolute;right:0;top:0;width:1px;height:100%;background:${cp}22;"></div>
-    ${logo?`<div class="logo-area"><img src="${logo}" style="max-height:170px;max-width:255px;object-fit:contain;display:block;"></div>`
-         :`<div style="width:110px;height:110px;border-radius:50%;background:${cp};display:flex;align-items:center;justify-content:center;"><span style="font-size:52px;font-weight:900;color:#fff;">${inicial}</span></div>`}
+  <div style="width:490px;height:600px;background:${cs};clip-path:polygon(0 0,100% 0,84% 100%,0 100%);flex-shrink:0;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 60px 0 44px;">
+    ${cktBg(cp,0.13)}
+    <div class="logo-area" style="position:relative;z-index:1;text-align:center;">
+      ${logo?`<img src="${logo}" style="max-height:120px;max-width:270px;object-fit:contain;filter:brightness(0) invert(1);">`:`<div style="width:96px;height:96px;border-radius:50%;border:3px solid ${cp};display:inline-flex;align-items:center;justify-content:center;"><span style="font-size:42px;font-weight:900;color:${cp};">${(d.empresa||'E').charAt(0)}</span></div>`}
+    </div>
+    <div style="position:relative;z-index:1;margin-top:18px;width:44px;height:3px;background:${cp};border-radius:2px;"></div>
   </div>
-  <div style="flex:1;padding:0 44px;display:flex;flex-direction:column;justify-content:center;position:relative;">
-    <div style="position:absolute;bottom:60px;left:0;right:44px;height:1px;background:#f0f0f0;"></div>
-    <div class="nome-text" style="font-size:38px;font-weight:800;color:#0a0a0a;line-height:1.05;letter-spacing:-.3px;">${nom}</div>
-    <div style="display:flex;align-items:center;gap:10px;margin-top:10px;"><div style="width:26px;height:2px;background:${cp};"></div><div class="cargo-text" style="font-size:11px;font-weight:600;color:${cp};letter-spacing:2px;text-transform:uppercase;">${car}</div></div>
-    <div style="margin-top:4px;font-size:11px;color:#c0c0c0;letter-spacing:.5px;">${emp}</div>
-    <div style="position:absolute;bottom:18px;left:0;display:flex;flex-direction:column;gap:7px;">${contatos}</div>
+  <div style="flex:1;padding:0 44px;display:flex;flex-direction:column;justify-content:center;position:relative;z-index:1;">
+    <div style="position:absolute;bottom:0;left:0;right:0;height:4px;background:linear-gradient(90deg,${cp},${cs});"></div>
+    <div style="font-size:10px;font-weight:700;color:${cp};letter-spacing:4px;text-transform:uppercase;margin-bottom:12px;">${emp}</div>
+    <div class="nome-text" style="font-size:40px;font-weight:900;color:#0f0f0f;line-height:1.0;letter-spacing:-1.5px;">${nom}</div>
+    <div style="display:flex;align-items:center;gap:12px;margin-top:14px;"><div style="width:36px;height:3px;background:${cp};border-radius:2px;"></div><div class="cargo-text" style="font-size:11px;font-weight:600;color:${cs};letter-spacing:2.5px;text-transform:uppercase;">${car}</div></div>
   </div>
 </div>
-<div id="verso" style="width:1050px;height:600px;background:#fff;position:relative;overflow:hidden;flex-shrink:0;">
-  <div style="position:absolute;bottom:0;left:0;right:0;height:6px;background:linear-gradient(90deg,${cp},${cs});"></div>
-  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;width:860px;">
-    ${logo?`<div class="logo-area" style="margin-bottom:24px;"><img src="${logo}" style="max-height:140px;max-width:400px;object-fit:contain;display:inline-block;"></div>`
-         :`<div style="width:100px;height:100px;border-radius:50%;background:${cp};display:inline-flex;align-items:center;justify-content:center;margin-bottom:24px;"><span style="font-size:48px;font-weight:900;color:#fff;">${inicial}</span></div>`}
-    <div style="font-size:${logo?'28px':'36px'};font-weight:800;color:#111;letter-spacing:5px;text-transform:uppercase;">${emp.toUpperCase()}</div>
-    ${d.site?`<div style="margin-top:18px;display:inline-flex;align-items:center;background:${cp}11;padding:9px 24px;border-radius:30px;"><span style="font-size:12px;color:${cp};font-weight:600;">${esc(d.site)}</span></div>`:''}
+<div id="verso" style="width:1050px;height:600px;background:#fff;position:relative;overflow:hidden;flex-shrink:0;display:flex;">
+  <div style="flex:1;display:flex;flex-direction:column;justify-content:center;padding:50px 44px;position:relative;z-index:1;">
+    ${cktBg('#aaa',0.05)}
+    <div class="nome-text" style="position:relative;z-index:1;font-size:30px;font-weight:900;color:#0f0f0f;line-height:1.0;">${nom}</div>
+    <div class="cargo-text" style="position:relative;z-index:1;font-size:11px;font-weight:600;color:${cp};letter-spacing:2.5px;text-transform:uppercase;margin-top:8px;">${car}</div>
+    <div style="position:relative;z-index:1;margin-top:26px;">${ct}</div>
+  </div>
+  <div style="width:370px;height:600px;background:${cp};flex-shrink:0;display:flex;flex-direction:column;justify-content:center;padding:40px 36px;position:relative;clip-path:polygon(14% 0,100% 0,100% 100%,0 100%);">
+    ${cktBg('#fff',0.08)}
+    <div class="logo-area" style="position:relative;z-index:1;margin-bottom:18px;">
+      ${logo?`<img src="${logo}" style="max-height:70px;max-width:200px;object-fit:contain;filter:brightness(0) invert(1);">`:`<div style="font-size:10px;font-weight:700;color:#fff;letter-spacing:3.5px;text-transform:uppercase;">${emp}</div>`}
+    </div>
+    <div style="position:relative;z-index:1;width:36px;height:2px;background:rgba(255,255,255,.5);margin-bottom:12px;"></div>
+    <div style="position:relative;z-index:1;font-size:11px;font-weight:700;color:rgba(255,255,255,.9);letter-spacing:2px;text-transform:uppercase;">${emp}</div>
+    <div style="position:relative;z-index:1;margin-top:20px;">${bct}</div>
   </div>
 </div></div>`;
 }
 
-// minimalista tipografia: nome como elemento central em tamanho enorme, decoração quase zero
-function tplCartaoMinimal(d: ProdutoInput, logo: string): string {
-  const cp=d.cor_primaria, cs=d.cor_secundaria;
+// ── tplTecnologico2: angular dark corners, logo center ──────────────────────
+function tplTecnologico2(d: ProdutoInput, logo: string): string {
+  const cp=d.cor_primaria||'#f97316', cs=d.cor_secundaria||'#1a2e4a';
   const emp=esc(d.empresa), nom=esc(d.nome), car=esc(d.cargo);
-  const letra=(d.empresa||'G').charAt(0).toUpperCase();
-  const contatosInline=[
-    d.telefone?`<span style="font-size:11px;color:#888;">${esc(d.telefone)}</span>`:'',
-    d.email?`<span style="font-size:11px;color:#888;">${esc(d.email)}</span>`:'',
-    d.site?`<span style="font-size:11px;color:${cp};font-weight:500;">${esc(d.site)}</span>`:'',
-  ].filter(Boolean).join('<span style="color:#ddd;margin:0 10px;">·</span>');
-  return `<div style="display:flex;width:2100px;height:600px;">
+  const ct=[
+    d.telefone?`<div style="display:flex;align-items:center;gap:10px;margin-bottom:9px;">${icoTel(cp)}<span style="font-size:12px;color:#444;">${esc(d.telefone)}</span></div>`:'',
+    d.email?`<div style="display:flex;align-items:center;gap:10px;margin-bottom:9px;">${icoMail(cp)}<span style="font-size:12px;color:#444;">${esc(d.email)}</span></div>`:'',
+    d.site?`<div style="display:flex;align-items:center;gap:10px;">${icoWeb(cp)}<span style="font-size:12px;color:${cp};font-weight:500;">${esc(d.site)}</span></div>`:'',
+  ].filter(Boolean).join('');
+  return `<div style="display:flex;width:2100px;height:600px;font-family:'Poppins',sans-serif;">
 <div id="frente" style="width:1050px;height:600px;background:#fff;position:relative;overflow:hidden;flex-shrink:0;">
-  <div style="position:absolute;bottom:0;left:0;right:0;height:4px;background:linear-gradient(90deg,${cp},${cs});"></div>
-  <div class="logo-area" style="position:absolute;top:40px;left:44px;">${logo?`<img src="${logo}" style="max-height:30px;max-width:100px;object-fit:contain;">`:`<span style="font-size:9px;font-weight:700;color:#c0c0c0;letter-spacing:3.5px;text-transform:uppercase;">${emp}</span>`}</div>
-  <div style="position:absolute;top:50%;left:44px;right:44px;transform:translateY(-58%);">
-    <div class="nome-text" style="font-size:64px;font-weight:900;color:#0a0a0a;line-height:.95;letter-spacing:-2.5px;">${nom}</div>
-    <div style="display:flex;align-items:center;gap:14px;margin-top:16px;">
-      <div style="width:18px;height:3px;background:${cp};border-radius:2px;"></div>
-      <div class="cargo-text" style="font-size:11px;font-weight:400;color:#999;letter-spacing:2px;text-transform:uppercase;">${car}</div>
+  ${cktBg(cp,0.06)}
+  <div style="position:absolute;top:0;left:0;width:300px;height:240px;background:${cs};clip-path:polygon(0 0,100% 0,68% 100%,0 100%);z-index:1;"></div>
+  <div style="position:absolute;bottom:0;right:0;width:250px;height:190px;background:${cs};clip-path:polygon(32% 0,100% 0,100% 100%,0 100%);z-index:1;"></div>
+  <div style="position:absolute;top:36px;left:36px;z-index:2;" class="logo-area">
+    ${logo?`<img src="${logo}" style="max-height:40px;max-width:130px;object-fit:contain;filter:brightness(0) invert(1);">`:`<span style="font-size:9px;font-weight:700;color:rgba(255,255,255,.7);letter-spacing:3px;text-transform:uppercase;">${emp}</span>`}
+  </div>
+  <div style="position:absolute;top:50%;left:50%;transform:translate(-44%,-52%);z-index:2;width:440px;">
+    <div class="logo-area" style="margin-bottom:16px;">${logo?`<img src="${logo}" style="max-height:90px;max-width:250px;object-fit:contain;">`:''}</div>
+    <div class="nome-text" style="font-size:42px;font-weight:900;color:#111;line-height:1.0;letter-spacing:-1.5px;">${nom}</div>
+    <div style="display:flex;align-items:center;gap:12px;margin-top:12px;"><div style="width:36px;height:3px;background:${cp};border-radius:2px;"></div><div class="cargo-text" style="font-size:11px;font-weight:600;color:${cp};letter-spacing:2.5px;text-transform:uppercase;">${car}</div></div>
+    <div style="margin-top:5px;font-size:11px;color:#999;">${emp}</div>
+  </div>
+</div>
+<div id="verso" style="width:1050px;height:600px;background:#fff;position:relative;overflow:hidden;flex-shrink:0;display:flex;">
+  <div style="width:340px;height:600px;background:${cs};flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px;position:relative;">
+    ${cktBg(cp,0.12)}
+    <div class="logo-area" style="position:relative;z-index:1;text-align:center;margin-bottom:14px;">
+      ${logo?`<img src="${logo}" style="max-height:90px;max-width:220px;object-fit:contain;filter:brightness(0) invert(1);">`:`<div style="width:80px;height:80px;border-radius:50%;border:3px solid ${cp};display:inline-flex;align-items:center;justify-content:center;"><span style="font-size:36px;font-weight:900;color:${cp};">${(d.empresa||'E').charAt(0)}</span></div>`}
+    </div>
+    <div style="position:relative;z-index:1;font-size:9px;font-weight:700;color:rgba(255,255,255,.55);letter-spacing:3px;text-transform:uppercase;text-align:center;">${emp}</div>
+  </div>
+  <div style="flex:1;display:flex;flex-direction:column;justify-content:center;padding:40px 44px;position:relative;overflow:hidden;">
+    <div style="position:absolute;top:0;right:0;width:110px;height:95px;background:${cp};clip-path:polygon(50% 0,100% 0,100% 100%);opacity:.9;"></div>
+    <div style="position:absolute;bottom:0;left:0;width:95px;height:80px;background:${cp};clip-path:polygon(0 0,50% 100%,0 100%);opacity:.9;"></div>
+    <div class="nome-text" style="font-size:34px;font-weight:900;color:#0f0f0f;line-height:1.05;letter-spacing:-1px;">${nom}</div>
+    <div class="cargo-text" style="font-size:11px;font-weight:600;color:${cp};letter-spacing:2.5px;text-transform:uppercase;margin-top:8px;">${car}</div>
+    <div style="width:36px;height:2px;background:${cs};margin:16px 0;border-radius:1px;"></div>
+    ${ct}
+  </div>
+</div></div>`;
+}
+
+// ── tplTecnologico3: white clean divider frente, navy circuits verso ─────────
+function tplTecnologico3(d: ProdutoInput, logo: string): string {
+  const cp=d.cor_primaria||'#f97316', cs=d.cor_secundaria||'#1a2e4a';
+  const emp=esc(d.empresa), nom=esc(d.nome), car=esc(d.cargo);
+  const bct=[
+    d.telefone?`<div style="display:flex;align-items:center;gap:11px;margin-bottom:10px;">${icoTel(cp)}<span style="font-size:13px;color:#fff;">${esc(d.telefone)}</span></div>`:'',
+    d.email?`<div style="display:flex;align-items:center;gap:11px;margin-bottom:10px;">${icoMail(cp)}<span style="font-size:13px;color:#fff;">${esc(d.email)}</span></div>`:'',
+    d.site?`<div style="display:flex;align-items:center;gap:11px;">${icoWeb(cp)}<span style="font-size:13px;color:${cp};">${esc(d.site)}</span></div>`:'',
+  ].filter(Boolean).join('');
+  return `<div style="display:flex;width:2100px;height:600px;font-family:'Poppins',sans-serif;">
+<div id="frente" style="width:1050px;height:600px;background:#fff;position:relative;overflow:hidden;flex-shrink:0;display:flex;">
+  ${cktBg(cp,0.07)}
+  <div style="width:400px;height:600px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;position:relative;z-index:1;">
+    <div class="logo-area" style="text-align:center;">
+      ${logo?`<img src="${logo}" style="max-height:120px;max-width:270px;object-fit:contain;">`:`<div style="width:96px;height:96px;border-radius:12px;background:${cp};display:inline-flex;align-items:center;justify-content:center;"><span style="font-size:44px;font-weight:900;color:#fff;">${(d.empresa||'E').charAt(0)}</span></div>`}
     </div>
   </div>
-  ${contatosInline?`<div style="position:absolute;bottom:22px;left:44px;display:flex;align-items:center;">${contatosInline}</div>`:''}
+  <div style="position:absolute;left:400px;top:60px;width:1px;height:480px;background:linear-gradient(180deg,transparent,${cp}66,transparent);z-index:2;"></div>
+  <div style="flex:1;display:flex;flex-direction:column;justify-content:center;padding:0 48px;position:relative;z-index:1;">
+    <div style="font-size:10px;font-weight:700;color:${cp};letter-spacing:4px;text-transform:uppercase;margin-bottom:14px;">${emp}</div>
+    <div class="nome-text" style="font-size:44px;font-weight:900;color:#0f0f0f;line-height:1.0;letter-spacing:-1.5px;">${nom}</div>
+    <div style="display:flex;align-items:center;gap:12px;margin-top:14px;"><div style="width:36px;height:3px;background:${cp};border-radius:2px;"></div><div class="cargo-text" style="font-size:11px;font-weight:600;color:#555;letter-spacing:2.5px;text-transform:uppercase;">${car}</div></div>
+    ${d.telefone?`<div style="margin-top:20px;font-size:12px;color:#888;">${esc(d.telefone)}</div>`:''}
+  </div>
+  <div style="position:absolute;bottom:0;left:0;right:0;height:5px;background:linear-gradient(90deg,${cp},${cs});z-index:3;"></div>
 </div>
-<div id="verso" style="width:1050px;height:600px;background:#fff;position:relative;overflow:hidden;flex-shrink:0;">
-  <div style="position:absolute;left:-50px;top:50%;transform:translateY(-50%);font-size:760px;font-weight:900;color:#0a0a0a;opacity:.028;line-height:1;pointer-events:none;">${letra}</div>
-  <div style="position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,${cp},${cs});"></div>
-  <div style="position:absolute;bottom:0;left:0;right:0;height:2px;background:linear-gradient(90deg,${cs},${cp});opacity:.4;"></div>
-  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;">
-    ${logo?`<div class="logo-area" style="margin-bottom:20px;"><img src="${logo}" style="max-height:80px;max-width:250px;object-fit:contain;display:inline-block;"></div>`:''}
-    <div style="font-size:${logo?'24px':'44px'};font-weight:900;color:#0a0a0a;letter-spacing:7px;text-transform:uppercase;">${emp.toUpperCase()}</div>
-    ${d.site?`<div style="margin-top:16px;font-size:12px;color:${cp};letter-spacing:2px;">${esc(d.site)}</div>`:''}
+<div id="verso" style="width:1050px;height:600px;background:${cs};position:relative;overflow:hidden;flex-shrink:0;">
+  ${cktBg(cp,0.14)}
+  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;z-index:1;width:750px;">
+    <div class="logo-area" style="margin-bottom:18px;">
+      ${logo?`<img src="${logo}" style="max-height:88px;max-width:250px;object-fit:contain;filter:brightness(0) invert(1);display:inline-block;">`:`<div style="font-size:44px;font-weight:900;color:${cp};display:inline-block;">${(d.empresa||'E').charAt(0)}</div>`}
+    </div>
+    <div style="font-size:${logo?'26px':'38px'};font-weight:800;color:#fff;letter-spacing:5px;text-transform:uppercase;">${emp.toUpperCase()}</div>
+    <div style="width:40px;height:3px;background:${cp};margin:16px auto;border-radius:2px;"></div>
+    <div style="display:inline-flex;flex-direction:column;align-items:flex-start;gap:4px;">${bct}</div>
   </div>
 </div></div>`;
 }
 
-function tplCartaoExecutivo(d: ProdutoInput, logo: string): string {
-  const cp=d.cor_primaria, cs=d.cor_secundaria, ico=icons('#777');
+// ── tplSaude1: emerald green + gold, EKG decoration ────────────────────────
+function tplSaude1(d: ProdutoInput, logo: string): string {
+  const cp=d.cor_primaria||'#2e7d32', cs=d.cor_secundaria||'#b8860b';
   const emp=esc(d.empresa), nom=esc(d.nome), car=esc(d.cargo);
-  const contatos=[
-    d.telefone?`<div style="display:flex;align-items:center;gap:9px;">${ico.tel}<span class="contact-text" style="font-size:12px;color:#555;">${esc(d.telefone)}</span></div>`:'',
-    d.email?`<div style="display:flex;align-items:center;gap:9px;">${ico.mail}<span class="contact-text" style="font-size:12px;color:#555;">${esc(d.email)}</span></div>`:'',
-    d.site?`<div style="display:flex;align-items:center;gap:9px;">${ico.web}<span class="contact-text" style="font-size:12px;color:#555;">${esc(d.site)}</span></div>`:'',
+  const ct=[
+    d.telefone?`<div style="display:flex;align-items:center;gap:10px;margin-bottom:9px;">${icoTel(cp)}<span style="font-size:12px;color:#444;">${esc(d.telefone)}</span></div>`:'',
+    d.email?`<div style="display:flex;align-items:center;gap:10px;margin-bottom:9px;">${icoMail(cp)}<span style="font-size:12px;color:#444;">${esc(d.email)}</span></div>`:'',
+    d.site?`<div style="display:flex;align-items:center;gap:10px;">${icoWeb(cp)}<span style="font-size:12px;color:${cp};font-weight:500;">${esc(d.site)}</span></div>`:'',
   ].filter(Boolean).join('');
-  return `<div style="display:flex;width:2100px;height:600px;">
+  const specs=(d.texto_secundario??'').split(/[,\n]/).map(s=>s.trim()).filter(Boolean);
+  const specsHtml=specs.map(s=>`<div style="display:flex;align-items:center;gap:9px;margin-bottom:7px;"><div style="width:8px;height:8px;border-radius:50%;background:${cs};flex-shrink:0;"></div><span style="font-size:12px;color:#333;">${esc(s)}</span></div>`).join('');
+  return `<div style="display:flex;width:2100px;height:600px;font-family:'Poppins',sans-serif;">
+<div id="frente" style="width:1050px;height:600px;background:#f9fbf8;position:relative;overflow:hidden;flex-shrink:0;display:flex;">
+  <div style="position:absolute;bottom:-80px;right:-80px;width:360px;height:360px;border-radius:50%;background:${cp}22;z-index:0;"></div>
+  <div style="position:absolute;bottom:-30px;right:-30px;width:220px;height:220px;border-radius:50%;background:${cp}33;z-index:0;"></div>
+  <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,${cp},${cs});z-index:3;"></div>
+  <div style="width:380px;height:600px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;position:relative;z-index:1;">
+    <div class="logo-area" style="text-align:center;margin-bottom:16px;">
+      ${logo?`<img src="${logo}" style="max-height:120px;max-width:250px;object-fit:contain;">`:`<div style="width:88px;height:88px;border-radius:50%;background:${cs};display:inline-flex;align-items:center;justify-content:center;"><span style="font-size:40px;font-weight:900;color:#fff;">${(d.empresa||'S').charAt(0)}</span></div>`}
+    </div>
+    <div style="font-size:10px;font-weight:700;color:${cs};letter-spacing:3px;text-transform:uppercase;text-align:center;">${emp}</div>
+  </div>
+  <div style="position:absolute;left:380px;top:60px;width:1px;height:480px;background:linear-gradient(180deg,transparent,${cp}55,transparent);z-index:2;"></div>
+  <div style="flex:1;display:flex;flex-direction:column;justify-content:center;padding:0 44px;position:relative;z-index:1;">
+    <div class="nome-text" style="font-size:40px;font-weight:800;color:#1a1a1a;line-height:1.0;letter-spacing:-.5px;">${nom}</div>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:10px;"><div style="width:28px;height:2px;background:${cs};border-radius:1px;"></div><div class="cargo-text" style="font-size:11px;font-weight:600;color:${cs};letter-spacing:2px;text-transform:uppercase;">${car}</div></div>
+    <div style="margin-top:18px;">${ekgLine(cp)}</div>
+    <div style="margin-top:18px;">${ct}</div>
+  </div>
+</div>
+<div id="verso" style="width:1050px;height:600px;background:#f9fbf8;position:relative;overflow:hidden;flex-shrink:0;display:flex;">
+  <div style="width:420px;height:600px;background:${cp};flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:44px 36px;position:relative;overflow:hidden;">
+    <div style="position:absolute;bottom:-20px;right:-20px;font-size:140px;color:rgba(255,255,255,.07);font-weight:900;line-height:1;user-select:none;">&#9829;</div>
+    <div style="position:relative;z-index:1;margin-bottom:16px;">${ekgLine(cs)}</div>
+    ${logo?`<div class="logo-area" style="position:relative;z-index:1;margin-bottom:14px;"><img src="${logo}" style="max-height:64px;max-width:200px;object-fit:contain;filter:brightness(0) invert(1);"></div>`:''}
+    <div style="position:relative;z-index:1;font-size:${logo?'15px':'18px'};font-weight:700;color:#fff;letter-spacing:2px;text-transform:uppercase;text-align:center;line-height:1.4;">${emp}</div>
+    ${d.texto_principal?`<div style="position:relative;z-index:1;margin-top:14px;font-size:12px;color:rgba(255,255,255,.75);text-align:center;font-style:italic;">"${esc(d.texto_principal)}"</div>`:''}
+  </div>
+  <div style="flex:1;display:flex;flex-direction:column;justify-content:center;padding:40px;position:relative;">
+    <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,${cp},${cs});"></div>
+    ${specsHtml?`<div style="margin-bottom:18px;">${specsHtml}</div>`:''}
+    ${d.telefone?`<div style="display:flex;align-items:center;gap:10px;margin-bottom:7px;">${icoTel(cs)}<span style="font-size:13px;color:#333;font-weight:600;">${esc(d.telefone)}</span></div>`:''}
+    ${d.email?`<div style="display:flex;align-items:center;gap:10px;margin-bottom:7px;">${icoMail(cs)}<span style="font-size:12px;color:#555;">${esc(d.email)}</span></div>`:''}
+    ${d.site?`<div style="display:flex;align-items:center;gap:10px;">${icoWeb(cs)}<span style="font-size:12px;color:${cp};font-weight:500;">${esc(d.site)}</span></div>`:''}
+  </div>
+</div></div>`;
+}
+
+// ── tplSaude2: teal + navy, cross badge, specialties verso ──────────────────
+function tplSaude2(d: ProdutoInput, logo: string): string {
+  const cp=d.cor_primaria||'#0d9488', cs=d.cor_secundaria||'#1e3a5f';
+  const emp=esc(d.empresa), nom=esc(d.nome), car=esc(d.cargo);
+  const ct=[
+    d.telefone?`<div style="display:flex;align-items:center;gap:10px;margin-bottom:9px;">${icoTel(cp)}<span style="font-size:12px;color:#444;">${esc(d.telefone)}</span></div>`:'',
+    d.email?`<div style="display:flex;align-items:center;gap:10px;margin-bottom:9px;">${icoMail(cp)}<span style="font-size:12px;color:#444;">${esc(d.email)}</span></div>`:'',
+    d.site?`<div style="display:flex;align-items:center;gap:10px;">${icoWeb(cp)}<span style="font-size:12px;color:${cp};font-weight:500;">${esc(d.site)}</span></div>`:'',
+  ].filter(Boolean).join('');
+  const specs=(d.texto_secundario??'').split(/[,\n]/).map(s=>s.trim()).filter(Boolean).slice(0,4);
+  const specsHtml=specs.map(s=>`<div style="display:flex;align-items:center;gap:9px;margin-bottom:8px;"><div style="width:16px;height:16px;border-radius:50%;background:${cp}22;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;"><svg viewBox="0 0 10 10" style="width:10px;height:10px;" stroke="${cp}" stroke-width="1.5" fill="none" stroke-linecap="round"><path d="M2 5h6M5 2v6"/></svg></div><span style="font-size:12px;color:#333;">${esc(s)}</span></div>`).join('');
+  return `<div style="display:flex;width:2100px;height:600px;font-family:'Poppins',sans-serif;">
 <div id="frente" style="width:1050px;height:600px;background:#fff;position:relative;overflow:hidden;flex-shrink:0;">
-  <div style="position:absolute;left:0;top:0;width:290px;height:100%;background:linear-gradient(180deg,${cp},${cs});"></div>
-  <div style="position:absolute;left:0;top:0;width:290px;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:0 22px;text-align:center;">
-    ${logo?`<img src="${logo}" class="logo-area" style="max-height:64px;max-width:180px;object-fit:contain;filter:brightness(0) invert(1);">`:''}
-    <div style="font-size:${logo?'10px':'14px'};font-weight:700;color:rgba(255,255,255,.88);letter-spacing:3px;text-transform:uppercase;line-height:1.5;">${emp}</div>
+  <div style="position:absolute;top:-28px;left:-28px;width:110px;height:110px;border-radius:50%;background:${cp};z-index:1;display:flex;align-items:flex-end;justify-content:flex-end;padding:16px;">
+    <svg viewBox="0 0 24 24" style="width:20px;height:20px;" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
   </div>
-  <div style="position:absolute;left:290px;top:18%;width:1px;height:64%;background:linear-gradient(180deg,transparent,${cp}33,transparent);"></div>
-  <div style="position:absolute;left:326px;top:50%;transform:translateY(-60%);right:44px;">
-    <div class="nome-text" style="font-size:38px;font-weight:800;color:#111;line-height:1.05;letter-spacing:-.5px;">${nom}</div>
-    <div style="margin-top:10px;display:flex;align-items:center;gap:12px;"><div style="width:32px;height:2px;background:${cp};"></div><div class="cargo-text" style="font-size:11px;font-weight:600;color:${cp};letter-spacing:2.5px;text-transform:uppercase;">${car}</div></div>
-    <div style="margin-top:5px;font-size:11px;color:#bbb;">${emp}</div>
+  <div style="position:absolute;top:0;right:0;width:320px;height:220px;background:${cs};clip-path:polygon(30% 0,100% 0,100% 100%,0 100%);z-index:1;overflow:hidden;">
+    <div style="position:absolute;top:10px;left:60px;opacity:.18;">${ekgLine('#fff')}</div>
   </div>
-  <div style="position:absolute;bottom:36px;left:326px;right:44px;display:flex;flex-direction:column;gap:8px;">${contatos}</div>
+  <div style="position:absolute;top:50%;left:50%;transform:translate(-46%,-52%);z-index:2;width:460px;">
+    <div class="logo-area" style="margin-bottom:14px;">
+      ${logo?`<img src="${logo}" style="max-height:80px;max-width:230px;object-fit:contain;">`:``}
+    </div>
+    <div class="nome-text" style="font-size:40px;font-weight:800;color:#1a1a1a;line-height:1.0;letter-spacing:-.5px;">${nom}</div>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:10px;"><div style="width:28px;height:2.5px;background:${cp};border-radius:1px;"></div><div class="cargo-text" style="font-size:11px;font-weight:600;color:${cp};letter-spacing:2px;text-transform:uppercase;">${car}</div></div>
+    <div style="margin-top:4px;font-size:11px;color:#bbb;">${emp}</div>
+  </div>
+  <div style="position:absolute;bottom:28px;left:50%;transform:translateX(-46%);z-index:2;width:460px;">${ct}</div>
+  <div style="position:absolute;bottom:0;left:0;right:0;height:4px;background:linear-gradient(90deg,${cp},${cs});z-index:3;"></div>
 </div>
-<div id="verso" style="width:1050px;height:600px;background:#f5f5f5;position:relative;overflow:hidden;flex-shrink:0;">
-  <div style="position:absolute;bottom:0;left:0;right:0;height:6px;background:linear-gradient(90deg,${cp},${cs});"></div>
-  <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,${cp},${cs});opacity:.4;"></div>
-  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;width:800px;">
-    ${logo?`<div class="logo-area" style="margin-bottom:22px;"><img src="${logo}" style="max-height:90px;max-width:280px;object-fit:contain;display:inline-block;"></div>`:''}
-    <div style="font-size:${logo?'28px':'42px'};font-weight:800;color:#111;letter-spacing:6px;text-transform:uppercase;">${emp.toUpperCase()}</div>
-    ${d.cargo?`<div style="margin-top:8px;font-size:11px;color:#999;letter-spacing:2px;text-transform:uppercase;">${car}</div>`:''}
-    ${d.site?`<div style="margin-top:20px;display:inline-flex;align-items:center;border:1.5px solid ${cp}55;padding:9px 24px;border-radius:40px;"><span style="font-size:12px;color:${cp};font-weight:500;">${esc(d.site)}</span></div>`:''}
+<div id="verso" style="width:1050px;height:600px;background:#fff;position:relative;overflow:hidden;flex-shrink:0;display:flex;">
+  <div style="width:360px;height:600px;background:${cs};flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:36px;position:relative;overflow:hidden;">
+    <div style="position:absolute;bottom:-40px;right:-40px;width:180px;height:180px;border-radius:50%;background:rgba(255,255,255,.05);"></div>
+    <div class="logo-area" style="position:relative;z-index:1;text-align:center;margin-bottom:18px;">
+      ${logo?`<img src="${logo}" style="max-height:100px;max-width:230px;object-fit:contain;filter:brightness(0) invert(1);">`:`<div style="width:80px;height:80px;border-radius:50%;background:${cp};display:inline-flex;align-items:center;justify-content:center;"><span style="font-size:36px;font-weight:900;color:#fff;">${(d.empresa||'S').charAt(0)}</span></div>`}
+    </div>
+    <div style="position:relative;z-index:1;font-size:10px;font-weight:700;color:rgba(255,255,255,.6);letter-spacing:3px;text-transform:uppercase;text-align:center;">${emp}</div>
   </div>
-</div></div>`;
-}
-
-function tplCartaoBold(d: ProdutoInput, logo: string): string {
-  const cp=d.cor_primaria, cs=d.cor_secundaria, ico=icons(cp);
-  const emp=esc(d.empresa), nom=esc(d.nome), car=esc(d.cargo);
-  const letra=(d.empresa||'G').charAt(0).toUpperCase();
-  const contatos=[
-    d.telefone?`<div style="display:flex;align-items:center;gap:10px;">${ico.tel}<span class="contact-text" style="font-size:13px;font-weight:300;color:rgba(255,255,255,.80);">${esc(d.telefone)}</span></div>`:'',
-    d.email?`<div style="display:flex;align-items:center;gap:10px;">${ico.mail}<span class="contact-text" style="font-size:13px;font-weight:300;color:rgba(255,255,255,.80);">${esc(d.email)}</span></div>`:'',
-    d.site?`<div style="display:flex;align-items:center;gap:10px;">${ico.web}<span class="contact-text" style="font-size:13px;font-weight:300;color:rgba(255,255,255,.80);">${esc(d.site)}</span></div>`:'',
-  ].filter(Boolean).join('');
-  return `<div style="display:flex;width:2100px;height:600px;">
-<div id="frente" style="width:1050px;height:600px;background:#0d0d0d;position:relative;overflow:hidden;flex-shrink:0;">
-  <div class="decos" style="position:absolute;top:0;right:0;width:500px;height:100%;background:linear-gradient(160deg,${cp},${cs});clip-path:polygon(22% 0%,100% 0%,100% 100%,0% 100%);"></div>
-  <div style="position:absolute;bottom:-24px;right:155px;font-size:360px;font-weight:900;color:rgba(255,255,255,.04);line-height:1;pointer-events:none;">${letra}</div>
-  <div style="position:absolute;top:32px;left:44px;display:flex;gap:7px;"><div style="width:9px;height:9px;border-radius:50%;background:${cp};"></div><div style="width:9px;height:9px;border-radius:50%;background:${cs}88;"></div><div style="width:9px;height:9px;border-radius:50%;background:${cp}44;"></div></div>
-  ${logo?`<div class="logo-area" style="position:absolute;top:32px;right:44px;"><img src="${logo}" style="max-height:50px;max-width:150px;object-fit:contain;filter:brightness(0) invert(1);"></div>`:''}
-  <div style="position:absolute;top:50%;left:44px;transform:translateY(-55%);max-width:520px;">
-    <div class="nome-text" style="font-size:44px;font-weight:900;color:#fff;line-height:1.05;letter-spacing:-1px;">${nom}</div>
-    <div style="margin-top:14px;display:flex;align-items:center;gap:12px;"><div style="width:44px;height:3px;background:linear-gradient(90deg,${cp},${cs});border-radius:2px;"></div><div class="cargo-text" style="font-size:12px;font-weight:600;color:${cp};letter-spacing:2.5px;text-transform:uppercase;">${car}</div></div>
-    <div style="margin-top:6px;font-size:11.5px;color:rgba(255,255,255,.4);">${emp}</div>
-  </div>
-  <div style="position:absolute;bottom:36px;left:44px;display:flex;flex-direction:column;gap:9px;">${contatos}</div>
-</div>
-<div id="verso" style="width:1050px;height:600px;background:linear-gradient(135deg,${cp},${cs});position:relative;overflow:hidden;flex-shrink:0;">
-  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(45deg);width:620px;height:620px;border:2px solid rgba(255,255,255,.10);"></div>
-  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(45deg);width:460px;height:460px;border:1px solid rgba(255,255,255,.07);"></div>
-  <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:rgba(255,255,255,.25);"></div>
-  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-55%);text-align:center;">
-    ${logo?`<div class="logo-area" style="margin-bottom:20px;"><img src="${logo}" style="max-height:80px;max-width:240px;object-fit:contain;filter:brightness(0) invert(1);display:inline-block;"></div>`:''}
-    <div style="font-size:${logo?'26px':'42px'};font-weight:900;color:#fff;letter-spacing:6px;text-transform:uppercase;">${emp.toUpperCase()}</div>
-    ${d.cargo?`<div style="margin-top:10px;font-size:11px;color:rgba(255,255,255,.65);letter-spacing:2.5px;text-transform:uppercase;">${car}</div>`:''}
-    ${d.site?`<div style="margin-top:18px;display:inline-flex;align-items:center;background:rgba(255,255,255,.15);padding:9px 22px;border-radius:40px;"><span style="font-size:12px;color:rgba(255,255,255,.9);letter-spacing:1.5px;">${esc(d.site)}</span></div>`:''}
+  <div style="flex:1;display:flex;flex-direction:column;justify-content:center;padding:36px 44px;position:relative;">
+    <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,${cs},${cp});"></div>
+    <div class="nome-text" style="font-size:22px;font-weight:800;color:#1a1a1a;margin-bottom:4px;">${nom}</div>
+    <div class="cargo-text" style="font-size:11px;font-weight:600;color:${cp};letter-spacing:2px;text-transform:uppercase;margin-bottom:18px;">${car}</div>
+    ${specsHtml?`<div style="margin-bottom:16px;">${specsHtml}</div>`:''}
+    <div style="width:40px;height:1.5px;background:${cp}55;margin-bottom:16px;"></div>
+    ${d.telefone?`<div style="display:flex;align-items:center;gap:10px;margin-bottom:7px;">${icoTel(cp)}<span style="font-size:12px;color:#333;font-weight:600;">${esc(d.telefone)}</span></div>`:''}
+    ${d.email?`<div style="display:flex;align-items:center;gap:10px;">${icoMail(cp)}<span style="font-size:12px;color:#555;">${esc(d.email)}</span></div>`:''}
   </div>
 </div></div>`;
 }
@@ -985,13 +1055,22 @@ function buildHTML(d: ProdutoInput, logo: string, bgUrl?: string): RenderResult 
     const inner = pick(2) === 0 ? folderCorporativo(d,logo) : folderCriativo(d,logo);
     return { html: wrapHTML(inner, obs, 2480, 1748, bgUrl), w: 2480, h: 1778 };
   }
-  // cartao_visita (default) — 5 templates disponíveis
-  const v = pick(5);
-  const inner = v === 0 ? tplCartaoExecutivo(d,logo)
-              : v === 1 ? tplCartaoBold(d,logo)
-              : v === 2 ? tplCartaoBrancoLinha(d,logo)
-              : v === 3 ? tplCartaoLogoDest(d,logo)
-              : tplCartaoMinimal(d,logo);
+  // cartao_visita — roteado por estilo
+  const estilo = (d.estilo ?? '').toLowerCase();
+  let inner: string;
+  if (estilo.includes('tecno')) {
+    const v = pick(3);
+    inner = v === 0 ? tplTecnologico1(d,logo) : v === 1 ? tplTecnologico2(d,logo) : tplTecnologico3(d,logo);
+  } else if (estilo.includes('saude') || estilo.includes('saúde')) {
+    inner = pick(2) === 0 ? tplSaude1(d,logo) : tplSaude2(d,logo);
+  } else {
+    const v = pick(5);
+    inner = v === 0 ? tplTecnologico1(d,logo)
+          : v === 1 ? tplTecnologico2(d,logo)
+          : v === 2 ? tplTecnologico3(d,logo)
+          : v === 3 ? tplSaude1(d,logo)
+          : tplSaude2(d,logo);
+  }
   return { html: wrapHTML(inner, obs, 2100, 600, bgUrl), w: 2100, h: 630 };
 }
 
