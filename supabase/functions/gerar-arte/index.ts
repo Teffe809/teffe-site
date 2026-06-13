@@ -180,6 +180,10 @@ function cktBg(color: string, opacity: number): string {
   return `<svg xmlns="http://www.w3.org/2000/svg" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;" viewBox="0 0 1050 600" preserveAspectRatio="xMidYMid slice"><g stroke="${color}" stroke-width="1.2" fill="none" opacity="${opacity}"><path d="M0 150 h80 v-40 h60 v40 h120 v80 h-40 v60"/><path d="M200 0 v80 h40 v60 h-40 v80 h80 v-40 h60"/><path d="M500 100 h60 v-60 h80 v60 h60 v120 h-40 v40"/><path d="M700 0 v120 h-60 v60 h60 v80 h80 v-60 h40"/><path d="M900 200 h80 v-80 h60 v180 h-60 v60"/><path d="M0 400 h100 v-40 h80 v80 h-40 v60 h100"/><path d="M300 500 h80 v-80 h60 v80 h100 v-40 h80"/><path d="M700 400 h80 v80 h60 v-100 h80 v40"/><circle cx="80" cy="150" r="4" fill="${color}"/><circle cx="200" cy="80" r="4" fill="${color}"/><circle cx="560" cy="100" r="4" fill="${color}"/><circle cx="760" cy="120" r="4" fill="${color}"/><circle cx="100" cy="400" r="4" fill="${color}"/><circle cx="380" cy="500" r="4" fill="${color}"/><circle cx="780" cy="400" r="4" fill="${color}"/></g></svg>`;
 }
 
+function pcbBg(color: string, opacity: number): string {
+  return `<svg xmlns="http://www.w3.org/2000/svg" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;" viewBox="0 0 1050 600" preserveAspectRatio="xMidYMid slice"><g stroke="${color}" stroke-width="1.5" fill="none" opacity="${opacity}"><path d="M20,60 H100 V140 H200"/><path d="M200,140 V60 H340"/><path d="M340,60 V200 H420 V130"/><path d="M20,400 H100 V340 H220"/><path d="M220,340 V460 H360 V380"/><path d="M40,260 H120 V320 H60 V420"/><path d="M600,40 H720 V120 H820 V60"/><path d="M820,60 H940 V160 H1000 V80"/><path d="M560,320 V440 H680 V300 H800 V380 H920"/><path d="M460,200 V280 H580 V220 H700"/></g><g fill="${color}" stroke="none" opacity="${opacity}"><circle cx="20" cy="60" r="4"/><circle cx="100" cy="60" r="3"/><circle cx="100" cy="140" r="4"/><circle cx="200" cy="140" r="4"/><circle cx="200" cy="60" r="3"/><circle cx="340" cy="60" r="4"/><circle cx="340" cy="200" r="3"/><circle cx="420" cy="200" r="4"/><circle cx="420" cy="130" r="3"/><circle cx="20" cy="400" r="4"/><circle cx="100" cy="400" r="3"/><circle cx="100" cy="340" r="4"/><circle cx="220" cy="340" r="4"/><circle cx="220" cy="460" r="3"/><circle cx="360" cy="460" r="4"/><circle cx="360" cy="380" r="3"/><circle cx="40" cy="260" r="4"/><circle cx="120" cy="260" r="3"/><circle cx="120" cy="320" r="4"/><circle cx="60" cy="420" r="3"/><circle cx="600" cy="40" r="4"/><circle cx="720" cy="40" r="3"/><circle cx="720" cy="120" r="4"/><circle cx="820" cy="120" r="3"/><circle cx="820" cy="60" r="4"/><circle cx="940" cy="60" r="3"/><circle cx="940" cy="160" r="4"/><circle cx="1000" cy="160" r="3"/><circle cx="1000" cy="80" r="4"/><circle cx="560" cy="320" r="4"/><circle cx="560" cy="440" r="3"/><circle cx="680" cy="440" r="4"/><circle cx="680" cy="300" r="3"/><circle cx="800" cy="300" r="4"/><circle cx="800" cy="380" r="3"/><circle cx="920" cy="380" r="4"/><circle cx="460" cy="200" r="4"/><circle cx="460" cy="280" r="3"/><circle cx="580" cy="280" r="4"/><circle cx="580" cy="220" r="3"/><circle cx="700" cy="220" r="4"/></g></svg>`;
+}
+
 function ekgLine(color: string): string {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 50" style="display:block;width:380px;height:50px;"><polyline points="0,25 50,25 70,25 88,5 105,45 122,2 140,48 158,25 200,25 380,25" stroke="${color}" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 }
@@ -191,56 +195,50 @@ function icoTel(c: string): string { return circIco(c,`<svg viewBox="0 0 24 24" 
 function icoMail(c: string): string { return circIco(c,`<svg viewBox="0 0 24 24" style="width:13px;height:13px;" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 01-2.06 0L2 7"/></svg>`); }
 function icoWeb(c: string): string  { return circIco(c,`<svg viewBox="0 0 24 24" style="width:13px;height:13px;" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>`); }
 
-// ── tplTecnologico1: navy diagonal left + circuits, orange accent ────────────
+// ── tplTecnologico1: navy diagonal left + PCB orange traces, white right ─────
 function tplTecnologico1(d: ProdutoInput, logo: string): string {
   const cp=d.cor_primaria||'#f97316', cs=d.cor_secundaria||'#1a2e4a';
   const emp=esc(d.empresa), nom=esc(d.nome), car=esc(d.cargo);
-  const ct=[
-    d.telefone?`<div style="display:flex;align-items:center;gap:11px;margin-bottom:11px;">${icoTel(cp)}<span style="font-size:13px;color:#333;">${esc(d.telefone)}</span></div>`:'',
-    d.email?`<div style="display:flex;align-items:center;gap:11px;margin-bottom:11px;">${icoMail(cp)}<span style="font-size:13px;color:#333;">${esc(d.email)}</span></div>`:'',
-    d.site?`<div style="display:flex;align-items:center;gap:11px;">${icoWeb(cp)}<span style="font-size:13px;color:${cp};font-weight:500;">${esc(d.site)}</span></div>`:'',
-  ].filter(Boolean).join('');
+  const hi=(inner: string)=>`<svg width="26" height="26" viewBox="0 0 26 26"><polygon points="13,2 24,8.5 24,17.5 13,24 2,17.5 2,8.5" fill="rgba(0,0,0,.3)" stroke="rgba(255,255,255,.35)" stroke-width="1"/>${inner}</svg>`;
+  const hexTel=hi(`<g transform="translate(6,6)" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9.3v1.7a1.1 1.1 0 01-1.2 1.1 11 11 0 01-4.8-1.7A10.9 10.9 0 012.3 5.9 11 11 0 01.6 1.1 1.1 1.1 0 011.7 0h1.7A1.1 1.1 0 014.5 1c.07.53.2 1.05.39 1.55a1.1 1.1 0 01-.25 1.16l-.76.76a8.89 8.89 0 003.43 3.43l.76-.76a1.1 1.1 0 011.16-.25c.5.19 1.02.32 1.55.39A1.1 1.1 0 0112 9.3z"/></g>`);
+  const hexMail=hi(`<g transform="translate(5,7)" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="0" y="0" width="16" height="11" rx="1.5"/><path d="M0 2l8 5 8-5"/></g>`);
+  const hexWeb=hi(`<g transform="translate(6,6)" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="7" r="7"/><line x1="0" y1="7" x2="14" y2="7"/><path d="M7 0a9 9 0 012 7 9 9 0 01-2 7 9 9 0 01-2-7 9 9 0 012-7z"/></g>`);
   const bct=[
-    d.telefone?`<div style="display:flex;align-items:center;gap:11px;margin-bottom:10px;">${icoTel('#fff')}<span style="font-size:13px;color:#fff;">${esc(d.telefone)}</span></div>`:'',
-    d.email?`<div style="display:flex;align-items:center;gap:11px;margin-bottom:10px;">${icoMail('#fff')}<span style="font-size:13px;color:#fff;">${esc(d.email)}</span></div>`:'',
-    d.site?`<div style="display:flex;align-items:center;gap:11px;">${icoWeb('#fff')}<span style="font-size:13px;color:${cp};">${esc(d.site)}</span></div>`:'',
+    d.telefone?`<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">${hexTel}<span style="font-size:12px;color:rgba(255,255,255,.9);">${esc(d.telefone)}</span></div>`:'',
+    d.email?`<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">${hexMail}<span style="font-size:12px;color:rgba(255,255,255,.9);">${esc(d.email)}</span></div>`:'',
+    d.site?`<div style="display:flex;align-items:center;gap:10px;">${hexWeb}<span style="font-size:12px;color:${cp};">${esc(d.site)}</span></div>`:'',
   ].filter(Boolean).join('');
   return `<div style="display:flex;width:2100px;height:600px;font-family:'Poppins',sans-serif;">
 <div id="frente" style="width:1050px;height:600px;background:#fff;position:relative;overflow:hidden;flex-shrink:0;display:flex;">
-  <div style="width:490px;height:600px;background:${cs};clip-path:polygon(0 0,100% 0,84% 100%,0 100%);flex-shrink:0;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 60px 0 44px;">
-    ${cktBg(cp,0.13)}
+  <div style="width:460px;height:600px;background:${cs};clip-path:polygon(0 0,100% 0,82% 100%,0 100%);flex-shrink:0;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 70px 0 44px;">
+    ${pcbBg(cp,0.18)}
     <div class="logo-area" style="position:relative;z-index:1;text-align:center;">
-      ${logo?`<img src="${logo}" style="max-height:120px;max-width:270px;object-fit:contain;filter:brightness(0) invert(1);">`:`<div style="width:96px;height:96px;border-radius:50%;border:3px solid ${cp};display:inline-flex;align-items:center;justify-content:center;"><span style="font-size:42px;font-weight:900;color:${cp};">${(d.empresa||'E').charAt(0)}</span></div>`}
+      ${logo?`<img src="${logo}" style="max-height:110px;max-width:260px;object-fit:contain;filter:brightness(0) invert(1);">`:`<div style="width:88px;height:88px;border-radius:12px;border:3px solid ${cp};display:inline-flex;align-items:center;justify-content:center;"><span style="font-size:40px;font-weight:900;color:${cp};">${(d.empresa||'E').charAt(0)}</span></div>`}
     </div>
-    <div style="position:relative;z-index:1;margin-top:18px;width:44px;height:3px;background:${cp};border-radius:2px;"></div>
+    <div style="position:relative;z-index:1;margin-top:20px;display:flex;gap:5px;"><div style="width:8px;height:8px;border-radius:50%;background:${cp};"></div><div style="width:8px;height:8px;border-radius:50%;background:${cp};opacity:.6;"></div><div style="width:8px;height:8px;border-radius:50%;background:${cp};opacity:.3;"></div></div>
   </div>
   <div style="flex:1;padding:0 44px;display:flex;flex-direction:column;justify-content:center;position:relative;z-index:1;">
     <div style="position:absolute;bottom:0;left:0;right:0;height:4px;background:linear-gradient(90deg,${cp},${cs});"></div>
-    <div style="font-size:10px;font-weight:700;color:${cp};letter-spacing:4px;text-transform:uppercase;margin-bottom:12px;">${emp}</div>
-    <div class="nome-text" style="font-size:40px;font-weight:900;color:#0f0f0f;line-height:1.0;letter-spacing:-1.5px;">${nom}</div>
-    <div style="display:flex;align-items:center;gap:12px;margin-top:14px;"><div style="width:36px;height:3px;background:${cp};border-radius:2px;"></div><div class="cargo-text" style="font-size:11px;font-weight:600;color:${cs};letter-spacing:2.5px;text-transform:uppercase;">${car}</div></div>
+    <div style="font-size:10px;font-weight:700;color:${cp};letter-spacing:4px;text-transform:uppercase;margin-bottom:8px;">${emp}</div>
+    <div class="nome-text" style="font-size:40px;font-weight:900;color:${cs};line-height:1.0;letter-spacing:-1.5px;">${nom}</div>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:12px;"><div style="width:28px;height:2px;background:${cp};"></div><div class="cargo-text" style="font-size:11px;font-weight:600;color:#555;letter-spacing:2.5px;text-transform:uppercase;">${car}</div></div>
+    ${d.telefone||d.email?`<div style="margin-top:20px;font-size:12px;color:#aaa;">${[d.telefone?esc(d.telefone):'',d.email?esc(d.email):''].filter(Boolean).join(' · ')}</div>`:''}
   </div>
 </div>
-<div id="verso" style="width:1050px;height:600px;background:#fff;position:relative;overflow:hidden;flex-shrink:0;display:flex;">
-  <div style="flex:1;display:flex;flex-direction:column;justify-content:center;padding:50px 44px;position:relative;z-index:1;">
-    ${cktBg('#aaa',0.05)}
-    <div class="nome-text" style="position:relative;z-index:1;font-size:30px;font-weight:900;color:#0f0f0f;line-height:1.0;">${nom}</div>
-    <div class="cargo-text" style="position:relative;z-index:1;font-size:11px;font-weight:600;color:${cp};letter-spacing:2.5px;text-transform:uppercase;margin-top:8px;">${car}</div>
-    <div style="position:relative;z-index:1;margin-top:26px;">${ct}</div>
-  </div>
-  <div style="width:370px;height:600px;background:${cp};flex-shrink:0;display:flex;flex-direction:column;justify-content:center;padding:40px 36px;position:relative;clip-path:polygon(14% 0,100% 0,100% 100%,0 100%);">
-    ${cktBg('#fff',0.08)}
-    <div class="logo-area" style="position:relative;z-index:1;margin-bottom:18px;">
-      ${logo?`<img src="${logo}" style="max-height:70px;max-width:200px;object-fit:contain;filter:brightness(0) invert(1);">`:`<div style="font-size:10px;font-weight:700;color:#fff;letter-spacing:3.5px;text-transform:uppercase;">${emp}</div>`}
+<div id="verso" style="width:1050px;height:600px;background:${cp};position:relative;overflow:hidden;flex-shrink:0;">
+  ${pcbBg(cs,0.15)}
+  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:1;width:760px;text-align:center;">
+    <div class="logo-area" style="margin-bottom:16px;">
+      ${logo?`<img src="${logo}" style="max-height:72px;max-width:220px;object-fit:contain;filter:brightness(0) invert(1);display:inline-block;">`:`<div style="font-size:14px;font-weight:800;color:#fff;letter-spacing:4px;text-transform:uppercase;">${emp}</div>`}
     </div>
-    <div style="position:relative;z-index:1;width:36px;height:2px;background:rgba(255,255,255,.5);margin-bottom:12px;"></div>
-    <div style="position:relative;z-index:1;font-size:11px;font-weight:700;color:rgba(255,255,255,.9);letter-spacing:2px;text-transform:uppercase;">${emp}</div>
-    <div style="position:relative;z-index:1;margin-top:20px;">${bct}</div>
+    <div style="font-size:20px;font-weight:700;color:#fff;letter-spacing:5px;text-transform:uppercase;">${emp}</div>
+    <div style="width:48px;height:2px;background:rgba(0,0,0,.25);margin:14px auto;"></div>
+    <div style="display:inline-flex;flex-direction:column;align-items:flex-start;gap:0;">${bct}</div>
   </div>
 </div></div>`;
 }
 
-// ── tplTecnologico2: angular dark corners, logo center ──────────────────────
+// ── tplTecnologico2: white + triangle dark corners + logo, angular verso ─────
 function tplTecnologico2(d: ProdutoInput, logo: string): string {
   const cp=d.cor_primaria||'#f97316', cs=d.cor_secundaria||'#1a2e4a';
   const emp=esc(d.empresa), nom=esc(d.nome), car=esc(d.cargo);
@@ -250,74 +248,76 @@ function tplTecnologico2(d: ProdutoInput, logo: string): string {
     d.site?`<div style="display:flex;align-items:center;gap:10px;">${icoWeb(cp)}<span style="font-size:12px;color:${cp};font-weight:500;">${esc(d.site)}</span></div>`:'',
   ].filter(Boolean).join('');
   return `<div style="display:flex;width:2100px;height:600px;font-family:'Poppins',sans-serif;">
-<div id="frente" style="width:1050px;height:600px;background:#fff;position:relative;overflow:hidden;flex-shrink:0;">
-  ${cktBg(cp,0.06)}
-  <div style="position:absolute;top:0;left:0;width:300px;height:240px;background:${cs};clip-path:polygon(0 0,100% 0,68% 100%,0 100%);z-index:1;"></div>
-  <div style="position:absolute;bottom:0;right:0;width:250px;height:190px;background:${cs};clip-path:polygon(32% 0,100% 0,100% 100%,0 100%);z-index:1;"></div>
-  <div style="position:absolute;top:36px;left:36px;z-index:2;" class="logo-area">
-    ${logo?`<img src="${logo}" style="max-height:40px;max-width:130px;object-fit:contain;filter:brightness(0) invert(1);">`:`<span style="font-size:9px;font-weight:700;color:rgba(255,255,255,.7);letter-spacing:3px;text-transform:uppercase;">${emp}</span>`}
+<div id="frente" style="width:1050px;height:600px;background:#fff;position:relative;overflow:hidden;flex-shrink:0;display:flex;align-items:center;">
+  ${pcbBg(cp,0.055)}
+  <div style="position:absolute;top:0;left:0;width:0;height:0;border-style:solid;border-width:230px 290px 0 0;border-color:${cs} transparent transparent transparent;z-index:1;"></div>
+  <div style="position:absolute;bottom:0;right:0;width:0;height:0;border-style:solid;border-width:0 0 200px 250px;border-color:transparent transparent ${cs} transparent;z-index:1;"></div>
+  <div style="position:absolute;top:22px;left:22px;z-index:2;" class="logo-area">
+    ${logo?`<img src="${logo}" style="max-height:36px;max-width:110px;object-fit:contain;filter:brightness(0) invert(1);">`:`<span style="font-size:9px;font-weight:700;color:rgba(255,255,255,.7);letter-spacing:3px;text-transform:uppercase;">${emp}</span>`}
   </div>
-  <div style="position:absolute;top:50%;left:50%;transform:translate(-44%,-52%);z-index:2;width:440px;">
-    <div class="logo-area" style="margin-bottom:16px;">${logo?`<img src="${logo}" style="max-height:90px;max-width:250px;object-fit:contain;">`:''}</div>
-    <div class="nome-text" style="font-size:42px;font-weight:900;color:#111;line-height:1.0;letter-spacing:-1.5px;">${nom}</div>
-    <div style="display:flex;align-items:center;gap:12px;margin-top:12px;"><div style="width:36px;height:3px;background:${cp};border-radius:2px;"></div><div class="cargo-text" style="font-size:11px;font-weight:600;color:${cp};letter-spacing:2.5px;text-transform:uppercase;">${car}</div></div>
-    <div style="margin-top:5px;font-size:11px;color:#999;">${emp}</div>
+  <div style="position:absolute;right:40px;bottom:26px;z-index:2;"><div style="width:52px;height:3px;background:${cp};margin-bottom:5px;"></div><div style="width:32px;height:3px;background:${cp};opacity:.4;"></div></div>
+  <div style="position:relative;z-index:2;padding:0 56px;flex:1;">
+    <div class="logo-area" style="margin-bottom:16px;">${logo?`<img src="${logo}" style="max-height:78px;max-width:220px;object-fit:contain;">`:''}</div>
+    <div class="nome-text" style="font-size:40px;font-weight:900;color:#111;line-height:1.0;letter-spacing:-1.5px;">${nom}</div>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:10px;"><div style="width:28px;height:3px;background:${cp};"></div><div class="cargo-text" style="font-size:11px;font-weight:600;color:${cp};letter-spacing:2.5px;text-transform:uppercase;">${car}</div></div>
+    <div style="margin-top:4px;font-size:11px;color:#bbb;letter-spacing:2px;">${emp}</div>
   </div>
 </div>
 <div id="verso" style="width:1050px;height:600px;background:#fff;position:relative;overflow:hidden;flex-shrink:0;display:flex;">
-  <div style="width:340px;height:600px;background:${cs};flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px;position:relative;">
-    ${cktBg(cp,0.12)}
+  <div style="width:360px;height:600px;background:${cs};flex-shrink:0;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;">
+    ${pcbBg(cp,0.15)}
     <div class="logo-area" style="position:relative;z-index:1;text-align:center;margin-bottom:14px;">
-      ${logo?`<img src="${logo}" style="max-height:90px;max-width:220px;object-fit:contain;filter:brightness(0) invert(1);">`:`<div style="width:80px;height:80px;border-radius:50%;border:3px solid ${cp};display:inline-flex;align-items:center;justify-content:center;"><span style="font-size:36px;font-weight:900;color:${cp};">${(d.empresa||'E').charAt(0)}</span></div>`}
+      ${logo?`<img src="${logo}" style="max-height:88px;max-width:210px;object-fit:contain;filter:brightness(0) invert(1);">`:`<div style="width:80px;height:80px;border-radius:50%;border:3px solid ${cp};display:inline-flex;align-items:center;justify-content:center;"><span style="font-size:36px;font-weight:900;color:${cp};">${(d.empresa||'E').charAt(0)}</span></div>`}
     </div>
-    <div style="position:relative;z-index:1;font-size:9px;font-weight:700;color:rgba(255,255,255,.55);letter-spacing:3px;text-transform:uppercase;text-align:center;">${emp}</div>
+    <div style="position:relative;z-index:1;font-size:9px;font-weight:700;color:rgba(255,255,255,.5);letter-spacing:3px;text-transform:uppercase;text-align:center;">${emp}</div>
   </div>
   <div style="flex:1;display:flex;flex-direction:column;justify-content:center;padding:40px 44px;position:relative;overflow:hidden;">
-    <div style="position:absolute;top:0;right:0;width:110px;height:95px;background:${cp};clip-path:polygon(50% 0,100% 0,100% 100%);opacity:.9;"></div>
-    <div style="position:absolute;bottom:0;left:0;width:95px;height:80px;background:${cp};clip-path:polygon(0 0,50% 100%,0 100%);opacity:.9;"></div>
+    <div style="position:absolute;top:0;right:0;width:0;height:0;border-style:solid;border-width:0 90px 90px 0;border-color:transparent ${cp} transparent transparent;"></div>
+    <div style="position:absolute;bottom:0;left:0;width:0;height:0;border-style:solid;border-width:0 0 80px 80px;border-color:transparent transparent ${cp} transparent;"></div>
     <div class="nome-text" style="font-size:34px;font-weight:900;color:#0f0f0f;line-height:1.05;letter-spacing:-1px;">${nom}</div>
-    <div class="cargo-text" style="font-size:11px;font-weight:600;color:${cp};letter-spacing:2.5px;text-transform:uppercase;margin-top:8px;">${car}</div>
+    <div class="cargo-text" style="font-size:12px;font-weight:700;color:${cp};letter-spacing:2.5px;text-transform:uppercase;margin-top:8px;">${car}</div>
     <div style="width:36px;height:2px;background:${cs};margin:16px 0;border-radius:1px;"></div>
     ${ct}
   </div>
 </div></div>`;
 }
 
-// ── tplTecnologico3: white clean divider frente, navy circuits verso ─────────
+// ── tplTecnologico3: white clean + PCB texture + divider, navy PCB verso ─────
 function tplTecnologico3(d: ProdutoInput, logo: string): string {
   const cp=d.cor_primaria||'#f97316', cs=d.cor_secundaria||'#1a2e4a';
   const emp=esc(d.empresa), nom=esc(d.nome), car=esc(d.cargo);
   const bct=[
-    d.telefone?`<div style="display:flex;align-items:center;gap:11px;margin-bottom:10px;">${icoTel(cp)}<span style="font-size:13px;color:#fff;">${esc(d.telefone)}</span></div>`:'',
-    d.email?`<div style="display:flex;align-items:center;gap:11px;margin-bottom:10px;">${icoMail(cp)}<span style="font-size:13px;color:#fff;">${esc(d.email)}</span></div>`:'',
+    d.telefone?`<div style="display:flex;align-items:center;gap:11px;margin-bottom:11px;">${icoTel(cp)}<span style="font-size:13px;color:#fff;">${esc(d.telefone)}</span></div>`:'',
+    d.email?`<div style="display:flex;align-items:center;gap:11px;margin-bottom:11px;">${icoMail(cp)}<span style="font-size:13px;color:#fff;">${esc(d.email)}</span></div>`:'',
     d.site?`<div style="display:flex;align-items:center;gap:11px;">${icoWeb(cp)}<span style="font-size:13px;color:${cp};">${esc(d.site)}</span></div>`:'',
   ].filter(Boolean).join('');
   return `<div style="display:flex;width:2100px;height:600px;font-family:'Poppins',sans-serif;">
 <div id="frente" style="width:1050px;height:600px;background:#fff;position:relative;overflow:hidden;flex-shrink:0;display:flex;">
-  ${cktBg(cp,0.07)}
-  <div style="width:400px;height:600px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;position:relative;z-index:1;">
+  ${pcbBg(cp,0.06)}
+  <div style="width:380px;height:600px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:44px;position:relative;z-index:1;">
     <div class="logo-area" style="text-align:center;">
-      ${logo?`<img src="${logo}" style="max-height:120px;max-width:270px;object-fit:contain;">`:`<div style="width:96px;height:96px;border-radius:12px;background:${cp};display:inline-flex;align-items:center;justify-content:center;"><span style="font-size:44px;font-weight:900;color:#fff;">${(d.empresa||'E').charAt(0)}</span></div>`}
+      ${logo?`<img src="${logo}" style="max-height:120px;max-width:260px;object-fit:contain;">`:`<div style="width:88px;height:88px;border-radius:12px;background:${cp};display:inline-flex;align-items:center;justify-content:center;"><span style="font-size:44px;font-weight:900;color:#fff;">${(d.empresa||'E').charAt(0)}</span></div>`}
     </div>
   </div>
-  <div style="position:absolute;left:400px;top:60px;width:1px;height:480px;background:linear-gradient(180deg,transparent,${cp}66,transparent);z-index:2;"></div>
+  <div style="position:absolute;left:380px;top:60px;width:1.5px;height:480px;background:linear-gradient(180deg,transparent,${cp},transparent);z-index:2;"></div>
   <div style="flex:1;display:flex;flex-direction:column;justify-content:center;padding:0 48px;position:relative;z-index:1;">
-    <div style="font-size:10px;font-weight:700;color:${cp};letter-spacing:4px;text-transform:uppercase;margin-bottom:14px;">${emp}</div>
-    <div class="nome-text" style="font-size:44px;font-weight:900;color:#0f0f0f;line-height:1.0;letter-spacing:-1.5px;">${nom}</div>
-    <div style="display:flex;align-items:center;gap:12px;margin-top:14px;"><div style="width:36px;height:3px;background:${cp};border-radius:2px;"></div><div class="cargo-text" style="font-size:11px;font-weight:600;color:#555;letter-spacing:2.5px;text-transform:uppercase;">${car}</div></div>
-    ${d.telefone?`<div style="margin-top:20px;font-size:12px;color:#888;">${esc(d.telefone)}</div>`:''}
+    <div style="font-size:10px;font-weight:700;color:${cp};letter-spacing:4px;text-transform:uppercase;margin-bottom:10px;">${emp}</div>
+    <div class="nome-text" style="font-size:42px;font-weight:900;color:#0f0f0f;line-height:1.0;letter-spacing:-1.5px;">${nom}</div>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:12px;"><div style="width:28px;height:3px;background:${cp};"></div><div class="cargo-text" style="font-size:11px;font-weight:600;color:#666;letter-spacing:2.5px;text-transform:uppercase;">${car}</div></div>
+    ${d.telefone?`<div style="margin-top:18px;font-size:12px;color:#bbb;">${esc(d.telefone)}</div>`:''}
+    ${d.email?`<div style="margin-top:4px;font-size:12px;color:#bbb;">${esc(d.email)}</div>`:''}
   </div>
   <div style="position:absolute;bottom:0;left:0;right:0;height:5px;background:linear-gradient(90deg,${cp},${cs});z-index:3;"></div>
 </div>
 <div id="verso" style="width:1050px;height:600px;background:${cs};position:relative;overflow:hidden;flex-shrink:0;">
-  ${cktBg(cp,0.14)}
-  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;z-index:1;width:750px;">
-    <div class="logo-area" style="margin-bottom:18px;">
-      ${logo?`<img src="${logo}" style="max-height:88px;max-width:250px;object-fit:contain;filter:brightness(0) invert(1);display:inline-block;">`:`<div style="font-size:44px;font-weight:900;color:${cp};display:inline-block;">${(d.empresa||'E').charAt(0)}</div>`}
+  ${pcbBg(cp,0.16)}
+  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;z-index:1;width:760px;">
+    <div class="logo-area" style="margin-bottom:16px;">
+      ${logo?`<img src="${logo}" style="max-height:80px;max-width:240px;object-fit:contain;filter:brightness(0) invert(1);display:inline-block;">`:`<div style="font-size:40px;font-weight:900;color:${cp};display:inline-block;">${(d.empresa||'E').charAt(0)}</div>`}
     </div>
-    <div style="font-size:${logo?'26px':'38px'};font-weight:800;color:#fff;letter-spacing:5px;text-transform:uppercase;">${emp.toUpperCase()}</div>
+    <div style="font-size:${logo?'22px':'34px'};font-weight:800;color:#fff;letter-spacing:5px;text-transform:uppercase;">${emp}</div>
     <div style="width:40px;height:3px;background:${cp};margin:16px auto;border-radius:2px;"></div>
-    <div style="display:inline-flex;flex-direction:column;align-items:flex-start;gap:4px;">${bct}</div>
+    <div style="display:inline-flex;flex-direction:column;align-items:flex-start;gap:0;">${bct}</div>
   </div>
 </div></div>`;
 }
@@ -425,28 +425,28 @@ function tplSaude2(d: ProdutoInput, logo: string): string {
 // ════════════════════════════════════════════════════════════════════════════
 function adRedondoMinimalista(d: ProdutoInput, logo: string): string {
   const cp=d.cor_primaria, emp=esc(d.empresa), tp=esc(d.texto_principal);
-  return `<div style="width:800px;height:800px;background:#e8e8e8;position:relative;display:flex;align-items:center;justify-content:center;">
-  <div style="width:760px;height:760px;border-radius:50%;background:${cp};position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:80px;">
+  return `<div style="width:800px;height:860px;background:#e8e8e8;display:flex;flex-direction:column;align-items:center;padding-top:20px;">
+  <div style="width:760px;height:760px;border-radius:50%;background:${cp};overflow:hidden;flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:80px;position:relative;">
     <div style="position:absolute;top:30px;left:50%;transform:translateX(-50%);width:700px;height:700px;border-radius:50%;border:1px solid rgba(255,255,255,.15);"></div>
     ${logo?`<img src="${logo}" class="logo-area" style="max-height:160px;max-width:320px;object-fit:contain;filter:brightness(0) invert(1);margin-bottom:20px;position:relative;">`:''}
     <div style="font-size:${logo?'38px':'48px'};font-weight:800;color:#fff;letter-spacing:4px;text-transform:uppercase;position:relative;">${emp}</div>
-    ${arcTextSVG(tp)}
   </div>
+  ${tp?`<div style="margin-top:14px;font-size:11px;color:#888;letter-spacing:2.5px;text-transform:uppercase;text-align:center;">${tp}</div>`:''}
 </div>`;
 }
 
 function adRedondoColorido(d: ProdutoInput, logo: string): string {
   const cp=d.cor_primaria, cs=d.cor_secundaria, emp=esc(d.empresa), tp=esc(d.texto_principal);
-  return `<div style="width:800px;height:800px;background:#f0f0f0;display:flex;align-items:center;justify-content:center;position:relative;">
-  <div style="width:760px;height:760px;border-radius:50%;background:linear-gradient(135deg,${cp} 0%,${cs} 100%);position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:80px;">
+  return `<div style="width:800px;height:860px;background:#f0f0f0;display:flex;flex-direction:column;align-items:center;padding-top:20px;">
+  <div style="width:760px;height:760px;border-radius:50%;background:linear-gradient(135deg,${cp} 0%,${cs} 100%);overflow:hidden;flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:80px;position:relative;">
     <div style="position:absolute;width:680px;height:680px;border-radius:50%;border:2px solid rgba(255,255,255,.18);top:40px;left:40px;"></div>
     <div style="position:absolute;width:540px;height:540px;border-radius:50%;border:1px solid rgba(255,255,255,.10);top:110px;left:110px;"></div>
     <div style="position:absolute;top:-80px;right:-80px;width:300px;height:300px;border-radius:50%;background:rgba(255,255,255,.07);"></div>
     ${logo?`<img src="${logo}" class="logo-area" style="max-height:130px;max-width:280px;object-fit:contain;filter:brightness(0) invert(1);margin-bottom:16px;position:relative;">`:''}
     <div style="font-size:${logo?'34px':'46px'};font-weight:900;color:#fff;letter-spacing:3px;text-transform:uppercase;text-shadow:0 2px 16px rgba(0,0,0,.2);position:relative;">${emp}</div>
     ${d.site?`<div style="margin-top:18px;padding:6px 20px;background:rgba(255,255,255,.2);border-radius:30px;font-size:13px;color:rgba(255,255,255,.9);position:relative;">${esc(d.site)}</div>`:''}
-    ${arcTextSVG(tp)}
   </div>
+  ${tp?`<div style="margin-top:14px;font-size:11px;color:#888;letter-spacing:2.5px;text-transform:uppercase;text-align:center;">${tp}</div>`:''}
 </div>`;
 }
 
@@ -1017,7 +1017,7 @@ function buildHTML(d: ProdutoInput, logo: string, bgUrl?: string): RenderResult 
 
   if (tipo === 'adesivo_redondo') {
     const inner = pick(2) === 0 ? adRedondoMinimalista(d,logo) : adRedondoColorido(d,logo);
-    return { html: wrapHTML(inner, obs, 800, 800, bgUrl), w: 800, h: 830 };
+    return { html: wrapHTML(inner, obs, 800, 860, bgUrl), w: 800, h: 890 };
   }
   if (tipo === 'adesivo_retangular') {
     const inner = pick(2) === 0 ? adRetangularClean(d,logo) : adRetangularBold(d,logo);
