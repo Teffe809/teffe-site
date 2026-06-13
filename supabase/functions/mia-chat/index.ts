@@ -135,15 +135,27 @@ async function buscarLogoUrl(instancia: string, telefone: string, supabaseUrl: s
 
 // ── Analisa cores do logo via Claude Vision ────────────────────────────────
 async function analisarLogo(url: string, anthropicApiKey: string): Promise<{ cor_primaria: string; cor_secundaria: string; descricao: string } | null> {
-  if (!url || !url.startsWith('http')) return null;
+  if (!url) return null;
   try {
-    const imgRes = await fetch(url, { signal: AbortSignal.timeout(10000) });
-    if (!imgRes.ok) { console.log('[analisar-logo] fetch falhou:', imgRes.status); return null; }
-    const buf = await imgRes.arrayBuffer();
-    const b64 = btoa(new Uint8Array(buf).reduce((a, b) => a + String.fromCharCode(b), ''));
-    const rawCt = imgRes.headers.get('content-type') ?? 'image/jpeg';
-    const mediaType = (['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(rawCt.split(';')[0])
-      ? rawCt.split(';')[0] : 'image/jpeg') as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp';
+    let b64: string;
+    let mediaType: 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp';
+    if (url.startsWith('data:')) {
+      // base64 direto — extrai mediaType e dados sem fetch
+      const m = url.match(/^data:(image\/[a-z+]+);base64,(.+)$/s);
+      if (!m) return null;
+      const rawMt = m[1];
+      mediaType = (['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(rawMt)
+        ? rawMt : 'image/jpeg') as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp';
+      b64 = m[2];
+    } else {
+      const imgRes = await fetch(url, { signal: AbortSignal.timeout(10000) });
+      if (!imgRes.ok) { console.log('[analisar-logo] fetch falhou:', imgRes.status); return null; }
+      const buf = await imgRes.arrayBuffer();
+      b64 = btoa(new Uint8Array(buf).reduce((a, b) => a + String.fromCharCode(b), ''));
+      const rawCt = imgRes.headers.get('content-type') ?? 'image/jpeg';
+      mediaType = (['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(rawCt.split(';')[0])
+        ? rawCt.split(';')[0] : 'image/jpeg') as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp';
+    }
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': anthropicApiKey, 'anthropic-version': '2023-06-01' },
@@ -401,8 +413,15 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
 
     if (urlBruta || base64Direto) {
       // 1. Salva no Storage — URL permanente (ou usa base64 direto se disponível)
+      const imgMime = (() => {
+        const mt = String((msgObj.imageMessage as Record<string, unknown>)?.mimetype ?? '');
+        if (mt === 'image/png' || urlBruta.endsWith('.png')) return 'image/png';
+        if (mt === 'image/gif' || urlBruta.endsWith('.gif')) return 'image/gif';
+        if (mt === 'image/webp' || urlBruta.endsWith('.webp')) return 'image/webp';
+        return 'image/jpeg';
+      })();
       const urlPermanente = base64Direto
-        ? `data:image/jpeg;base64,${base64Direto}`
+        ? `data:${imgMime};base64,${base64Direto}`
         : await salvarLogoStorage(urlBruta, telefone, supabaseUrl, storageKey, evolutionKey);
 
       // 2. Analisa cores do logo
