@@ -473,21 +473,31 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
     msgObj.videoMessage    ||
     msgObj.stickerMessage
   );
+  // Usa || em vez de ?? para também descartar strings vazias "" que a Evolution API
+  // pode preencher em mensagens de imagem (caption ficava inacessível com ??)
   const texto = String(
-    msgObj.conversation ??
-    ((msgObj.extendedTextMessage as Record<string, unknown>)?.text) ??
-    ((msgObj.imageMessage as Record<string, unknown>)?.caption) ??
+    msgObj.conversation ||
+    ((msgObj.extendedTextMessage as Record<string, unknown>)?.text) ||
+    ((msgObj.imageMessage as Record<string, unknown>)?.caption) ||
     ''
   ).trim();
 
   // Mensagem de mídia sem legenda — injeta placeholder para Claude responder
   let logoUrl = '';
   if (instancia === 'teffe-press' && msgObj.imageMessage) {
-    // Evolution API armazena a mídia baixada em data.mediaUrl (URL acessível).
-    // imageMessage.url é o CDN criptografado do WhatsApp — nem sempre acessível.
     const dataMediaUrl = String((data as Record<string, unknown>).mediaUrl ?? '');
     const img = msgObj.imageMessage as Record<string, unknown>;
     logoUrl = dataMediaUrl || String(img.url ?? img.mediaUrl ?? '');
+    // Log de diagnóstico — mostra estrutura real do payload para confirmar onde está o caption
+    console.log('[mia-chat] IMAGE_DEBUG:', JSON.stringify({
+      mediaUrl:          dataMediaUrl.substring(0, 100),
+      img_caption:       img.caption,
+      img_keys:          Object.keys(img).filter(k => !['jpegThumbnail','fileEncSha256','fileSha256','mediaKey'].includes(k)),
+      msg_conversation:  msgObj.conversation,
+      msg_extText:       (msgObj.extendedTextMessage as Record<string, unknown>)?.text,
+      texto_resolvido:   texto,
+      logoUrl_resolvido: logoUrl.substring(0, 100),
+    }));
   }
   // Quando cliente envia imagem com legenda na mesma mensagem, preserva ambos
   const textoFinal = texto && logoUrl
