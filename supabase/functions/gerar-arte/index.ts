@@ -1075,6 +1075,30 @@ function buildHTML(d: ProdutoInput, logo: string, bgUrl?: string): RenderResult 
 }
 
 // ════════════════════════════════════════════════════════════════════════════
+// DYNAMIC MOCKUPS — caneca realista
+// ════════════════════════════════════════════════════════════════════════════
+async function aplicarMockupCaneca(artUrl: string): Promise<string | null> {
+  const dmKey = Deno.env.get('DYNAMIC_MOCKUPS_API_KEY') ?? '';
+  if (!dmKey) { console.log('[dynamic-mockups] DYNAMIC_MOCKUPS_API_KEY não configurado'); return null; }
+  try {
+    const res = await fetch('https://app.dynamicmockups.com/api/v1/renders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${dmKey}` },
+      body: JSON.stringify({
+        mockup_uuid: '06a6f80b-d475-4e0f-8a6a-6ccca70834cb',
+        smart_objects: [{ uuid: 'c19645fd-5db0-461e-aad3-8131b36501dd', asset: { url: artUrl } }],
+      }),
+      signal: AbortSignal.timeout(30000),
+    });
+    if (!res.ok) { console.log('[dynamic-mockups] erro:', res.status, await res.text()); return null; }
+    const data = await res.json() as { data?: { export_url?: string } };
+    const url = data?.data?.export_url ?? null;
+    if (url) console.log('[dynamic-mockups] mockup gerado:', url.substring(0, 80));
+    return url;
+  } catch (e) { console.log('[dynamic-mockups] exceção:', e); return null; }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
 // RENDERIZADORES
 // ════════════════════════════════════════════════════════════════════════════
 async function renderizarHCTI(html: string, w: number, h: number): Promise<string | null> {
@@ -1163,8 +1187,13 @@ Deno.serve(async (req: Request) => {
           { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
         );
       }
+      let urlFinal = imageUrl;
+      if (d.tipo_produto === 'caneca') {
+        const mockup = await aplicarMockupCaneca(imageUrl);
+        if (mockup) urlFinal = mockup;
+      }
       return new Response(
-        JSON.stringify({ url: imageUrl, tipo_produto: d.tipo_produto, modo: 'ilustracao' }),
+        JSON.stringify({ url: urlFinal, tipo_produto: d.tipo_produto, modo: 'ilustracao' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }
@@ -1209,8 +1238,13 @@ Deno.serve(async (req: Request) => {
           { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
         );
       }
+      let urlFinalComb = imageUrl;
+      if (d.tipo_produto === 'caneca') {
+        const mockup = await aplicarMockupCaneca(imageUrl);
+        if (mockup) urlFinalComb = mockup;
+      }
       return new Response(
-        JSON.stringify({ url: imageUrl, tipo_produto: d.tipo_produto, modo: 'combinado', background_reutilizado: !!(d.background_url), background_gerado: !!(bgUrl && !d.background_url) }),
+        JSON.stringify({ url: urlFinalComb, tipo_produto: d.tipo_produto, modo: 'combinado', background_reutilizado: !!(d.background_url), background_gerado: !!(bgUrl && !d.background_url) }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }
@@ -1235,8 +1269,13 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    let urlFinalTexto = imageUrl;
+    if (d.tipo_produto === 'caneca') {
+      const mockup = await aplicarMockupCaneca(imageUrl);
+      if (mockup) urlFinalTexto = mockup;
+    }
     return new Response(
-      JSON.stringify({ url: imageUrl, tipo_produto: d.tipo_produto, modo: 'texto', dimensoes: `${w}x${h}` }),
+      JSON.stringify({ url: urlFinalTexto, tipo_produto: d.tipo_produto, modo: 'texto', dimensoes: `${w}x${h}` }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
   } catch (err) {
