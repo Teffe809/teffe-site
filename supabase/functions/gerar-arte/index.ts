@@ -40,6 +40,14 @@ function pick(n: number): number { return Math.floor(Math.random() * n); }
 
 function esc(s: string | undefined): string { return (s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
+// SVG texto em arco no topo — para adesivo redondo
+// Posicionado dentro da div 760×760 (border-radius:50%), raio 330px (≈45% dos 760px internos)
+function arcTextSVG(texto: string): string {
+  if (!texto) return '';
+  const id = Math.random().toString(36).slice(2, 8);
+  return `<svg style="position:absolute;top:0;left:0;width:760px;height:760px;pointer-events:none;z-index:10;overflow:visible;" viewBox="0 0 760 760"><defs><filter id="ats-${id}" x="-25%" y="-25%" width="150%" height="150%"><feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#000" flood-opacity="0.93"/></filter><path id="atp-${id}" d="M 50,380 a 330,330,0,0,0,660,0"/></defs><text font-family="'Poppins',sans-serif" font-size="46" font-weight="700" fill="white" letter-spacing="3" filter="url(#ats-${id})" text-anchor="middle"><textPath href="#atp-${id}" startOffset="50%">${texto}</textPath></text></svg>`;
+}
+
 // ── Replicate flux-schnell ────────────────────────────────────────────────────
 function replicateDims(w: number, h: number): [number, number] {
   const snap = (v: number) => Math.max(256, Math.min(1440, Math.round(v / 16) * 16));
@@ -276,7 +284,7 @@ function adRedondoMinimalista(d: ProdutoInput, logo: string): string {
     <div style="position:absolute;top:30px;left:50%;transform:translateX(-50%);width:700px;height:700px;border-radius:50%;border:1px solid rgba(255,255,255,.15);"></div>
     ${logo?`<img src="${logo}" class="logo-area" style="max-height:160px;max-width:320px;object-fit:contain;filter:brightness(0) invert(1);margin-bottom:20px;position:relative;">`:''}
     <div style="font-size:${logo?'38px':'48px'};font-weight:800;color:#fff;letter-spacing:4px;text-transform:uppercase;position:relative;">${emp}</div>
-    ${tp?`<div style="margin-top:12px;font-size:18px;color:rgba(255,255,255,.75);letter-spacing:1px;position:relative;">${tp}</div>`:''}
+    ${arcTextSVG(tp)}
   </div>
 </div>`;
 }
@@ -290,8 +298,8 @@ function adRedondoColorido(d: ProdutoInput, logo: string): string {
     <div style="position:absolute;top:-80px;right:-80px;width:300px;height:300px;border-radius:50%;background:rgba(255,255,255,.07);"></div>
     ${logo?`<img src="${logo}" class="logo-area" style="max-height:130px;max-width:280px;object-fit:contain;filter:brightness(0) invert(1);margin-bottom:16px;position:relative;">`:''}
     <div style="font-size:${logo?'34px':'46px'};font-weight:900;color:#fff;letter-spacing:3px;text-transform:uppercase;text-shadow:0 2px 16px rgba(0,0,0,.2);position:relative;">${emp}</div>
-    ${tp?`<div style="margin-top:12px;font-size:17px;color:rgba(255,255,255,.80);letter-spacing:1px;position:relative;">${tp}</div>`:''}
     ${d.site?`<div style="margin-top:18px;padding:6px 20px;background:rgba(255,255,255,.2);border-radius:30px;font-size:13px;color:rgba(255,255,255,.9);position:relative;">${esc(d.site)}</div>`:''}
+    ${arcTextSVG(tp)}
   </div>
 </div>`;
 }

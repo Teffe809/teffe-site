@@ -213,6 +213,56 @@ JSON:`,
   }
 }
 
+// ── Enriquece prompt de ilustração com Claude Haiku (80+ palavras, cartoon) ──
+async function enriquecerPromptIlustracao(
+  promptOriginal: string,
+  apiKey: string,
+): Promise<string> {
+  if (!promptOriginal) return promptOriginal;
+  const wordCount = promptOriginal.trim().split(/\s+/).length;
+  if (wordCount >= 80) return promptOriginal; // já é detalhado o suficiente
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 350,
+        messages: [{
+          role: 'user',
+          content: `You are an expert at writing image generation prompts for Flux AI.
+
+Expand the following brief description into a vivid, detailed image generation prompt. Requirements:
+- Written entirely in English
+- Colorful cute cartoon style (friendly mascot, children's book illustration, vibrant 2D art)
+- If characters are involved: specify exact number (e.g. "one character", "two characters"), their position in frame, facial expression (happy, cheerful, smiling), and pose
+- Describe the scene and background environment in detail
+- Specify warm, cheerful, natural lighting
+- Always end with: "cartoon style, colorful, cute, vibrant colors, clean lineart, professional illustration, high quality, highly detailed"
+- Minimum 80 words total
+- Output ONLY the prompt text — no explanations, no markdown, no labels
+
+Brief description: "${promptOriginal}"
+
+Expanded prompt:`,
+        }],
+      }),
+    });
+    if (!res.ok) return promptOriginal;
+    const data = await res.json() as { content?: Array<{ text: string }> };
+    const expanded = (data.content?.[0]?.text ?? '').trim();
+    console.log('[enriquecer-prompt] palavras orig:', wordCount, '→ enriquecido:', expanded.split(/\s+/).length);
+    return expanded || promptOriginal;
+  } catch (e) {
+    console.log('[enriquecer-prompt] erro:', e);
+    return promptOriginal;
+  }
+}
+
 // ── Gera PDF de ordem de produção (exclusivo teffe-press) ────────────────────
 async function gerarOrdemProducaoPDF(dados: {
   cliente: string; telefone: string; resumo: string; arteUrl: string;
@@ -592,6 +642,11 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
         observacoes:      dadosJson.observacoes      || '',
       };
       if (bgUrlResolvido) console.log('[mia-chat] combinado: reutilizando ilustração:', bgUrlResolvido.substring(0, 60));
+
+      // Enriquece prompt de ilustração com Claude Haiku — mínimo 80 palavras, cartoon colorido
+      if (dadosArte.ilustracao_prompt) {
+        dadosArte.ilustracao_prompt = await enriquecerPromptIlustracao(dadosArte.ilustracao_prompt, apiKey);
+      }
       console.log('[mia-chat] dados arte:', JSON.stringify(dadosArte));
 
       const imageUrl = await chamarGerarArte(dadosArte, supabaseUrl, serviceKey);
