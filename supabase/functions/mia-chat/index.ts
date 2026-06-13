@@ -553,6 +553,44 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
       if (logoAnalise) console.log('[mia-chat] logo analisado:', JSON.stringify(logoAnalise));
     }
   }
+  // ── teffe-press: documentMessage → logo via arquivo ──
+  // PDF/PNG chegam como document; o texto do cliente vem numa mensagem separada.
+  // Salva [logo_pendente: URL] no histórico e envia ack imediato sem chamar Claude.
+  if (instancia === 'teffe-press' && msgObj.documentMessage) {
+    const doc          = msgObj.documentMessage as Record<string, unknown>;
+    const dataMediaUrl = String((data as Record<string, unknown>).mediaUrl ?? '');
+    const docUrl       = dataMediaUrl || String(doc.url ?? '');
+    const fileName     = String(doc.fileName ?? 'arquivo');
+    console.log('[mia-chat] DOC_DEBUG:', JSON.stringify({ docUrl: docUrl.substring(0, 100), fileName }));
+    if (docUrl) {
+      let histDoc: Msg[] = [];
+      try {
+        const histRes = await fetch(
+          `${supabaseUrl}/rest/v1/mia_conversas_whatsapp?instancia=eq.${encodeURIComponent(instancia)}&telefone=eq.${encodeURIComponent(telefone)}&select=historico,pausado`,
+          { headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` } },
+        );
+        if (histRes.ok) {
+          const rows = await histRes.json() as Array<{ historico: Msg[]; pausado: boolean }>;
+          if (rows.length > 0) histDoc = rows[0].historico ?? [];
+        }
+      } catch (_) {}
+      const ackDoc = 'Arquivo recebido! 😊 Me passa os dados que você quer no cartão e já preparo a arte pra você.';
+      histDoc.push({ role: 'user',      content: `[logo_pendente: ${docUrl}] arquivo: ${fileName}` });
+      histDoc.push({ role: 'assistant', content: ackDoc });
+      fetch(`${supabaseUrl}/rest/v1/mia_conversas_whatsapp?on_conflict=instancia,telefone`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, Prefer: 'resolution=merge-duplicates' },
+        body: JSON.stringify({ instancia, telefone, historico: histDoc, updated_at: new Date().toISOString() }),
+      }).catch(console.error);
+      fetch(`${EVOLUTION_URL}/message/sendText/${instancia}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', apikey: evolutionKey },
+        body: JSON.stringify({ number: telefone, text: ackDoc }),
+      }).catch(console.error);
+      return new Response('OK', { status: 200 });
+    }
+  }
+
   // Monta textoFinal: caption + [logo recebido] + [cores_logo] para o histórico
   let textoFinal: string;
   if (logoUrl) {
@@ -594,6 +632,28 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
   } catch (_) { /* começa do zero se o banco falhar */ }
 
   if (pausado) return new Response('OK', { status: 200 });
+
+  // ── Combina logo_pendente (de documentMessage anterior) com texto atual ──
+  if (!logoUrl && texto) {
+    const pendEntry = [...historico]
+      .map((m, i) => ({ m, i }))
+      .reverse()
+      .find(({ m }) => m.role === 'user' && m.content.includes('[logo_pendente:'));
+    if (pendEntry) {
+      const matchPend = pendEntry.m.content.match(/\[logo_pendente:\s*([^\]]+)\]/);
+      if (matchPend) {
+        logoUrl = matchPend[1].trim();
+        // Marca como processado para não reutilizar em mensagens futuras
+        historico[pendEntry.i] = { role: 'user', content: '[logo_pendente: processado]' };
+        // Analisa cores via Vision
+        logoAnalise = await analisarLogo(logoUrl, evolutionKey, apiKey);
+        if (logoAnalise) console.log('[mia-chat] logo pendente analisado:', JSON.stringify(logoAnalise));
+        // Reconstrói textoFinal com logo + cores embutidos
+        const coresTagP = logoAnalise ? ` [cores_logo: ${JSON.stringify(logoAnalise)}]` : '';
+        textoFinal = `${texto} [logo recebido: ${logoUrl}]${coresTagP}`;
+      }
+    }
+  }
 
   const primeiraMsg = historico.length === 0;
   historico.push({ role: 'user', content: textoFinal });
