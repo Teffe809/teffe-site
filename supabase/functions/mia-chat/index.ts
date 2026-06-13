@@ -172,6 +172,55 @@ async function buscarLogoBase64(url: string, evolutionApiKey: string): Promise<s
   } catch { return url; }
 }
 
+// ── Analisa cores do logo via Claude Vision ───────────────────────────────────
+async function analisarLogo(
+  url: string,
+  evolutionApiKey: string,
+  anthropicApiKey: string,
+): Promise<{ cor_primaria: string; cor_secundaria: string; descricao: string } | null> {
+  if (!url || url.startsWith('data:')) return null;
+  try {
+    const imgRes = await fetch(url, {
+      headers: { apikey: evolutionApiKey },
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!imgRes.ok) { console.log('[analisar-logo] fetch falhou:', imgRes.status); return null; }
+    const buf  = await imgRes.arrayBuffer();
+    const b64  = btoa(new Uint8Array(buf).reduce((a, b) => a + String.fromCharCode(b), ''));
+    const rawCt = imgRes.headers.get('content-type') ?? 'image/jpeg';
+    const mediaType = (['image/jpeg','image/png','image/gif','image/webp'].includes(rawCt.split(';')[0])
+      ? rawCt.split(';')[0] : 'image/jpeg') as 'image/jpeg'|'image/png'|'image/gif'|'image/webp';
+
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': anthropicApiKey, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 150,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: mediaType, data: b64 } },
+            { type: 'text', text: `Analise este logo e responda APENAS com JSON válido, sem markdown, sem texto extra.
+Campos:
+- cor_primaria: cor mais dominante em hex (ex: "#1B3A6B")
+- cor_secundaria: segunda cor mais presente em hex (ex: "#C9A84C")
+- descricao: descrição do logo em até 12 palavras em português
+
+JSON:` },
+          ],
+        }],
+      }),
+    });
+    if (!res.ok) return null;
+    const d   = await res.json() as { content?: Array<{ text: string }> };
+    const txt = (d.content?.[0]?.text ?? '').trim();
+    const m   = txt.match(/\{[\s\S]*\}/);
+    if (!m) return null;
+    return JSON.parse(m[0]) as { cor_primaria: string; cor_secundaria: string; descricao: string };
+  } catch (e) { console.log('[analisar-logo] erro:', e); return null; }
+}
+
 // ── Extrai dados do produto da conversa via Claude Haiku ─────────────────────
 async function extrairDadosProduto(
   historico: { role: string; content: string }[],
@@ -484,11 +533,11 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
 
   // Mensagem de mídia sem legenda — injeta placeholder para Claude responder
   let logoUrl = '';
+  let logoAnalise: { cor_primaria: string; cor_secundaria: string; descricao: string } | null = null;
   if (instancia === 'teffe-press' && msgObj.imageMessage) {
     const dataMediaUrl = String((data as Record<string, unknown>).mediaUrl ?? '');
     const img = msgObj.imageMessage as Record<string, unknown>;
     logoUrl = dataMediaUrl || String(img.url ?? img.mediaUrl ?? '');
-    // Log de diagnóstico — mostra estrutura real do payload para confirmar onde está o caption
     console.log('[mia-chat] IMAGE_DEBUG:', JSON.stringify({
       mediaUrl:          dataMediaUrl.substring(0, 100),
       img_caption:       img.caption,
@@ -498,13 +547,22 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
       texto_resolvido:   texto,
       logoUrl_resolvido: logoUrl.substring(0, 100),
     }));
+    // Analisa cores do logo via Claude Vision — resultado injetado no histórico como [cores_logo]
+    if (logoUrl) {
+      logoAnalise = await analisarLogo(logoUrl, evolutionKey, Deno.env.get('ANTHROPIC_API_KEY') ?? '');
+      if (logoAnalise) console.log('[mia-chat] logo analisado:', JSON.stringify(logoAnalise));
+    }
   }
-  // Quando cliente envia imagem com legenda na mesma mensagem, preserva ambos
-  const textoFinal = texto && logoUrl
-    ? `${texto} [logo recebido: ${logoUrl}]`
-    : texto
-    || (logoUrl ? `[logo recebido: ${logoUrl}]` : '')
-    || (isMedia ? '[arquivo recebido]' : '');
+  // Monta textoFinal: caption + [logo recebido] + [cores_logo] para o histórico
+  let textoFinal: string;
+  if (logoUrl) {
+    const coresTag = logoAnalise ? ` [cores_logo: ${JSON.stringify(logoAnalise)}]` : '';
+    textoFinal = texto
+      ? `${texto} [logo recebido: ${logoUrl}]${coresTag}`
+      : `[logo recebido: ${logoUrl}]${coresTag}`;
+  } else {
+    textoFinal = texto || (isMedia ? '[arquivo recebido]' : '');
+  }
   if (!textoFinal) return new Response('OK', { status: 200 });
 
   const nome = String(data.pushName ?? '');
