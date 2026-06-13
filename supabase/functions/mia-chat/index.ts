@@ -300,7 +300,7 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
 
   const instancia = String(body.instance ?? '');
   const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+  const serviceKey = Deno.env.get('SERVICE_ROLE_KEY') ?? '';
   const evolutionKey = Deno.env.get('EVOLUTION_API_KEY') ?? '';
   const apiKey = Deno.env.get('ANTHROPIC_API_KEY') ?? '';
 
