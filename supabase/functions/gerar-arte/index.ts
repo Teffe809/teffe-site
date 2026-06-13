@@ -322,6 +322,77 @@ function tplTecnologico3(d: ProdutoInput, logo: string): string {
 </div></div>`;
 }
 
+// ── tplTecnologicoZ: full-doc template — dois cards side-by-side standalone ──
+function tplTecnologicoZ(d: ProdutoInput, logoB64: string): string {
+  const primeiraLetra = (d.empresa || d.nome || 'T')[0].toUpperCase();
+  const cor1 = d.cor_primaria  || '#142D63';
+  const cor2 = d.cor_secundaria || '#F58220';
+  const emp  = esc(d.empresa  || 'EMPRESA');
+  const nom  = esc(d.nome     || '');
+  const car  = esc(d.cargo    || '');
+  const tag  = esc(d.texto_secundario || '');
+  const tel  = esc(d.telefone || '');
+  const mail = esc(d.email    || '');
+  const site = esc(d.site     || '');
+
+  const logoHtml = logoB64
+    ? `<img src="${logoB64}" style="width:130px;height:130px;object-fit:contain;">`
+    : `<div style="background:${cor1};clip-path:polygon(25% 6.7%,75% 6.7%,100% 50%,75% 93.3%,25% 93.3%,0% 50%);width:130px;height:130px;position:relative;display:flex;justify-content:center;align-items:center;"><span style="color:${cor2};font-size:70px;font-weight:800;">${primeiraLetra}</span></div>`;
+
+  const logoSmallHtml = logoB64
+    ? `<img src="${logoB64}" style="width:90px;height:90px;object-fit:contain;">`
+    : `<div style="width:90px;height:90px;background:${cor1};border:4px solid ${cor2};clip-path:polygon(25% 6.7%,75% 6.7%,100% 50%,75% 93.3%,25% 93.3%,0% 50%);display:flex;justify-content:center;align-items:center;color:${cor2};font-size:42px;font-weight:800;">${primeiraLetra}</div>`;
+
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Montserrat',sans-serif;}
+body{background:#1b1b1b;display:flex;justify-content:center;align-items:center;gap:0;min-height:100vh;padding:0;flex-wrap:nowrap;}
+.card{width:1050px;height:600px;border-radius:20px;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.35);position:relative;}
+.front{background:#ffffff;position:relative;}
+.front::after{content:'';position:absolute;bottom:0;left:0;width:100%;height:90px;background:linear-gradient(90deg,${cor1},${cor2});clip-path:polygon(0 30%,100% 0,100% 100%,0 100%);}
+.logo-area{height:100%;display:flex;align-items:center;padding:80px;gap:35px;}
+.company h1{font-size:82px;line-height:1;color:${cor1};}
+.company h2{margin-top:10px;color:${cor2};letter-spacing:12px;font-weight:500;font-size:24px;}
+.back{background:linear-gradient(135deg,#0d1d45,${cor1} 40%,#0d1d45);color:white;}
+.back-content{display:flex;height:100%;}
+.left{width:35%;padding:60px;border-right:1px solid rgba(255,255,255,.12);}
+.brand{margin-top:25px;font-size:34px;font-weight:800;color:white;}
+.brand span{color:${cor2};}
+.right{flex:1;padding:60px;}
+.name{font-size:42px;font-weight:700;}
+.position{color:${cor2};font-size:20px;margin-top:8px;margin-bottom:40px;}
+.info{display:flex;align-items:center;gap:15px;margin-bottom:22px;font-size:20px;}
+.icon{width:40px;height:40px;border-radius:50%;background:${cor2};display:flex;justify-content:center;align-items:center;font-weight:700;color:white;flex-shrink:0;}
+</style></head>
+<body>
+<div class="card front">
+  <div class="logo-area">
+    ${logoHtml}
+    <div class="company">
+      <h1>${emp}</h1>
+      <h2>${tag}</h2>
+    </div>
+  </div>
+</div>
+<div class="card back">
+  <div class="back-content">
+    <div class="left">
+      ${logoSmallHtml}
+      <div class="brand">${emp}</div>
+    </div>
+    <div class="right">
+      <div class="name">${nom}</div>
+      <div class="position">${car}</div>
+      ${mail ? `<div class="info"><div class="icon">@</div>${mail}</div>` : ''}
+      ${tel  ? `<div class="info"><div class="icon">&#9990;</div>${tel}</div>` : ''}
+      ${site ? `<div class="info"><div class="icon">W</div>${site}</div>` : ''}
+    </div>
+  </div>
+</div>
+</body></html>`;
+}
+
 // ── tplSaude1: emerald green + gold, EKG decoration ────────────────────────
 function tplSaude1(d: ProdutoInput, logo: string): string {
   const cp=d.cor_primaria||'#2e7d32', cs=d.cor_secundaria||'#b8860b';
@@ -979,7 +1050,7 @@ function tplOverlaySimples(d: ProdutoInput, w: number, h: number): string {
 // ════════════════════════════════════════════════════════════════════════════
 // ROTEADOR PRINCIPAL
 // ════════════════════════════════════════════════════════════════════════════
-interface RenderResult { html: string; w: number; h: number; }
+interface RenderResult { html: string; w: number; h: number; fullDoc?: boolean; }
 
 function normalizarTipo(t: string): string {
   const m: Record<string,string> = {
@@ -1058,6 +1129,9 @@ function buildHTML(d: ProdutoInput, logo: string, bgUrl?: string): RenderResult 
   // cartao_visita — roteado por estilo
   const estilo = (d.estilo ?? '').toLowerCase();
   let inner: string;
+  if (estilo.includes('tecnologico-z') || estilo === 'z') {
+    return { html: tplTecnologicoZ(d, logo), w: 2100, h: 600, fullDoc: true };
+  }
   if (estilo.includes('tecno')) {
     const v = pick(3);
     inner = v === 0 ? tplTecnologico1(d,logo) : v === 1 ? tplTecnologico2(d,logo) : tplTecnologico3(d,logo);
@@ -1101,15 +1175,22 @@ async function aplicarMockupCaneca(artUrl: string): Promise<string | null> {
 // ════════════════════════════════════════════════════════════════════════════
 // RENDERIZADORES
 // ════════════════════════════════════════════════════════════════════════════
-async function renderizarHCTI(html: string, w: number, h: number): Promise<string | null> {
+async function renderizarHCTI(html: string, w: number, h: number, fullDoc = false): Promise<string | null> {
   const userId = Deno.env.get('HCTI_USER_ID') ?? '';
   const apiKey = Deno.env.get('HCTI_API_KEY') ?? '';
   if (!userId || !apiKey) return null;
   try {
+    const hctiBody: Record<string, unknown> = {
+      html,
+      google_fonts: fullDoc ? 'Montserrat:300,400,500,600,700,800' : 'Poppins:300,400,600,700,800,900',
+      viewport_width: w,
+      viewport_height: h,
+    };
+    if (!fullDoc) hctiBody.selector = '#wrapper';
     const res = await fetch('https://hcti.io/v1/image', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Basic ${btoa(`${userId}:${apiKey}`)}` },
-      body: JSON.stringify({ html, google_fonts: 'Poppins:300,400,600,700,800,900', viewport_width: w, viewport_height: h, selector: '#wrapper' }),
+      body: JSON.stringify(hctiBody),
     });
     if (res.ok) {
       const data = await res.json() as { url: string };
@@ -1229,8 +1310,8 @@ Deno.serve(async (req: Request) => {
       if (bgUrl) console.log('[gerar-arte] combinado: fundo =', bgUrl.substring(0, 60));
 
       const logo = d.logo_url ? await logoParaBase64(d.logo_url) : '';
-      const { html, w, h } = buildHTML(d, logo, bgUrl);
-      const imageUrl = await renderizarHCTI(html, w, h) ?? await renderizarBrowserless(html, w, h);
+      const { html, w, h, fullDoc } = buildHTML(d, logo, bgUrl);
+      const imageUrl = await renderizarHCTI(html, w, h, fullDoc) ?? await renderizarBrowserless(html, w, h);
 
       if (!imageUrl) {
         return new Response(
@@ -1259,8 +1340,8 @@ Deno.serve(async (req: Request) => {
     if (d.observacoes) console.log('[gerar-arte] observacoes:', d.observacoes);
 
     const logo = d.logo_url ? await logoParaBase64(d.logo_url) : '';
-    const { html, w, h } = buildHTML(d, logo);
-    const imageUrl = await renderizarHCTI(html, w, h) ?? await renderizarBrowserless(html, w, h);
+    const { html, w, h, fullDoc } = buildHTML(d, logo);
+    const imageUrl = await renderizarHCTI(html, w, h, fullDoc) ?? await renderizarBrowserless(html, w, h);
 
     if (!imageUrl) {
       return new Response(
