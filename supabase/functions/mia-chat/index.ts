@@ -680,7 +680,7 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
       .find(({ m }) => m.role === 'user' && m.content.includes('[logo_pendente:'));
     if (pendEntry) {
       const matchPend = pendEntry.m.content.match(/\[logo_pendente:\s*([^\]]+)\]/);
-      if (matchPend) {
+      if (matchPend && matchPend[1].trim() !== 'processado') {
         logoUrl = matchPend[1].trim();
         // Marca como processado para não reutilizar em mensagens futuras
         historico[pendEntry.i] = { role: 'user', content: '[logo_pendente: processado]' };
