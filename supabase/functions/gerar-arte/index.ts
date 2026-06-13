@@ -26,6 +26,8 @@ interface ProdutoInput {
 
 // ── Utilitários ───────────────────────────────────────────────────────────────
 async function logoParaBase64(url: string): Promise<string> {
+  if (!url) return '';
+  if (url.startsWith('data:')) return url; // já foi convertido em mia-chat
   try {
     const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
     if (!res.ok) return '';

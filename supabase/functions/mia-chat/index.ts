@@ -156,6 +156,22 @@ async function chamarGerarArte(
   }
 }
 
+// ── Converte logo para base64 (com apikey Evolution para URLs privadas) ───────
+async function buscarLogoBase64(url: string, evolutionApiKey: string): Promise<string> {
+  if (!url || url.startsWith('data:')) return url;
+  try {
+    const res = await fetch(url, {
+      headers: { apikey: evolutionApiKey },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return url; // mantém URL original se inacessível
+    const buf = await res.arrayBuffer();
+    const b64 = btoa(new Uint8Array(buf).reduce((a, b) => a + String.fromCharCode(b), ''));
+    const ct  = res.headers.get('content-type') ?? 'image/png';
+    return `data:${ct};base64,${b64}`;
+  } catch { return url; }
+}
+
 // ── Extrai dados do produto da conversa via Claude Haiku ─────────────────────
 async function extrairDadosProduto(
   historico: { role: string; content: string }[],
@@ -473,7 +489,10 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
     const img = msgObj.imageMessage as Record<string, unknown>;
     logoUrl = dataMediaUrl || String(img.url ?? img.mediaUrl ?? '');
   }
-  const textoFinal = texto
+  // Quando cliente envia imagem com legenda na mesma mensagem, preserva ambos
+  const textoFinal = texto && logoUrl
+    ? `${texto} [logo recebido: ${logoUrl}]`
+    : texto
     || (logoUrl ? `[logo recebido: ${logoUrl}]` : '')
     || (isMedia ? '[arquivo recebido]' : '');
   if (!textoFinal) return new Response('OK', { status: 200 });
@@ -621,6 +640,13 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
       const bgUrlResolvido = dadosJson.background_url
         || (modoDados === 'combinado' && !dadosJson.ilustracao_prompt ? ilustUrlHist : '');
 
+      // Logo: converte para base64 aqui (mia-chat tem a chave da Evolution API)
+      const logoUrlBruto = extraido.logo_url || dadosJson.logo_url || '';
+      const logoUrlFinal = logoUrlBruto
+        ? await buscarLogoBase64(logoUrlBruto, evolutionKey)
+        : '';
+      if (logoUrlFinal) console.log('[mia-chat] logo resolvido:', logoUrlFinal.startsWith('data:') ? 'base64 ok' : logoUrlFinal.substring(0, 60));
+
       // Merge: texto extraído tem prioridade para campos de texto; JSON mantém tipo/modo/cores
       const dadosArte: Record<string, string> = {
         tipo_produto:     dadosJson.tipo_produto     || 'cartao_visita',
@@ -633,7 +659,7 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
         telefone:         extraido.telefone          || dadosJson.telefone          || '',
         email:            extraido.email             || dadosJson.email             || '',
         site:             extraido.site              || dadosJson.site              || '',
-        logo_url:         extraido.logo_url          || dadosJson.logo_url          || '',
+        logo_url:         logoUrlFinal,
         texto_principal:  extraido.texto_principal   || dadosJson.texto_principal   || '',
         texto_secundario: extraido.texto_secundario  || dadosJson.texto_secundario  || '',
         cor_primaria:     dadosJson.cor_primaria     || '#1B3A6B',
