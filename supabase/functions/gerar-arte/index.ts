@@ -133,13 +133,21 @@ function wrapHTML(inner: string, obs: string, w: number, h: number, bgUrl?: stri
   const bgLayer = bgUrl
     ? `<div style="position:absolute;top:0;left:0;width:${w}px;height:${h}px;background-image:url('${bgUrl}');background-size:cover;background-position:center;z-index:0;"></div><div style="position:absolute;top:0;left:0;width:${w}px;height:${h}px;background:rgba(0,0,0,0.48);z-index:1;"></div>`
     : '';
+  // Marca d'água de prévia — visível em todas as imagens, removida na arte final aprovada
+  const wmFs = Math.max(12, Math.min(22, Math.round(Math.max(w, h) * 0.007)));
+  const wmH  = Math.round(wmFs * 2.6);
+  const watermark = `<div id="preview-watermark" style="position:absolute;bottom:0;left:0;width:${w}px;height:${wmH}px;background:rgba(0,0,0,0.58);display:flex;align-items:center;justify-content:center;gap:${Math.round(wmFs * 0.6)}px;z-index:99;pointer-events:none;">
+<span style="font-size:${wmFs}px;font-weight:400;color:rgba(255,255,255,.60);letter-spacing:1.2px;font-family:'Poppins',sans-serif;">Prévia — Arte gerada pela Maya IA</span>
+<span style="font-size:${wmFs}px;color:rgba(255,255,255,.30);">•</span>
+<span style="font-size:${wmFs}px;font-weight:600;color:rgba(255,255,255,.60);letter-spacing:.8px;font-family:'Poppins',sans-serif;">Gráfica Damasceno</span>
+</div>`;
   return `<!DOCTYPE html><html><head><meta charset="UTF-8">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
 <style>*{margin:0;padding:0;box-sizing:border-box;}body{background:#0a0a14;font-family:'Poppins',sans-serif;}</style>${css}
 </head><body>
 <div id="wrapper" style="width:${w}px;background:#0a0a14;">
-<div id="produto" style="width:${w}px;height:${h}px;overflow:hidden;position:relative;">${bgLayer}${inner}
+<div id="produto" style="width:${w}px;height:${h}px;overflow:hidden;position:relative;">${bgLayer}${inner}${watermark}
 </div>
 <div style="width:${w}px;height:30px;background:#0a0a14;display:flex;align-items:center;justify-content:center;gap:10px;">
 <span style="font-size:9px;font-weight:300;color:rgba(255,255,255,.28);letter-spacing:2.5px;text-transform:uppercase;">Arte gerada por Maya</span>
@@ -770,32 +778,47 @@ function folderCriativo(d: ProdutoInput, logo: string): string {
 // ════════════════════════════════════════════════════════════════════════════
 // OVERLAY SIMPLES — texto centralizado sobre ilustração de fundo
 // ════════════════════════════════════════════════════════════════════════════
+function posicaoOverlayTexto(obs: string): 'flex-start' | 'center' | 'flex-end' {
+  const o = (obs || '').toLowerCase();
+  if (o.match(/inferior|baixo|bottom|rodap[eé]|base\s+da/)) return 'flex-end';
+  if (o.match(/cent(ro|er|ral)|meio|middle/)) return 'center';
+  return 'flex-start'; // padrão: topo — melhor para ilustrações com personagem no centro
+}
+
 function tplOverlaySimples(d: ProdutoInput, w: number, h: number): string {
-  const cp   = d.cor_primaria;
-  const emp  = esc(d.empresa || d.nome || '');
-  const tp   = esc(d.texto_principal || '');
-  const ts   = esc(d.texto_secundario || '');
-  const base = Math.min(w, h);
-  const sh   = '0 2px 24px rgba(0,0,0,.98),0 0 60px rgba(0,0,0,.8)';
-  const shSm = '0 1px 12px rgba(0,0,0,.98)';
-  const fsEmp  = Math.round(base * 0.055);
-  const fsMain = Math.round(base * (tp ? 0.085 : 0.07));
-  const fsSub  = Math.round(base * 0.036);
-  const fsCtx  = Math.round(base * 0.028);
-  const gap    = (n: number) => `${Math.round(base * n)}px`;
+  const cp      = d.cor_primaria;
+  const emp     = esc(d.empresa || d.nome || '');
+  const tp      = esc(d.texto_principal || '');
+  const ts      = esc(d.texto_secundario || '');
+  const base    = Math.min(w, h);
+  const sh      = '0 2px 24px rgba(0,0,0,.98),0 0 60px rgba(0,0,0,.8)';
+  const shSm    = '0 1px 12px rgba(0,0,0,.98)';
+  const fsEmp   = Math.round(base * 0.055);
+  const fsMain  = Math.round(base * (tp ? 0.085 : 0.07));
+  const fsSub   = Math.round(base * 0.036);
+  const fsCtx   = Math.round(base * 0.028);
+  const sp      = (n: number) => `${Math.round(base * n)}px`;
+
+  // Posicionamento: topo por padrão (personagens ficam no centro livre),
+  // ou conforme instrução em observacoes
+  const justify = posicaoOverlayTexto(d.observacoes ?? '');
+  const padPx   = Math.round(h * 0.05);
+  const padStyle = justify === 'flex-start' ? `padding-top:${padPx}px;padding-bottom:0;`
+                 : justify === 'flex-end'   ? `padding-bottom:${padPx}px;padding-top:0;`
+                 : '';
 
   const contacts = [
-    d.telefone ? `<div style="font-size:${fsCtx}px;color:rgba(255,255,255,.88);text-shadow:${shSm};margin-top:${gap(.012)};">${esc(d.telefone)}</div>` : '',
-    d.email    ? `<div style="font-size:${fsCtx}px;color:rgba(255,255,255,.75);text-shadow:${shSm};margin-top:${gap(.007)};">${esc(d.email)}</div>` : '',
-    d.site     ? `<div style="font-size:${fsCtx}px;color:${cp};text-shadow:${shSm};margin-top:${gap(.007)};">${esc(d.site)}</div>` : '',
+    d.telefone ? `<div style="font-size:${fsCtx}px;color:rgba(255,255,255,.88);text-shadow:${shSm};margin-top:${sp(.012)};">${esc(d.telefone)}</div>` : '',
+    d.email    ? `<div style="font-size:${fsCtx}px;color:rgba(255,255,255,.75);text-shadow:${shSm};margin-top:${sp(.007)};">${esc(d.email)}</div>` : '',
+    d.site     ? `<div style="font-size:${fsCtx}px;color:${cp};text-shadow:${shSm};margin-top:${sp(.007)};">${esc(d.site)}</div>` : '',
   ].filter(Boolean).join('');
 
-  return `<div style="width:${w}px;height:${h}px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:${gap(.09)} ${gap(.07)};position:relative;z-index:2;box-sizing:border-box;">
-  ${emp && tp  ? `<div style="font-size:${fsEmp}px;font-weight:700;color:rgba(255,255,255,.82);letter-spacing:3px;text-transform:uppercase;text-shadow:${sh};margin-bottom:${gap(.018)};">${emp}</div>` : ''}
+  return `<div style="width:${w}px;height:${h}px;display:flex;flex-direction:column;align-items:center;justify-content:${justify};text-align:center;padding:0 ${sp(.07)};${padStyle}position:relative;z-index:2;box-sizing:border-box;">
+  ${emp && tp  ? `<div style="font-size:${fsEmp}px;font-weight:700;color:rgba(255,255,255,.82);letter-spacing:3px;text-transform:uppercase;text-shadow:${sh};margin-bottom:${sp(.018)};">${emp}</div>` : ''}
   ${emp && !tp ? `<div style="font-size:${fsMain}px;font-weight:900;color:#fff;letter-spacing:4px;text-transform:uppercase;text-shadow:${sh};line-height:1.1;">${emp}</div>` : ''}
   ${tp         ? `<div style="font-size:${fsMain}px;font-weight:900;color:#fff;line-height:1.1;text-shadow:${sh};">${tp}</div>` : ''}
-  ${ts         ? `<div style="margin-top:${gap(.025)};font-size:${fsSub}px;font-weight:400;color:rgba(255,255,255,.80);text-shadow:${shSm};line-height:1.45;">${ts}</div>` : ''}
-  ${contacts   ? `<div style="margin-top:${gap(.03)};">${contacts}</div>` : ''}
+  ${ts         ? `<div style="margin-top:${sp(.025)};font-size:${fsSub}px;font-weight:400;color:rgba(255,255,255,.80);text-shadow:${shSm};line-height:1.45;">${ts}</div>` : ''}
+  ${contacts   ? `<div style="margin-top:${sp(.03)};">${contacts}</div>` : ''}
 </div>`;
 }
 
