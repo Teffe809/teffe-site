@@ -27,9 +27,14 @@ interface ProdutoInput {
 // ── Utilitários ───────────────────────────────────────────────────────────────
 async function logoParaBase64(url: string): Promise<string> {
   if (!url) return '';
-  if (url.startsWith('data:')) return url; // já foi convertido em mia-chat
+  if (url.startsWith('data:')) return url; // já convertido em mia-chat
   try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+    // URLs do WhatsApp CDN e Evolution API exigem autenticação
+    const needsAuth = url.startsWith('https://mmg.whatsapp.net') || url.startsWith('https://evolution-api');
+    const headers: Record<string, string> = needsAuth
+      ? { apikey: Deno.env.get('EVOLUTION_API_KEY') ?? '' }
+      : {};
+    const res = await fetch(url, { headers, signal: AbortSignal.timeout(8000) });
     if (!res.ok) return '';
     const buf  = await res.arrayBuffer();
     const b64  = btoa(new Uint8Array(buf).reduce((a, b) => a + String.fromCharCode(b), ''));
@@ -170,38 +175,107 @@ function wrapHTML(inner: string, obs: string, w: number, h: number, bgUrl?: stri
 // ════════════════════════════════════════════════════════════════════════════
 // CARTÃO DE VISITA  1050×600 cada lado  → produto: 2100×600
 // ════════════════════════════════════════════════════════════════════════════
-function tplCartaoClassico(d: ProdutoInput, logo: string): string {
-  const cp=d.cor_primaria, cs=d.cor_secundaria, ico=icons(cp);
+// branco clean: fundo branco puro, única faixa gradiente de 5px na lateral esquerda
+function tplCartaoBrancoLinha(d: ProdutoInput, logo: string): string {
+  const cp=d.cor_primaria, cs=d.cor_secundaria, ico=icons('#888');
   const emp=esc(d.empresa), nom=esc(d.nome), car=esc(d.cargo);
   const contatos=[
-    d.telefone?`<div style="display:flex;align-items:center;gap:10px;">${ico.tel}<span class="contact-text" style="font-size:13px;font-weight:300;color:rgba(255,255,255,.85);">${esc(d.telefone)}</span></div>`:'',
-    d.email?`<div style="display:flex;align-items:center;gap:10px;">${ico.mail}<span class="contact-text" style="font-size:13px;font-weight:300;color:rgba(255,255,255,.85);">${esc(d.email)}</span></div>`:'',
-    d.site?`<div style="display:flex;align-items:center;gap:10px;">${ico.web}<span class="contact-text" style="font-size:13px;font-weight:300;color:rgba(255,255,255,.85);">${esc(d.site)}</span></div>`:'',
+    d.telefone?`<div style="display:flex;align-items:center;gap:9px;">${ico.tel}<span class="contact-text" style="font-size:12px;color:#555;">${esc(d.telefone)}</span></div>`:'',
+    d.email?`<div style="display:flex;align-items:center;gap:9px;">${ico.mail}<span class="contact-text" style="font-size:12px;color:#555;">${esc(d.email)}</span></div>`:'',
+    d.site?`<div style="display:flex;align-items:center;gap:9px;">${ico.web}<span class="contact-text" style="font-size:12px;color:${cp};font-weight:500;">${esc(d.site)}</span></div>`:'',
   ].filter(Boolean).join('');
   return `<div style="display:flex;width:2100px;height:600px;">
-<div id="frente" style="width:1050px;height:600px;background:linear-gradient(148deg,#07071a 0%,#11112b 45%,#090918 100%);position:relative;overflow:hidden;flex-shrink:0;">
-  <div class="decos"><div style="position:absolute;top:-130px;right:-90px;width:400px;height:400px;border-radius:50%;border:1.5px solid ${cp}22;"></div><div style="position:absolute;top:-70px;right:-30px;width:260px;height:260px;border-radius:50%;border:1px solid ${cp}44;"></div><div style="position:absolute;bottom:-110px;left:-70px;width:320px;height:320px;border-radius:50%;border:1px solid ${cs}33;"></div><div style="position:absolute;top:-60px;right:-60px;width:300px;height:300px;border-radius:50%;background:radial-gradient(circle,${cp}18 0%,transparent 70%);"></div></div>
-  <div style="position:absolute;left:0;top:0;width:4px;height:100%;background:linear-gradient(180deg,${cp},${cs});"></div>
-  <div style="position:absolute;bottom:110px;left:52px;right:52px;height:1px;background:linear-gradient(90deg,${cp}66,transparent);"></div>
-  <div class="logo-area" style="position:absolute;top:44px;left:52px;">${logo?`<img src="${logo}" style="max-height:52px;max-width:150px;object-fit:contain;filter:drop-shadow(0 0 8px ${cp}66);">`:`<span style="font-size:17px;font-weight:700;color:#fff;letter-spacing:3px;text-transform:uppercase;">${emp}</span>`}</div>
-  <div style="position:absolute;top:62px;right:52px;width:8px;height:8px;border-radius:50%;background:${cp};box-shadow:0 0 12px ${cp}99;"></div>
-  <div style="position:absolute;top:50%;left:52px;transform:translateY(-58%);max-width:600px;">
-    <div class="nome-text" style="font-size:42px;font-weight:800;color:#fff;line-height:1.08;letter-spacing:-.5px;text-shadow:0 2px 24px rgba(0,0,0,.6);">${nom}</div>
-    <div style="display:flex;align-items:center;gap:10px;margin-top:13px;"><div style="width:28px;height:2px;background:${cp};border-radius:1px;"></div><div class="cargo-text" style="font-size:14px;font-weight:500;color:${cp};letter-spacing:2.5px;text-transform:uppercase;">${car}</div></div>
-    <div style="margin-top:6px;font-size:12.5px;font-weight:300;color:rgba(255,255,255,.45);letter-spacing:.8px;">${emp}</div>
+<div id="frente" style="width:1050px;height:600px;background:#fff;position:relative;overflow:hidden;flex-shrink:0;">
+  <div style="position:absolute;left:0;top:0;width:5px;height:100%;background:linear-gradient(180deg,${cp},${cs});"></div>
+  <div style="position:absolute;bottom:92px;left:40px;right:40px;height:1px;background:#ebebeb;"></div>
+  <div class="logo-area" style="position:absolute;top:44px;left:44px;">${logo?`<img src="${logo}" style="max-height:40px;max-width:130px;object-fit:contain;">`:`<span style="font-size:10px;font-weight:700;color:#aaa;letter-spacing:3.5px;text-transform:uppercase;">${emp}</span>`}</div>
+  <div style="position:absolute;top:44px;right:44px;width:7px;height:7px;border-radius:50%;background:${cp};"></div>
+  <div style="position:absolute;top:50%;left:44px;transform:translateY(-60%);max-width:600px;">
+    <div class="nome-text" style="font-size:48px;font-weight:800;color:#0a0a0a;line-height:1.0;letter-spacing:-.5px;">${nom}</div>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:12px;"><div style="width:28px;height:2px;background:${cp};border-radius:1px;"></div><div class="cargo-text" style="font-size:11px;font-weight:600;color:${cp};letter-spacing:2.5px;text-transform:uppercase;">${car}</div></div>
+    <div style="margin-top:5px;font-size:11px;color:#bbb;letter-spacing:.5px;">${emp}</div>
   </div>
-  <div style="position:absolute;bottom:40px;left:52px;display:flex;flex-direction:column;gap:9px;">${contatos}</div>
+  <div style="position:absolute;bottom:26px;left:44px;display:flex;flex-direction:column;gap:8px;">${contatos}</div>
 </div>
-<div id="verso" style="width:1050px;height:600px;background:linear-gradient(148deg,${cp} 0%,${cs} 100%);position:relative;overflow:hidden;flex-shrink:0;">
-  <div style="position:absolute;top:-160px;right:-110px;width:480px;height:480px;border-radius:50%;background:rgba(255,255,255,.09);"></div>
-  <div style="position:absolute;bottom:-130px;left:-90px;width:400px;height:400px;border-radius:50%;background:rgba(255,255,255,.07);"></div>
-  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:720px;height:720px;border-radius:50%;border:1px solid rgba(255,255,255,.12);"></div>
-  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:540px;height:540px;border-radius:50%;border:1px solid rgba(255,255,255,.09);"></div>
-  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-55%);text-align:center;width:720px;">
-    ${logo?`<div class="logo-area" style="margin-bottom:20px;"><img src="${logo}" style="max-height:90px;max-width:280px;object-fit:contain;filter:brightness(0) invert(1);display:inline-block;"></div>`:''}
-    <div style="font-size:${logo?'26px':'44px'};font-weight:800;color:#fff;letter-spacing:${logo?'5px':'7px'};text-transform:uppercase;">${emp.toUpperCase()}</div>
-    ${d.cargo?`<div style="margin-top:10px;font-size:13px;font-weight:300;color:rgba(255,255,255,.65);letter-spacing:2px;text-transform:uppercase;">${car}</div>`:''}
-    ${d.site?`<div style="margin-top:16px;display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.15);padding:8px 20px;border-radius:40px;"><span style="font-size:12px;color:rgba(255,255,255,.9);">${esc(d.site)}</span></div>`:''}
+<div id="verso" style="width:1050px;height:600px;background:#f7f8fa;position:relative;overflow:hidden;flex-shrink:0;">
+  <div style="position:absolute;top:0;left:0;right:0;height:5px;background:linear-gradient(90deg,${cp},${cs});"></div>
+  <div style="position:absolute;bottom:0;left:0;right:0;height:3px;background:linear-gradient(90deg,${cs},${cp});opacity:.45;"></div>
+  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;">
+    ${logo?`<div class="logo-area" style="margin-bottom:22px;"><img src="${logo}" style="max-height:100px;max-width:310px;object-fit:contain;display:inline-block;"></div>`:''}
+    <div style="font-size:${logo?'26px':'40px'};font-weight:800;color:#111;letter-spacing:5px;text-transform:uppercase;">${emp.toUpperCase()}</div>
+    ${d.cargo?`<div style="margin-top:8px;font-size:11px;color:#999;letter-spacing:2px;text-transform:uppercase;">${car}</div>`:''}
+    ${d.site?`<div style="margin-top:18px;display:inline-flex;align-items:center;border:1px solid ${cp}44;padding:8px 22px;border-radius:30px;"><span style="font-size:12px;color:${cp};font-weight:500;">${esc(d.site)}</span></div>`:''}
+  </div>
+</div></div>`;
+}
+
+// logo em destaque: painel esquerdo com fundo levemente tintado exibe o logo em tamanho grande; informações à direita em branco
+function tplCartaoLogoDest(d: ProdutoInput, logo: string): string {
+  const cp=d.cor_primaria, cs=d.cor_secundaria, ico=icons('#777');
+  const emp=esc(d.empresa), nom=esc(d.nome), car=esc(d.cargo);
+  const inicial=(d.empresa||'G').charAt(0).toUpperCase();
+  const contatos=[
+    d.telefone?`<div style="display:flex;align-items:center;gap:9px;">${ico.tel}<span class="contact-text" style="font-size:12px;color:#555;">${esc(d.telefone)}</span></div>`:'',
+    d.email?`<div style="display:flex;align-items:center;gap:9px;">${ico.mail}<span class="contact-text" style="font-size:12px;color:#555;">${esc(d.email)}</span></div>`:'',
+    d.site?`<div style="display:flex;align-items:center;gap:9px;">${ico.web}<span class="contact-text" style="font-size:12px;color:${cp};font-weight:500;">${esc(d.site)}</span></div>`:'',
+  ].filter(Boolean).join('');
+  return `<div style="display:flex;width:2100px;height:600px;">
+<div id="frente" style="width:1050px;height:600px;background:#fff;position:relative;overflow:hidden;flex-shrink:0;display:flex;">
+  <div style="width:340px;height:600px;background:${cp}0d;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;position:relative;flex-shrink:0;">
+    <div style="position:absolute;right:0;top:0;width:1px;height:100%;background:${cp}22;"></div>
+    ${logo?`<div class="logo-area"><img src="${logo}" style="max-height:170px;max-width:255px;object-fit:contain;display:block;"></div>`
+         :`<div style="width:110px;height:110px;border-radius:50%;background:${cp};display:flex;align-items:center;justify-content:center;"><span style="font-size:52px;font-weight:900;color:#fff;">${inicial}</span></div>`}
+  </div>
+  <div style="flex:1;padding:0 44px;display:flex;flex-direction:column;justify-content:center;position:relative;">
+    <div style="position:absolute;bottom:60px;left:0;right:44px;height:1px;background:#f0f0f0;"></div>
+    <div class="nome-text" style="font-size:38px;font-weight:800;color:#0a0a0a;line-height:1.05;letter-spacing:-.3px;">${nom}</div>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:10px;"><div style="width:26px;height:2px;background:${cp};"></div><div class="cargo-text" style="font-size:11px;font-weight:600;color:${cp};letter-spacing:2px;text-transform:uppercase;">${car}</div></div>
+    <div style="margin-top:4px;font-size:11px;color:#c0c0c0;letter-spacing:.5px;">${emp}</div>
+    <div style="position:absolute;bottom:18px;left:0;display:flex;flex-direction:column;gap:7px;">${contatos}</div>
+  </div>
+</div>
+<div id="verso" style="width:1050px;height:600px;background:#fff;position:relative;overflow:hidden;flex-shrink:0;">
+  <div style="position:absolute;bottom:0;left:0;right:0;height:6px;background:linear-gradient(90deg,${cp},${cs});"></div>
+  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;width:860px;">
+    ${logo?`<div class="logo-area" style="margin-bottom:24px;"><img src="${logo}" style="max-height:140px;max-width:400px;object-fit:contain;display:inline-block;"></div>`
+         :`<div style="width:100px;height:100px;border-radius:50%;background:${cp};display:inline-flex;align-items:center;justify-content:center;margin-bottom:24px;"><span style="font-size:48px;font-weight:900;color:#fff;">${inicial}</span></div>`}
+    <div style="font-size:${logo?'28px':'36px'};font-weight:800;color:#111;letter-spacing:5px;text-transform:uppercase;">${emp.toUpperCase()}</div>
+    ${d.site?`<div style="margin-top:18px;display:inline-flex;align-items:center;background:${cp}11;padding:9px 24px;border-radius:30px;"><span style="font-size:12px;color:${cp};font-weight:600;">${esc(d.site)}</span></div>`:''}
+  </div>
+</div></div>`;
+}
+
+// minimalista tipografia: nome como elemento central em tamanho enorme, decoração quase zero
+function tplCartaoMinimal(d: ProdutoInput, logo: string): string {
+  const cp=d.cor_primaria, cs=d.cor_secundaria;
+  const emp=esc(d.empresa), nom=esc(d.nome), car=esc(d.cargo);
+  const letra=(d.empresa||'G').charAt(0).toUpperCase();
+  const contatosInline=[
+    d.telefone?`<span style="font-size:11px;color:#888;">${esc(d.telefone)}</span>`:'',
+    d.email?`<span style="font-size:11px;color:#888;">${esc(d.email)}</span>`:'',
+    d.site?`<span style="font-size:11px;color:${cp};font-weight:500;">${esc(d.site)}</span>`:'',
+  ].filter(Boolean).join('<span style="color:#ddd;margin:0 10px;">·</span>');
+  return `<div style="display:flex;width:2100px;height:600px;">
+<div id="frente" style="width:1050px;height:600px;background:#fff;position:relative;overflow:hidden;flex-shrink:0;">
+  <div style="position:absolute;bottom:0;left:0;right:0;height:4px;background:linear-gradient(90deg,${cp},${cs});"></div>
+  <div class="logo-area" style="position:absolute;top:40px;left:44px;">${logo?`<img src="${logo}" style="max-height:30px;max-width:100px;object-fit:contain;">`:`<span style="font-size:9px;font-weight:700;color:#c0c0c0;letter-spacing:3.5px;text-transform:uppercase;">${emp}</span>`}</div>
+  <div style="position:absolute;top:50%;left:44px;right:44px;transform:translateY(-58%);">
+    <div class="nome-text" style="font-size:64px;font-weight:900;color:#0a0a0a;line-height:.95;letter-spacing:-2.5px;">${nom}</div>
+    <div style="display:flex;align-items:center;gap:14px;margin-top:16px;">
+      <div style="width:18px;height:3px;background:${cp};border-radius:2px;"></div>
+      <div class="cargo-text" style="font-size:11px;font-weight:400;color:#999;letter-spacing:2px;text-transform:uppercase;">${car}</div>
+    </div>
+  </div>
+  ${contatosInline?`<div style="position:absolute;bottom:22px;left:44px;display:flex;align-items:center;">${contatosInline}</div>`:''}
+</div>
+<div id="verso" style="width:1050px;height:600px;background:#fff;position:relative;overflow:hidden;flex-shrink:0;">
+  <div style="position:absolute;left:-50px;top:50%;transform:translateY(-50%);font-size:760px;font-weight:900;color:#0a0a0a;opacity:.028;line-height:1;pointer-events:none;">${letra}</div>
+  <div style="position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,${cp},${cs});"></div>
+  <div style="position:absolute;bottom:0;left:0;right:0;height:2px;background:linear-gradient(90deg,${cs},${cp});opacity:.4;"></div>
+  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;">
+    ${logo?`<div class="logo-area" style="margin-bottom:20px;"><img src="${logo}" style="max-height:80px;max-width:250px;object-fit:contain;display:inline-block;"></div>`:''}
+    <div style="font-size:${logo?'24px':'44px'};font-weight:900;color:#0a0a0a;letter-spacing:7px;text-transform:uppercase;">${emp.toUpperCase()}</div>
+    ${d.site?`<div style="margin-top:16px;font-size:12px;color:${cp};letter-spacing:2px;">${esc(d.site)}</div>`:''}
   </div>
 </div></div>`;
 }
@@ -911,9 +985,13 @@ function buildHTML(d: ProdutoInput, logo: string, bgUrl?: string): RenderResult 
     const inner = pick(2) === 0 ? folderCorporativo(d,logo) : folderCriativo(d,logo);
     return { html: wrapHTML(inner, obs, 2480, 1748, bgUrl), w: 2480, h: 1778 };
   }
-  // cartao_visita (default)
-  const v = pick(3);
-  const inner = v === 0 ? tplCartaoClassico(d,logo) : v === 1 ? tplCartaoExecutivo(d,logo) : tplCartaoBold(d,logo);
+  // cartao_visita (default) — 5 templates disponíveis
+  const v = pick(5);
+  const inner = v === 0 ? tplCartaoExecutivo(d,logo)
+              : v === 1 ? tplCartaoBold(d,logo)
+              : v === 2 ? tplCartaoBrancoLinha(d,logo)
+              : v === 3 ? tplCartaoLogoDest(d,logo)
+              : tplCartaoMinimal(d,logo);
   return { html: wrapHTML(inner, obs, 2100, 600, bgUrl), w: 2100, h: 630 };
 }
 
