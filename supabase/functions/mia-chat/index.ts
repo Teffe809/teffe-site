@@ -172,6 +172,43 @@ async function buscarLogoBase64(url: string, evolutionApiKey: string): Promise<s
   } catch { return url; }
 }
 
+// ── Salva logo no Supabase Storage para URL permanente ───────────────────────
+async function salvarLogoStorage(urlEvolution: string, telefone: string): Promise<string> {
+  try {
+    const apikey = Deno.env.get('EVOLUTION_API_KEY') ?? '';
+    const resp = await fetch(urlEvolution, {
+      headers: { apikey },
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!resp.ok) return urlEvolution;
+    const buffer = await resp.arrayBuffer();
+    const ct = resp.headers.get('content-type') ?? 'image/jpeg';
+    const ext = ct.includes('png') ? 'png' : 'jpg';
+    const nome = `${telefone.replace(/\D/g, '')}_${Date.now()}.${ext}`;
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+    const uploadResp = await fetch(`${supabaseUrl}/storage/v1/object/logos-cartao/${nome}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': ct,
+        'Authorization': `Bearer ${serviceKey}`,
+        'x-upsert': 'true',
+      },
+      body: buffer,
+    });
+    if (!uploadResp.ok) {
+      console.log('[salvarLogoStorage] upload falhou:', uploadResp.status, await uploadResp.text());
+      return urlEvolution;
+    }
+    const urlPublica = `${supabaseUrl}/storage/v1/object/public/logos-cartao/${nome}`;
+    console.log('[salvarLogoStorage] logo salvo:', urlPublica);
+    return urlPublica;
+  } catch (e) {
+    console.log('[salvarLogoStorage] exceção:', e);
+    return urlEvolution;
+  }
+}
+
 // ── Analisa cores do logo via Claude Vision ───────────────────────────────────
 async function analisarLogo(
   url: string,
@@ -549,7 +586,8 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
     }));
     // Analisa cores do logo via Claude Vision — resultado injetado no histórico como [cores_logo]
     if (logoUrl) {
-      logoAnalise = await analisarLogo(logoUrl, evolutionKey, Deno.env.get('ANTHROPIC_API_KEY') ?? '');
+      logoUrl = await salvarLogoStorage(logoUrl, telefone);
+      logoAnalise = await analisarLogo(logoUrl, Deno.env.get('EVOLUTION_API_KEY') ?? '', Deno.env.get('ANTHROPIC_API_KEY') ?? '');
       if (logoAnalise) console.log('[mia-chat] logo analisado:', JSON.stringify(logoAnalise));
     }
   }
@@ -562,6 +600,7 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
     const docUrl       = dataMediaUrl || String(doc.url ?? '');
     const fileName     = String(doc.fileName ?? 'arquivo');
     console.log('[mia-chat] DOC_DEBUG:', JSON.stringify({ docUrl: docUrl.substring(0, 100), fileName }));
+    const docUrlPermanente = docUrl ? await salvarLogoStorage(docUrl, telefone) : '';
     if (docUrl) {
       let histDoc: Msg[] = [];
       try {
@@ -575,7 +614,7 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
         }
       } catch (_) {}
       const ackDoc = 'Arquivo recebido! 😊 Me passa os dados que você quer no cartão e já preparo a arte pra você.';
-      histDoc.push({ role: 'user',      content: `[logo_pendente: ${docUrl}] arquivo: ${fileName}` });
+      histDoc.push({ role: 'user',      content: `[logo_pendente: ${docUrlPermanente || docUrl}] arquivo: ${fileName}` });
       histDoc.push({ role: 'assistant', content: ackDoc });
       fetch(`${supabaseUrl}/rest/v1/mia_conversas_whatsapp?on_conflict=instancia,telefone`, {
         method: 'POST',
