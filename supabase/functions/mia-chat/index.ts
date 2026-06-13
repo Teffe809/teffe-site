@@ -671,6 +671,7 @@ Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
   try {
     const body = await req.json();
+    console.log('[debug-entry] body keys:', Object.keys(body), '| event:', body.event);
     if (body.event && body.instance) return await handleWhatsApp(body as Record<string, unknown>);
 
     const { messages, modo, cliente_nome } = body;
