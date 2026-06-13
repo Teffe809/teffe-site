@@ -809,8 +809,9 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
 
       // Logo: converte para base64 aqui (mia-chat tem a chave da Evolution API)
       const logoUrlBruto = extraido.logo_url || dadosJson.logo_url || '';
+      const isUrlPermanente = logoUrlBruto.includes('/storage/v1/object/public/');
       const logoUrlFinal = logoUrlBruto
-        ? await buscarLogoBase64(logoUrlBruto, evolutionKey)
+        ? (isUrlPermanente ? logoUrlBruto : await buscarLogoBase64(logoUrlBruto, evolutionKey))
         : '';
       if (logoUrlFinal) console.log('[mia-chat] logo resolvido:', logoUrlFinal.startsWith('data:') ? 'base64 ok' : logoUrlFinal.substring(0, 60));
 
