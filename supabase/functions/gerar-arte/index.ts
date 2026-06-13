@@ -8,6 +8,7 @@ interface ProdutoInput {
   tipo_produto:       string;   // "cartao_visita" | "adesivo_redondo" | ...
   modo?:              string;   // "texto" | "ilustracao" | "combinado"
   ilustracao_prompt?: string;   // prompt em inglês para o Replicate (flux-schnell)
+  background_url?:    string;   // URL de ilustração já gerada (pula o Replicate)
   nome?:              string;
   cargo?:             string;
   empresa?:           string;
@@ -767,6 +768,38 @@ function folderCriativo(d: ProdutoInput, logo: string): string {
 }
 
 // ════════════════════════════════════════════════════════════════════════════
+// OVERLAY SIMPLES — texto centralizado sobre ilustração de fundo
+// ════════════════════════════════════════════════════════════════════════════
+function tplOverlaySimples(d: ProdutoInput, w: number, h: number): string {
+  const cp   = d.cor_primaria;
+  const emp  = esc(d.empresa || d.nome || '');
+  const tp   = esc(d.texto_principal || '');
+  const ts   = esc(d.texto_secundario || '');
+  const base = Math.min(w, h);
+  const sh   = '0 2px 24px rgba(0,0,0,.98),0 0 60px rgba(0,0,0,.8)';
+  const shSm = '0 1px 12px rgba(0,0,0,.98)';
+  const fsEmp  = Math.round(base * 0.055);
+  const fsMain = Math.round(base * (tp ? 0.085 : 0.07));
+  const fsSub  = Math.round(base * 0.036);
+  const fsCtx  = Math.round(base * 0.028);
+  const gap    = (n: number) => `${Math.round(base * n)}px`;
+
+  const contacts = [
+    d.telefone ? `<div style="font-size:${fsCtx}px;color:rgba(255,255,255,.88);text-shadow:${shSm};margin-top:${gap(.012)};">${esc(d.telefone)}</div>` : '',
+    d.email    ? `<div style="font-size:${fsCtx}px;color:rgba(255,255,255,.75);text-shadow:${shSm};margin-top:${gap(.007)};">${esc(d.email)}</div>` : '',
+    d.site     ? `<div style="font-size:${fsCtx}px;color:${cp};text-shadow:${shSm};margin-top:${gap(.007)};">${esc(d.site)}</div>` : '',
+  ].filter(Boolean).join('');
+
+  return `<div style="width:${w}px;height:${h}px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:${gap(.09)} ${gap(.07)};position:relative;z-index:2;box-sizing:border-box;">
+  ${emp && tp  ? `<div style="font-size:${fsEmp}px;font-weight:700;color:rgba(255,255,255,.82);letter-spacing:3px;text-transform:uppercase;text-shadow:${sh};margin-bottom:${gap(.018)};">${emp}</div>` : ''}
+  ${emp && !tp ? `<div style="font-size:${fsMain}px;font-weight:900;color:#fff;letter-spacing:4px;text-transform:uppercase;text-shadow:${sh};line-height:1.1;">${emp}</div>` : ''}
+  ${tp         ? `<div style="font-size:${fsMain}px;font-weight:900;color:#fff;line-height:1.1;text-shadow:${sh};">${tp}</div>` : ''}
+  ${ts         ? `<div style="margin-top:${gap(.025)};font-size:${fsSub}px;font-weight:400;color:rgba(255,255,255,.80);text-shadow:${shSm};line-height:1.45;">${ts}</div>` : ''}
+  ${contacts   ? `<div style="margin-top:${gap(.03)};">${contacts}</div>` : ''}
+</div>`;
+}
+
+// ════════════════════════════════════════════════════════════════════════════
 // ROTEADOR PRINCIPAL
 // ════════════════════════════════════════════════════════════════════════════
 interface RenderResult { html: string; w: number; h: number; }
@@ -791,6 +824,19 @@ function normalizarTipo(t: string): string {
 function buildHTML(d: ProdutoInput, logo: string, bgUrl?: string): RenderResult {
   const tipo = normalizarTipo(d.tipo_produto ?? 'cartao_visita');
   const obs  = d.observacoes ?? '';
+
+  // Quando bgUrl presente (ilustração pré-gerada ou via Replicate): overlay de texto
+  if (bgUrl) {
+    const dims: Record<string, [number, number]> = {
+      cartao_visita: [2100, 600], adesivo_redondo: [800, 800], adesivo_retangular: [1050, 400],
+      flyer_a5: [750, 1050], banner_vertical: [600, 1800], banner_horizontal: [1800, 600],
+      panfleto: [2100, 1500], caneca: [2100, 800], camiseta: [1200, 1200],
+      envelope_a4: [1240, 877], folder_a4: [2480, 1748],
+    };
+    const [pw, ph] = dims[tipo] ?? [1024, 1024];
+    const inner = tplOverlaySimples(d, pw, ph);
+    return { html: wrapHTML(inner, obs, pw, ph, bgUrl), w: pw, h: ph + 30 };
+  }
 
   if (tipo === 'adesivo_redondo') {
     const inner = pick(2) === 0 ? adRedondoMinimalista(d,logo) : adRedondoColorido(d,logo);
@@ -933,7 +979,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // ── MODO COMBINADO: gera ilustração de fundo + template HTML com texto ──
+    // ── MODO COMBINADO: ilustração de fundo + texto por cima ──
     if (modo === 'combinado') {
       if (!d.empresa && !d.nome && !d.texto_principal) {
         return new Response(
@@ -952,12 +998,16 @@ Deno.serve(async (req: Request) => {
       };
       const [pw, ph] = dimMap[d.tipo_produto] ?? [1024, 1024];
 
-      let bgUrl: string | undefined;
-      if (d.ilustracao_prompt) {
+      // background_url passado diretamente (ilustração já aprovada) → pula Replicate
+      let bgUrl: string | undefined = d.background_url || undefined;
+
+      if (!bgUrl && d.ilustracao_prompt) {
         console.log('[gerar-arte] combinado: gerando fundo com Replicate...');
         bgUrl = (await gerarIlustracaoReplicate(d.ilustracao_prompt, pw, ph)) ?? undefined;
-        if (!bgUrl) console.log('[gerar-arte] Replicate falhou — usando template sem fundo');
+        if (!bgUrl) console.log('[gerar-arte] Replicate falhou — renderizando sem fundo');
       }
+
+      if (bgUrl) console.log('[gerar-arte] combinado: fundo =', bgUrl.substring(0, 60));
 
       const logo = d.logo_url ? await logoParaBase64(d.logo_url) : '';
       const { html, w, h } = buildHTML(d, logo, bgUrl);
@@ -970,7 +1020,7 @@ Deno.serve(async (req: Request) => {
         );
       }
       return new Response(
-        JSON.stringify({ url: imageUrl, tipo_produto: d.tipo_produto, modo: 'combinado', background_gerado: !!bgUrl }),
+        JSON.stringify({ url: imageUrl, tipo_produto: d.tipo_produto, modo: 'combinado', background_reutilizado: !!(d.background_url), background_gerado: !!(bgUrl && !d.background_url) }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }

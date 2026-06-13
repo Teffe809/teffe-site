@@ -557,14 +557,26 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
       let dadosJson: Record<string, string> = {};
       try { dadosJson = JSON.parse(arteJson); } catch { /* continua com extração */ }
 
+      // Procura URL de ilustração prévia no histórico (para modo combinado sem novo Replicate)
+      const ilustEntry  = [...historico].reverse().find(m => m.content.includes('[ilustracao_gerada:'));
+      const ilustMatch  = ilustEntry?.content.match(/\[ilustracao_gerada:\s*([^\]]+)\]/);
+      const ilustUrlHist = ilustMatch?.[1]?.trim() ?? '';
+
       // Extração inteligente via Haiku — garante campos mesmo se o JSON vier incompleto
       const extraido = await extrairDadosProduto(historico, apiKey);
+
+      const modoDados = dadosJson.modo || 'texto';
+      // background_url: do JSON da Maya → ou da ilustração anterior no histórico
+      // (quando cliente aprova ilustração e pede texto, Maya emite modo:combinado sem ilustracao_prompt)
+      const bgUrlResolvido = dadosJson.background_url
+        || (modoDados === 'combinado' && !dadosJson.ilustracao_prompt ? ilustUrlHist : '');
 
       // Merge: texto extraído tem prioridade para campos de texto; JSON mantém tipo/modo/cores
       const dadosArte: Record<string, string> = {
         tipo_produto:     dadosJson.tipo_produto     || 'cartao_visita',
-        modo:             dadosJson.modo             || 'texto',
+        modo:             modoDados,
         ilustracao_prompt:dadosJson.ilustracao_prompt|| '',
+        background_url:   bgUrlResolvido,
         nome:             extraido.nome              || dadosJson.nome              || '',
         cargo:            extraido.cargo             || dadosJson.cargo             || '',
         empresa:          extraido.empresa           || dadosJson.empresa           || '',
@@ -579,20 +591,28 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
         estilo:           dadosJson.estilo           || 'moderno',
         observacoes:      dadosJson.observacoes      || '',
       };
+      if (bgUrlResolvido) console.log('[mia-chat] combinado: reutilizando ilustração:', bgUrlResolvido.substring(0, 60));
       console.log('[mia-chat] dados arte:', JSON.stringify(dadosArte));
 
       const imageUrl = await chamarGerarArte(dadosArte, supabaseUrl, serviceKey);
       if (imageUrl) {
+        const isIlustracao = dadosArte.modo === 'ilustracao';
         const tipoProd = dadosArte.tipo_produto.replace(/_/g,' ');
-        const msgArte = `Aqui está a prévia do seu ${tipoProd}! 😊 O que acha? Precisa de algum ajuste?`;
+        const msgArte = isIlustracao
+          ? 'Aqui está sua ilustração! 😊 O que acha? Se quiser posso adicionar seu nome, empresa ou contato por cima!'
+          : `Aqui está a prévia do seu ${tipoProd}! 😊 O que acha? Precisa de algum ajuste?`;
         fetch(`${EVOLUTION_URL}/message/sendMedia/${instancia}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', apikey: evolutionKey },
-          body: JSON.stringify({ number: telefone, mediatype: 'image', mimetype: 'image/png', caption: msgArte, media: imageUrl, fileName: 'cartao.png' }),
+          body: JSON.stringify({ number: telefone, mediatype: 'image', mimetype: 'image/png', caption: msgArte, media: imageUrl, fileName: 'arte.png' }),
         }).catch(console.error);
-        historico.push({ role: 'assistant', content: `[Arte gerada e enviada: ${imageUrl}] ${msgArte}` });
+        // Marcador especial para ilustrações — permite recuperar a URL para combinado posterior
+        const histContent = isIlustracao
+          ? `[ilustracao_gerada: ${imageUrl}] ${msgArte}`
+          : `[Arte gerada e enviada: ${imageUrl}] ${msgArte}`;
+        historico.push({ role: 'assistant', content: histContent });
       } else {
-        const msgFalha = 'Tive um probleminha ao gerar o cartão agora. 😅 Nossa equipe vai preparar e te envia em breve!';
+        const msgFalha = 'Tive um probleminha ao gerar a arte agora. 😅 Nossa equipe vai preparar e te envia em breve!';
         fetch(`${EVOLUTION_URL}/message/sendText/${instancia}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', apikey: evolutionKey },
