@@ -1314,10 +1314,12 @@ body { background: #0a0a0a; font-family: Montserrat, Arial, Helvetica, sans-seri
       </g>
     </svg>
 
-    <!-- LOGO grande centralizado na frente -->
+    <!-- LOGO grande centralizado na frente — card branco premium -->
     <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-58%);text-align:center;">
       ${logo
-        ? `<img src="${logo}" style="max-width:420px;max-height:240px;object-fit:contain;display:block;margin:0 auto;filter:brightness(0) invert(1);">`
+        ? `<div style="background:#FFFFFF;border:2px solid ${cs};border-radius:16px;padding:28px 36px;box-shadow:0 8px 40px rgba(0,0,0,0.50),0 0 20px rgba(255,255,255,0.06);display:inline-block;">
+             <img src="${logo}" style="max-width:340px;max-height:200px;object-fit:contain;display:block;">
+           </div>`
         : `<div style="text-align:center;">
              <div style="font-size:${empresaSize}px;font-weight:900;color:#FFFFFF;letter-spacing:-2px;line-height:1;">${empresa}</div>
            </div>`
