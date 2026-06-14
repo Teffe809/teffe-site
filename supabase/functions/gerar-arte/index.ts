@@ -1494,6 +1494,7 @@ function buildHTML(d: ProdutoInput, logo: string, bgUrl?: string): RenderResult 
   const layoutId = (d.layout_id ?? '').toLowerCase();
   const estilo = (d.estilo ?? '').toLowerCase();
   console.log('[gerar-arte] template debug:', JSON.stringify({ tipo_produto: d.tipo_produto, layout_id: d.layout_id, estilo: d.estilo, logo_url: (d.logo_url ?? '').substring(0, 60), temLogo: !!logo, tamanhoLogo: logo?.length || 0 }));
+  console.log('[gerar-arte] logo slice(0,80):', logo ? logo.slice(0, 80) : '(vazio)');
   if (layoutId === 'cartao_premium_dark') { return { html: tplCartaoPremiumDark(d, logo), w: 2100, h: 630, fullDoc: true }; }
   if (layoutId === 'cartao_premium') { return { html: tplCartaoPremium(d, logo), w: 2100, h: 630, fullDoc: true }; }
   if (

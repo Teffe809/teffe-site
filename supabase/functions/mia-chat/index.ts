@@ -434,12 +434,20 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
     if (urlBruta || base64Direto) {
       // 1. Salva no Storage — URL permanente (ou usa base64 direto se disponível)
       const imgMime = (() => {
+        // Detecta pelo magic bytes do base64 (mais confiável que o mimetype do WhatsApp)
+        if (base64Direto) {
+          if (base64Direto.startsWith('iVBORw0KGgo')) return 'image/png';
+          if (base64Direto.startsWith('R0lG'))        return 'image/gif';
+          if (base64Direto.startsWith('UklGR'))       return 'image/webp';
+          if (base64Direto.startsWith('/9j/'))        return 'image/jpeg';
+        }
         const mt = String((msgObj.imageMessage as Record<string, unknown>)?.mimetype ?? '');
         if (mt === 'image/png' || urlBruta.endsWith('.png')) return 'image/png';
         if (mt === 'image/gif' || urlBruta.endsWith('.gif')) return 'image/gif';
         if (mt === 'image/webp' || urlBruta.endsWith('.webp')) return 'image/webp';
         return 'image/jpeg';
       })();
+      console.log('[mia-chat] imgMime detectado:', imgMime, '| base64 início:', base64Direto.substring(0, 20));
       const urlPermanente = base64Direto
         ? `data:${imgMime};base64,${base64Direto}`
         : await salvarLogoStorage(urlBruta, telefone, supabaseUrl, storageKey, evolutionKey);
