@@ -629,10 +629,12 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
       console.log('[mia-chat] logo_url para arte:', logoUrlFinal.substring(0, 80));
 
       const todoHistorico = historico.map(m => m.content).join(' ');
-      const isDark = /premium[\s_-]*dark|(?<![a-z])dark(?![a-z])|escuro|preto\s+e\s+dourado/i.test(todoHistorico);
-      const isPremium = !isDark && /premium/i.test(todoHistorico);
-      const layoutIdDetectado = dadosJson.layout_id || (isDark ? 'cartao_premium_dark' : isPremium ? 'cartao_premium' : '');
-      const estiloDetectado = dadosJson.estilo || (isDark ? 'premium-dark' : isPremium ? 'premium' : 'moderno');
+      const isDark    = /premium[\s_-]*dark|(?<![a-z])dark(?![a-z])|escuro|preto\s+e\s+dourado/i.test(todoHistorico);
+      const isLight   = !isDark && /premium[\s_-]*light|claro|branco\s+e\s+(azul|corp)/i.test(todoHistorico);
+      const isImpacto = !isDark && !isLight && /impacto|bold|arrojado/i.test(todoHistorico);
+      const isPremium = !isDark && !isLight && !isImpacto && /premium/i.test(todoHistorico);
+      const layoutIdDetectado = dadosJson.layout_id || (isDark ? 'cartao_premium_dark' : isLight ? 'cartao_premium_light' : isImpacto ? 'cartao_impacto' : isPremium ? 'cartao_premium' : '');
+      const estiloDetectado   = dadosJson.estilo    || (isDark ? 'premium-dark' : isLight ? 'light' : isImpacto ? 'impacto' : isPremium ? 'premium' : 'moderno');
 
       const dadosArte: Record<string, string> = {
         tipo_produto: dadosJson.tipo_produto || 'cartao_visita',
