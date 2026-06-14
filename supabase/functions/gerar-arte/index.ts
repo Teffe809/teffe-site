@@ -1078,9 +1078,8 @@ function tplCartaoPremium(d: ProdutoInput, logo: string): string {
   const telefone = (d.telefone || '').replace(/&/g,'&amp;');
   const email = (d.email || '').replace(/&/g,'&amp;');
   const site = (d.site || '').replace(/&/g,'&amp;');
-  const subtitulo = (d.texto_secundario || 'TECNOLOGIA').replace(/&/g,'&amp;');
-  const empresaSize = empresa.length > 20 ? 52 : empresa.length > 12 ? 66 : 80;
-  const nomeSize = nome.length > 24 ? 46 : nome.length > 18 ? 52 : 58;
+  const nomeSize = nome.length > 24 ? 44 : nome.length > 18 ? 50 : 56;
+  const empresaSize = empresa.length > 20 ? 48 : empresa.length > 12 ? 62 : 76;
 
   return `<!DOCTYPE html>
 <html>
@@ -1095,155 +1094,119 @@ body { background: #1a1a1a; font-family: Montserrat, Arial, Helvetica, sans-seri
 <body>
 <div id="canvas">
 
-  <!-- FRENTE: 0px → 1050px -->
+  <!-- FRENTE: 0px → 1050px — logo grande centralizado -->
   <div style="position:absolute;left:0;top:0;width:1050px;height:600px;background:#FFFFFF;overflow:hidden;">
 
     <!-- Faixa diagonal laranja base -->
-    <div style="position:absolute;left:0;bottom:0;width:1050px;height:120px;overflow:hidden;">
-      <div style="position:absolute;left:-60px;bottom:-60px;width:1200px;height:160px;background:${cs};transform:rotate(-4deg);transform-origin:left bottom;"></div>
+    <div style="position:absolute;left:0;bottom:0;width:1050px;height:110px;overflow:hidden;">
+      <div style="position:absolute;left:-60px;bottom:-55px;width:1200px;height:150px;background:${cs};transform:rotate(-4deg);transform-origin:left bottom;"></div>
     </div>
-
     <!-- Faixa diagonal azul sobre laranja -->
-    <div style="position:absolute;left:0;bottom:0;width:1050px;height:90px;overflow:hidden;">
-      <div style="position:absolute;left:-60px;bottom:-50px;width:1200px;height:120px;background:${cp};transform:rotate(-4deg);transform-origin:left bottom;opacity:0.93;"></div>
+    <div style="position:absolute;left:0;bottom:0;width:1050px;height:82px;overflow:hidden;">
+      <div style="position:absolute;left:-60px;bottom:-45px;width:1200px;height:110px;background:${cp};transform:rotate(-4deg);transform-origin:left bottom;opacity:0.93;"></div>
     </div>
 
     <!-- SVG Circuitos canto superior direito -->
-    <svg style="position:absolute;top:0;right:0;width:320px;height:280px;opacity:0.07;" viewBox="0 0 320 280" xmlns="http://www.w3.org/2000/svg">
+    <svg style="position:absolute;top:0;right:0;width:280px;height:240px;opacity:0.06;" viewBox="0 0 280 240" xmlns="http://www.w3.org/2000/svg">
       <g stroke="${cp}" stroke-width="1.5" fill="none">
-        <path d="M320,0 L320,80 L240,80 L240,40 L180,40 L180,100 L260,100 L260,160 L200,160"/>
-        <path d="M320,120 L280,120 L280,180 L220,180 L220,140 L160,140 L160,200 L240,200 L240,240"/>
-        <path d="M320,200 L300,200 L300,260 L240,260"/>
-        <path d="M260,0 L260,30 L200,30 L200,70 L140,70"/>
-        <path d="M180,0 L180,20 L120,20 L120,60 L80,60 L80,120"/>
-        <circle cx="240" cy="80" r="4" fill="${cp}"/>
-        <circle cx="180" cy="40" r="4" fill="${cp}"/>
-        <circle cx="260" cy="100" r="4" fill="${cp}"/>
-        <circle cx="280" cy="180" r="4" fill="${cp}"/>
-        <circle cx="220" cy="140" r="4" fill="${cp}"/>
-        <circle cx="300" cy="200" r="4" fill="${cp}"/>
-        <rect x="228" y="68" width="24" height="24" rx="3" stroke="${cp}" stroke-width="1.5" fill="none"/>
-        <rect x="268" y="88" width="24" height="24" rx="3" stroke="${cp}" stroke-width="1.5" fill="none"/>
-        <rect x="208" y="128" width="24" height="24" rx="3" stroke="${cp}" stroke-width="1.5" fill="none"/>
+        <path d="M280,0 L280,70 L210,70 L210,30 L150,30 L150,90 L230,90 L230,150"/>
+        <path d="M280,110 L240,110 L240,170 L180,170 L180,130 L120,130"/>
+        <circle cx="210" cy="70" r="4" fill="${cp}"/>
+        <circle cx="150" cy="30" r="4" fill="${cp}"/>
+        <circle cx="240" cy="170" r="4" fill="${cp}"/>
+        <rect x="198" y="58" width="24" height="24" rx="3" stroke="${cp}" stroke-width="1.5" fill="none"/>
       </g>
     </svg>
 
     <!-- SVG Circuitos canto inferior esquerdo -->
-    <svg style="position:absolute;bottom:0;left:0;width:260px;height:220px;opacity:0.08;" viewBox="0 0 260 220" xmlns="http://www.w3.org/2000/svg">
+    <svg style="position:absolute;bottom:0;left:0;width:220px;height:180px;opacity:0.07;" viewBox="0 0 220 180" xmlns="http://www.w3.org/2000/svg">
       <g stroke="${cp}" stroke-width="1.5" fill="none">
-        <path d="M0,220 L0,140 L60,140 L60,180 L120,180 L120,120 L60,120 L60,80 L120,80"/>
-        <path d="M0,100 L40,100 L40,60 L100,60 L100,100 L160,100 L160,60"/>
-        <path d="M0,60 L20,60 L20,20 L80,20 L80,60"/>
-        <circle cx="60" cy="140" r="4" fill="${cp}"/>
-        <circle cx="120" cy="180" r="4" fill="${cp}"/>
-        <circle cx="60" cy="80" r="4" fill="${cp}"/>
-        <circle cx="40" cy="60" r="4" fill="${cp}"/>
-        <rect x="48" y="128" width="24" height="24" rx="3" stroke="${cp}" stroke-width="1.5" fill="none"/>
+        <path d="M0,180 L0,110 L50,110 L50,150 L100,150 L100,100 L50,100 L50,60"/>
+        <path d="M0,80 L40,80 L40,40 L90,40 L90,80 L140,80"/>
+        <circle cx="50" cy="110" r="4" fill="${cp}"/>
+        <circle cx="100" cy="150" r="4" fill="${cp}"/>
+        <rect x="38" y="98" width="24" height="24" rx="3" stroke="${cp}" stroke-width="1.5" fill="none"/>
       </g>
     </svg>
 
-    <!-- Hexágono decorativo fundo frente -->
-    <svg style="position:absolute;top:50%;left:520px;transform:translateY(-50%);width:160px;height:160px;opacity:0.04;" viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg">
-      <polygon points="80,8 146,44 146,116 80,152 14,116 14,44" fill="${cp}"/>
-    </svg>
+    <!-- LOGO grande centralizado na frente -->
+    <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-58%);text-align:center;">
+      ${logo
+        ? `<img src="${logo}" style="max-width:420px;max-height:240px;object-fit:contain;display:block;margin:0 auto;">`
+        : `<div style="text-align:center;">
+             <div style="font-size:${empresaSize}px;font-weight:900;color:${cp};letter-spacing:-2px;line-height:1;">${empresa}</div>
+           </div>`
+      }
+      ${logo ? `<div style="margin-top:20px;font-size:16px;font-weight:700;color:${cs};letter-spacing:6px;text-transform:uppercase;">${empresa}</div>` : ''}
+    </div>
 
-    <!-- LOGO frente -->
-    ${logo
-      ? `<img src="${logo}" style="position:absolute;left:55px;top:50%;transform:translateY(-58%);max-width:320px;max-height:220px;object-fit:contain;">`
-      : `<div style="position:absolute;left:55px;top:50%;transform:translateY(-60%);">
-           <svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-             <polygon points="50,6 90,28 90,72 50,94 10,72 10,28" fill="${cp}"/>
-             <text x="50" y="64" text-anchor="middle" font-family="Arial" font-weight="800" font-size="40" fill="${cs}">${empresa.charAt(0)}</text>
-           </svg>
-         </div>`
-    }
-
-    <!-- Linha separadora vertical -->
-    <div style="position:absolute;left:400px;top:100px;width:2px;height:360px;background:linear-gradient(180deg,transparent,${cp},transparent);"></div>
-
-    <!-- Nome da empresa e subtítulo -->
-    <div style="position:absolute;left:430px;top:50%;transform:translateY(-55%);width:620px;">
-      <div style="font-size:${empresaSize}px;font-weight:900;color:${cp};letter-spacing:-2px;line-height:1;">${empresa}</div>
-      <div style="font-size:17px;font-weight:600;color:${cs};letter-spacing:7px;text-transform:uppercase;margin-top:10px;">${subtitulo}</div>
-      <div style="display:flex;gap:8px;margin-top:20px;">
-        <div style="width:10px;height:10px;border-radius:50%;background:${cs};"></div>
-        <div style="width:10px;height:10px;border-radius:50%;background:${cp};"></div>
-        <div style="width:10px;height:10px;border-radius:50%;background:${cs};opacity:0.4;"></div>
-      </div>
+    <!-- Pontos decorativos centralizados -->
+    <div style="position:absolute;left:50%;bottom:110px;transform:translateX(-50%);display:flex;gap:10px;">
+      <div style="width:10px;height:10px;border-radius:50%;background:${cs};"></div>
+      <div style="width:10px;height:10px;border-radius:50%;background:${cp};"></div>
+      <div style="width:10px;height:10px;border-radius:50%;background:${cs};opacity:0.4;"></div>
     </div>
 
   </div>
 
-  <!-- VERSO: 1050px → 2100px -->
+  <!-- VERSO: 1050px → 2100px — informações completas -->
   <div style="position:absolute;left:1050px;top:0;width:1050px;height:600px;background:${cp};overflow:hidden;">
 
     <!-- Gradiente overlay -->
     <div style="position:absolute;left:0;top:0;width:1050px;height:600px;background:linear-gradient(135deg,rgba(0,0,0,0.35) 0%,transparent 55%);"></div>
 
     <!-- SVG Circuitos verso -->
-    <svg style="position:absolute;top:0;left:0;width:1050px;height:600px;opacity:0.09;" viewBox="0 0 1050 600" xmlns="http://www.w3.org/2000/svg">
+    <svg style="position:absolute;top:0;left:0;width:1050px;height:600px;opacity:0.08;" viewBox="0 0 1050 600" xmlns="http://www.w3.org/2000/svg">
       <g stroke="#FFFFFF" stroke-width="1.5" fill="none">
-        <path d="M0,100 L80,100 L80,40 L160,40 L160,100 L260,100 L260,160 L180,160"/>
-        <path d="M0,300 L60,300 L60,240 L140,240 L140,300 L200,300 L200,360 L120,360"/>
+        <path d="M0,100 L80,100 L80,40 L160,40 L160,100 L260,100"/>
+        <path d="M0,300 L60,300 L60,240 L140,240 L140,300 L200,300"/>
         <path d="M0,480 L100,480 L100,420 L180,420"/>
-        <path d="M1050,80 L970,80 L970,140 L890,140 L890,80 L810,80"/>
-        <path d="M1050,300 L990,300 L990,360 L910,360 L910,300 L840,300"/>
+        <path d="M1050,80 L970,80 L970,140 L890,140"/>
+        <path d="M1050,300 L990,300 L990,360 L910,360"/>
         <path d="M1050,480 L970,480 L970,420 L890,420"/>
         <circle cx="80" cy="100" r="5" fill="#FFFFFF"/>
         <circle cx="160" cy="40" r="5" fill="#FFFFFF"/>
         <circle cx="60" cy="300" r="5" fill="#FFFFFF"/>
         <circle cx="970" cy="80" r="5" fill="#FFFFFF"/>
-        <circle cx="890" cy="140" r="5" fill="#FFFFFF"/>
         <rect x="68" y="88" width="24" height="24" rx="3" stroke="#FFFFFF" stroke-width="1" fill="none"/>
         <rect x="148" y="28" width="24" height="24" rx="3" stroke="#FFFFFF" stroke-width="1" fill="none"/>
         <rect x="958" y="68" width="24" height="24" rx="3" stroke="#FFFFFF" stroke-width="1" fill="none"/>
       </g>
     </svg>
 
-    <!-- Hexágono GIGANTE atrás do nome - impacto visual -->
-    <svg style="position:absolute;left:-80px;top:50%;transform:translateY(-50%);width:500px;height:500px;opacity:0.04;" viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg">
-      <polygon points="250,20 460,135 460,365 250,480 40,365 40,135" fill="#FFFFFF"/>
-      <polygon points="250,60 430,160 430,340 250,440 70,340 70,160" fill="none" stroke="#FFFFFF" stroke-width="2"/>
+    <!-- Hexágono gigante atrás do nome -->
+    <svg style="position:absolute;left:-100px;top:50%;transform:translateY(-50%);width:520px;height:520px;opacity:0.04;" viewBox="0 0 520 520" xmlns="http://www.w3.org/2000/svg">
+      <polygon points="260,20 476,142 476,378 260,500 44,378 44,142" fill="#FFFFFF"/>
+      <polygon points="260,60 440,162 440,358 260,460 80,358 80,162" fill="none" stroke="#FFFFFF" stroke-width="2"/>
     </svg>
 
     <!-- Faixa laranja diagonal -->
-    <div style="position:absolute;left:300px;top:-20px;width:5px;height:680px;background:${cs};transform:rotate(10deg);transform-origin:top left;opacity:0.55;"></div>
-    <div style="position:absolute;left:318px;top:-20px;width:2px;height:680px;background:${cs};transform:rotate(10deg);transform-origin:top left;opacity:0.25;"></div>
+    <div style="position:absolute;left:310px;top:-20px;width:5px;height:680px;background:${cs};transform:rotate(10deg);transform-origin:top left;opacity:0.50;"></div>
+    <div style="position:absolute;left:328px;top:-20px;width:2px;height:680px;background:${cs};transform:rotate(10deg);transform-origin:top left;opacity:0.22;"></div>
 
-    <!-- Círculos decorativos cantos -->
+    <!-- Círculos decorativos -->
     <div style="position:absolute;right:-90px;top:-90px;width:320px;height:320px;border-radius:50%;border:1px solid rgba(255,255,255,0.07);"></div>
     <div style="position:absolute;right:-50px;top:-50px;width:210px;height:210px;border-radius:50%;border:1px solid rgba(255,255,255,0.05);"></div>
 
     <!-- Hexágono decorativo canto inferior direito -->
-    <svg style="position:absolute;right:50px;bottom:50px;width:120px;height:120px;opacity:0.07;" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
-      <polygon points="60,6 108,33 108,87 60,114 12,87 12,33" fill="none" stroke="#FFFFFF" stroke-width="2"/>
+    <svg style="position:absolute;right:44px;bottom:44px;width:110px;height:110px;opacity:0.07;" viewBox="0 0 110 110" xmlns="http://www.w3.org/2000/svg">
+      <polygon points="55,5 100,30 100,80 55,105 10,80 10,30" fill="none" stroke="#FFFFFF" stroke-width="2"/>
     </svg>
 
-    <!-- LOGO verso - sem filtro para preservar cores originais -->
-    ${logo
-      ? `<img src="${logo}" style="position:absolute;left:44px;bottom:32px;max-width:120px;max-height:65px;object-fit:contain;opacity:0.80;">`
-      : `<div style="position:absolute;left:44px;bottom:32px;">
-           <svg width="55" height="55" viewBox="0 0 55 55" xmlns="http://www.w3.org/2000/svg">
-             <polygon points="27,3 51,16 51,39 27,52 3,39 3,16" fill="none" stroke="${cs}" stroke-width="2"/>
-             <text x="27" y="36" text-anchor="middle" font-family="Arial" font-weight="800" font-size="22" fill="${cs}">${empresa.charAt(0)}</text>
-           </svg>
-         </div>`
-    }
-
-    <!-- Nome empresa verso fundo -->
-    <div style="position:absolute;right:44px;top:32px;text-align:right;">
-      <div style="font-size:26px;font-weight:800;color:rgba(255,255,255,0.10);letter-spacing:5px;text-transform:uppercase;">${empresa}</div>
+    <!-- Nome empresa topo direito sutil -->
+    <div style="position:absolute;right:44px;top:28px;">
+      <div style="font-size:22px;font-weight:800;color:rgba(255,255,255,0.09);letter-spacing:5px;text-transform:uppercase;">${empresa}</div>
     </div>
 
-    <!-- Nome do profissional -->
-    <div style="position:absolute;left:60px;top:72px;width:640px;">
-      <div style="font-size:${nomeSize}px;font-weight:800;color:#FFFFFF;line-height:1.05;letter-spacing:-1px;">${nome}</div>
-      <div style="font-size:21px;font-weight:600;color:${cs};letter-spacing:3px;text-transform:uppercase;margin-top:10px;">${cargo}</div>
-      <div style="width:56px;height:3px;background:${cs};margin-top:14px;border-radius:2px;"></div>
+    <!-- Nome e cargo do profissional -->
+    <div style="position:absolute;left:60px;top:68px;width:660px;">
+      <div style="font-size:${nomeSize}px;font-weight:800;color:#FFFFFF;line-height:1.05;letter-spacing:-0.5px;">${nome}</div>
+      <div style="font-size:20px;font-weight:600;color:${cs};letter-spacing:3px;text-transform:uppercase;margin-top:10px;">${cargo}</div>
+      <div style="width:52px;height:3px;background:${cs};margin-top:12px;border-radius:2px;"></div>
     </div>
 
     <!-- Contatos -->
-    <div style="position:absolute;left:60px;top:300px;">
+    <div style="position:absolute;left:60px;top:290px;">
 
       ${email ? `
       <div style="position:absolute;top:0;left:0;display:flex;align-items:center;gap:16px;">
