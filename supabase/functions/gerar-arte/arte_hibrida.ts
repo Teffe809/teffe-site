@@ -56,10 +56,12 @@ export interface BaseIA {
 }
 
 export interface ResultadoFinal {
-  html:    string;
-  w:       number;
-  h:       number;
-  fullDoc: boolean;
+  html:       string;
+  w:          number;
+  h:          number;
+  fullDoc:    boolean;
+  _provider?: string;
+  _baseUrl?:  string;   // URL pública do Supabase Storage da imagem IA — fallback quando HCTI falha
 }
 
 // ── Dimensões por produto ─────────────────────────────────────────────────────
@@ -147,21 +149,29 @@ export async function gerarBaseIA(
   const produto = normalizarTipo(d.tipo_produto ?? '');
   const prompt  = _construirPromptVisual(produto, cp, cs, d);
 
-  // ── OpenAI DALL-E 3 ────────────────────────────────────────────────────────
+  // ── OpenAI gpt-image-1 ───────────────────────────────────────────────────────
+  // _uploadToStorage usa Deno.env.get() diretamente — não precisa de repasse de env
   const openAiKey = _env?.OPENAI_API_KEY;
+  console.log('[hibrida] OPENAI_API_KEY presente:', !!openAiKey);
+
   if (openAiKey) {
-    console.log('[hibrida/openai] gerando base visual DALL-E 3 para', produto, '...');
-    const url = await _chamarOpenAI(prompt, openAiKey, produto);
-    if (url) return { url, prompt, provider: 'openai', mock: false };
-    console.warn('[hibrida/openai] falhou — usando mock SVG como fallback');
-  } else {
-    console.log('[hibrida] OPENAI_API_KEY ausente — usando mock SVG');
+    console.log('[hibrida/openai] gerando base visual gpt-image-1 para', produto, '...');
+    const resultado = await _chamarOpenAI(prompt, openAiKey, produto);
+    if (resultado.url) return { url: resultado.url, prompt, provider: 'openai', mock: false };
+    console.warn('[hibrida/openai] falhou:', resultado.erro);
+    const svg = _gerarMockSVG(produto, cp, cs);
+    return {
+      url:      `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svg)))}`,
+      prompt,
+      provider: `mock:${resultado.erro ?? 'openai_falhou'}` as 'mock',
+      mock:     true,
+    };
   }
 
-  // ── Fallback: mock SVG ─────────────────────────────────────────────────────
+  console.log('[hibrida] OPENAI_API_KEY ausente — usando mock SVG');
   const svg     = _gerarMockSVG(produto, cp, cs);
   const baseUrl = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svg)))}`;
-  return { url: baseUrl, prompt, provider: 'mock', mock: true };
+  return { url: baseUrl, prompt, provider: 'mock:key_ausente' as 'mock', mock: true };
 }
 
 function _construirPromptVisual(
@@ -227,22 +237,51 @@ function _nomeCor(hex: string): string {
   return lum < 100 ? 'dark neutral' : 'medium tone';
 }
 
-// Chama OpenAI Images (DALL-E 3) e retorna data URL base64.
-// Usa b64_json para evitar expiração de URL e dependência de fetch externo no renderer.
+// Faz upload de bytes PNG para o bucket 'artes' do Supabase Storage.
+// Lê SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY diretamente do env do Deno — não depende de parâmetros.
+async function _uploadToStorage(pngBytes: Uint8Array): Promise<string | null> {
+  const supUrl = Deno.env.get('SUPABASE_URL') ?? '';
+  const supKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+  if (!supUrl || !supKey) {
+    console.warn('[hibrida/storage] SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY ausentes');
+    return null;
+  }
+  const file = `hibrida-ia-${Date.now()}.png`;
+  try {
+    const up = await fetch(`${supUrl}/storage/v1/object/artes/${file}`, {
+      method: 'POST',
+      headers: {
+        apikey:          supKey,
+        Authorization:   `Bearer ${supKey}`,
+        'Content-Type':  'image/png',
+        'x-upsert':      'true',
+      },
+      body: pngBytes,
+      signal: AbortSignal.timeout(20_000),
+    });
+    if (up.ok) {
+      const url = `${supUrl}/storage/v1/object/public/artes/${file}`;
+      console.log('[hibrida/storage] upload OK:', url);
+      return url;
+    }
+    const errBody = await up.text();
+    console.error('[hibrida/storage] upload falhou:', up.status, errBody.slice(0, 200));
+    return null;
+  } catch (err) {
+    console.error('[hibrida/storage] exceção upload:', String(err).slice(0, 100));
+    return null;
+  }
+}
+
+// Chama OpenAI Images (gpt-image-1) e retorna URL pública do Supabase Storage.
+// Ao receber b64_json faz upload imediato — evita embutir ~2MB de base64 no HTML do overlay.
 async function _chamarOpenAI(
   prompt: string,
   apiKey: string,
   produto: string,
-): Promise<string | null> {
-  // DALL-E 3 suporta: 1024x1024, 1792x1024 (landscape), 1024x1792 (portrait)
-  const sizeMap: Record<string, string> = {
-    caneca:              '1792x1024',
-    cartao_visita:       '1792x1024',
-    panfleto:            '1024x1792',
-    adesivo_redondo:     '1024x1024',
-    adesivo_retangular:  '1792x1024',
-  };
-  const size = sizeMap[produto] ?? '1024x1024';
+): Promise<{ url: string | null; erro?: string }> {
+  // gpt-image-1: sizes suportados: 1024x1024 | 1536x1024 | 1024x1536
+  const size = '1024x1024';
 
   try {
     const res = await fetch('https://api.openai.com/v1/images/generations', {
@@ -252,30 +291,55 @@ async function _chamarOpenAI(
         'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model:           'dall-e-3',
+        model:   'gpt-image-1',
         prompt,
-        n:               1,
+        n:       1,
         size,
-        quality:         'standard',
-        response_format: 'b64_json',
+        quality: 'low',
       }),
       signal: AbortSignal.timeout(55_000),
     });
 
     if (!res.ok) {
-      console.error(`[hibrida/openai] DALL-E 3 erro ${res.status}:`, await res.text());
-      return null;
+      const errText = await res.text();
+      console.error(`[hibrida/openai] erro HTTP ${res.status}:`, errText);
+      return { url: null, erro: `HTTP_${res.status}:${errText.slice(0, 200)}` };
     }
 
-    const data  = await res.json() as { data: Array<{ b64_json?: string }> };
-    const b64   = data.data?.[0]?.b64_json;
-    if (!b64) { console.error('[hibrida/openai] resposta sem b64_json'); return null; }
+    const data    = await res.json() as { data: Array<{ url?: string; b64_json?: string }> };
+    const imgItem = data.data?.[0];
+    if (!imgItem) return { url: null, erro: 'resposta_vazia' };
 
-    console.log('[hibrida/openai] imagem gerada OK, tamanho base64:', b64.length, 'chars');
-    return `data:image/png;base64,${b64}`;
+    // Extrair bytes PNG da resposta
+    let pngBytes: Uint8Array | null = null;
+
+    if (imgItem.b64_json) {
+      console.log('[hibrida/openai] OK (b64_json), chars:', imgItem.b64_json.length);
+      const binStr = atob(imgItem.b64_json);
+      pngBytes = Uint8Array.from({ length: binStr.length }, (_, i) => binStr.charCodeAt(i));
+    } else if (imgItem.url) {
+      console.log('[hibrida/openai] OK (url), buscando bytes...');
+      const imgRes = await fetch(imgItem.url, { signal: AbortSignal.timeout(30_000) });
+      if (!imgRes.ok) return { url: null, erro: `fetch_url_${imgRes.status}` };
+      pngBytes = new Uint8Array(await imgRes.arrayBuffer());
+    }
+
+    if (!pngBytes) return { url: null, erro: 'sem_url_nem_b64' };
+
+    console.log('[hibrida/openai] bytes PNG:', pngBytes.byteLength);
+
+    // Upload para Supabase Storage → HTML usa URL pública (pequena), não base64 inline
+    const storageUrl = await _uploadToStorage(pngBytes);
+    if (storageUrl) return { url: storageUrl };
+
+    console.warn('[hibrida/openai] storage falhou, caindo em data URL inline');
+    // Fallback: data URL inline (pode causar HTML grande → timeout no HCTI)
+    const b64 = btoa(pngBytes.reduce((s, b) => s + String.fromCharCode(b), ''));
+    return { url: `data:image/png;base64,${b64}` };
+
   } catch (err) {
     console.error('[hibrida/openai] exceção:', err);
-    return null;
+    return { url: null, erro: `excecao:${String(err).slice(0, 100)}` };
   }
 }
 
@@ -702,14 +766,20 @@ export async function renderizarFinal(
   console.log('[hibrida] decisao:', JSON.stringify(decisao));
 
   const base = await gerarBaseIA(d, env);
-  console.log(`[hibrida] base: provider=${base.provider} mock=${base.mock} prompt="${base.prompt.slice(0, 72)}…"`);
+  console.log(`[hibrida] base: provider=${base.provider} mock=${base.mock} url_len=${base.url.length}`);
 
   const html = aplicarOverlayHTML(d, logo, base.url);
 
+  // _baseUrl: URL pública do storage quando IA gerou via OpenAI — usada como fallback
+  // se o renderizador HTML (HCTI/Browserless) falhar
+  const isStorageUrl = base.url.startsWith('http') && !base.url.startsWith('data:');
+
   return {
     html,
-    w:       decisao.dimensoes.w,
-    h:       decisao.dimensoes.h,
-    fullDoc: true,
+    w:         decisao.dimensoes.w,
+    h:         decisao.dimensoes.h,
+    fullDoc:   true,
+    _provider: base.provider,
+    _baseUrl:  isStorageUrl ? base.url : undefined,
   };
 }

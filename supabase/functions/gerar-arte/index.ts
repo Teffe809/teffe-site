@@ -1,4 +1,4 @@
-import { renderizarFinal } from './arte_hibrida.ts';
+import { renderizarFinal, gerarBaseIA, aplicarOverlayHTML } from './arte_hibrida.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -2523,16 +2523,16 @@ async function aplicarMockupCaneca(artUrl: string): Promise<string | null> {
   try {
     const res = await fetch('https://app.dynamicmockups.com/api/v1/renders', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${dmKey}` },
+      headers: { 'Content-Type': 'application/json', 'X-Api-Key': dmKey },
       body: JSON.stringify({
-        mockup_uuid: '06a6f80b-d475-4e0f-8a6a-6ccca70834cb',
-        smart_objects: [{ uuid: 'c19645fd-5db0-461e-aad3-8131b36501dd', asset: { url: artUrl } }],
+        mockup_uuid: '58e96eb8-82c4-457d-b953-ac52054681fc',
+        smart_objects: [{ uuid: 'b0578b21-2c2e-4335-a726-a5ff8e7541c6', asset: { url: artUrl } }],
       }),
       signal: AbortSignal.timeout(30000),
     });
     if (!res.ok) { console.log('[dynamic-mockups] erro:', res.status, await res.text()); return null; }
-    const data = await res.json() as { data?: { export_url?: string } };
-    const url = data?.data?.export_url ?? null;
+    const data = await res.json() as { data?: { export_path?: string; export_url?: string }; success?: boolean };
+    const url = data?.data?.export_path ?? data?.data?.export_url ?? null;
     if (url) console.log('[dynamic-mockups] mockup gerado:', url.substring(0, 80));
     return url;
   } catch (e) { console.log('[dynamic-mockups] exceção:', e); return null; }
@@ -2698,19 +2698,72 @@ Deno.serve(async (req: Request) => {
 
     // ── MODO HIBRIDO — caneca (teste): IA gera base, HTML/SVG aplica textos ──
     if (d.tipo_produto === 'caneca' && d.layout_id === 'hibrida_caneca') {
-      const logo = d.logo_url ? await logoParaBase64(d.logo_url) : '';
-      const r    = await renderizarFinal(d, logo, Deno.env.toObject());
-      const imageUrl = await renderizarHCTI(r.html, r.w, r.h, r.fullDoc)
-                    ?? await renderizarBrowserless(r.html, r.w, r.h);
+      const logo      = d.logo_url ? await logoParaBase64(d.logo_url) : '';
+      const openAiKey = Deno.env.get('OPENAI_API_KEY') ?? '';
+      console.log('[hibrida] OPENAI_API_KEY presente:', !!openAiKey);
+
+      // Fase 1: gerarBaseIA — IA produz imagem base
+      const base = await gerarBaseIA(d, openAiKey ? { OPENAI_API_KEY: openAiKey } : {});
+      console.log('[hibrida] base provider:', base.provider, '| url prefix:', base.url.slice(0, 40));
+
+      // Fase 2: se OpenAI retornou data URL, fazer upload para Supabase Storage
+      let baseUrl    = base.url;
+      let storageErr = '';
+      const supUrl   = Deno.env.get('SUPABASE_URL') ?? '';
+      const supKey   = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+      console.log('[hibrida/storage] supUrl len:', supUrl.length, '| supKey len:', supKey.length);
+      if (base.provider === 'openai' && base.url.startsWith('data:image/') && supUrl && supKey) {
+        const b64str   = base.url.replace(/^data:image\/png;base64,/, '');
+        const binStr   = atob(b64str);
+        const pngBytes = Uint8Array.from({ length: binStr.length }, (_, i) => binStr.charCodeAt(i));
+        const file     = `hibrida-ia-${Date.now()}.png`;
+        const up       = await fetch(`${supUrl}/storage/v1/object/artes/${file}`, {
+          method: 'POST',
+          headers: { apikey: supKey, Authorization: `Bearer ${supKey}`, 'Content-Type': 'image/png', 'x-upsert': 'true' },
+          body: pngBytes,
+        });
+        if (up.ok) {
+          baseUrl = `${supUrl}/storage/v1/object/public/artes/${file}`;
+          console.log('[hibrida/storage] upload OK:', baseUrl);
+        } else {
+          storageErr = `HTTP_${up.status}:${(await up.text()).slice(0, 150)}`;
+          console.error('[hibrida/storage] upload falhou:', storageErr);
+        }
+      } else if (!supUrl || !supKey) {
+        storageErr = `env_ausente:supUrl=${!!supUrl},supKey=${!!supKey}`;
+        console.warn('[hibrida/storage]', storageErr);
+      }
+
+      // Fase 3: overlay HTML usando baseUrl (storage URL ou data URL)
+      // aplicarOverlayHTML retorna string (HTML puro); dimensões para caneca = 1800×700
+      const overlayHtml = aplicarOverlayHTML(d, logo, baseUrl);
+      const [ hibW, hibH ] = [ 1800, 700 ];
+      console.log('[hibrida] htmlLen:', overlayHtml.length, '| baseUrl type:', baseUrl.startsWith('http') ? 'storage' : 'data');
+
+      // Fase 4: renderizar HTML com overlay via HCTI/Browserless
+      const rendered = await renderizarHCTI(overlayHtml, hibW, hibH, true)
+                    ?? await renderizarBrowserless(overlayHtml, hibW, hibH);
+
+      // Fase 5 fallback: se renderizador falhar mas temos imagem OpenAI no Storage → mockup direto
+      const storageBase = baseUrl.startsWith('http') ? baseUrl : undefined;
+      const imageUrl    = rendered ?? storageBase ?? null;
+
       if (!imageUrl) {
         return new Response(
-          JSON.stringify({ error: 'Renderização indisponível.', html: r.html }),
+          JSON.stringify({ error: 'Renderização indisponível.' }),
           { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
         );
       }
       const mockup = await aplicarMockupCaneca(imageUrl);
+      const modo   = rendered ? 'hibrida' : 'hibrida_base_sem_overlay';
       return new Response(
-        JSON.stringify({ url: mockup ?? imageUrl, tipo_produto: 'caneca', modo: 'hibrida', layout_id: 'hibrida_caneca' }),
+        JSON.stringify({
+          url:          mockup ?? imageUrl,
+          tipo_produto: 'caneca',
+          modo,
+          layout_id:    'hibrida_caneca',
+          _ia_provider: base.provider,
+        }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }
