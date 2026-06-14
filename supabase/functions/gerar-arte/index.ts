@@ -1145,7 +1145,8 @@ function buildHTML(d: ProdutoInput, logo: string, bgUrl?: string): RenderResult 
           : v === 3 ? tplSaude1(d,logo)
           : tplSaude2(d,logo);
   }
-  return { html: wrapHTML(inner, obs, 2100, 600, bgUrl), w: 2100, h: 630 };
+  const apenasFrente = obs.toLowerCase().includes('apenas frente');
+  return { html: wrapHTML(inner, obs, apenasFrente ? 1050 : 2100, 600, bgUrl), w: apenasFrente ? 1050 : 2100, h: 630 };
 }
 
 // ════════════════════════════════════════════════════════════════════════════
