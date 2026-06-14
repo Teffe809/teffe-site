@@ -1137,7 +1137,7 @@ body { background: #1a1a1a; font-family: Montserrat, Arial, Helvetica, sans-seri
              <div style="font-size:${empresaSize}px;font-weight:900;color:${cp};letter-spacing:-2px;line-height:1;">${empresa}</div>
            </div>`
       }
-      ${logo ? `<div style="margin-top:20px;font-size:16px;font-weight:700;color:${cs};letter-spacing:6px;text-transform:uppercase;">${empresa}</div>` : ''}
+      ${''}
     </div>
 
     <!-- Pontos decorativos centralizados -->
@@ -1220,13 +1220,13 @@ body { background: #1a1a1a; font-family: Montserrat, Arial, Helvetica, sans-seri
       </div>` : ''}
 
       ${telefone ? `
-      <div style="position:absolute;top:62px;left:0;display:flex;align-items:center;gap:16px;">
+      <div style="position:absolute;top:72px;left:0;display:flex;align-items:center;gap:16px;">
         <div style="width:40px;height:40px;border-radius:50%;background:${cs};position:relative;flex-shrink:0;">
           <svg style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.4 1.14 2 2 0 012 1h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 8.91a16 16 0 006.18 6.18l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/>
           </svg>
         </div>
-        <span style="font-size:20px;font-weight:400;color:rgba(255,255,255,0.88);">${telefone}</span>
+        <span style="font-size:18px;font-weight:400;color:rgba(255,255,255,0.88);">${telefone}</span>
       </div>` : ''}
 
       ${site ? `
