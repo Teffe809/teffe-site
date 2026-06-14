@@ -1,3 +1,5 @@
+import { renderizarFinal } from './arte_hibrida.ts';
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'content-type, authorization',
@@ -2694,28 +2696,28 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // ── MODO HIBRIDO: IA gera base visual, HTML/SVG aplica textos ────────────
-    // Ativado quando layout_id começa com 'hibrida_'
-    // Importação estática não usada ainda — chame renderizarFinal() aqui quando pronto:
-    //
-    //   import { renderizarFinal } from './arte_hibrida.ts';
-    //
-    //   if ((d.layout_id ?? '').startsWith('hibrida_')) {
-    //     const logo = d.logo_url ? await logoParaBase64(d.logo_url) : '';
-    //     const r    = await renderizarFinal(d, logo, Deno.env.toObject());
-    //     const imageUrl = await renderizarHCTI(r.html, r.w, r.h, r.fullDoc)
-    //                   ?? await renderizarBrowserless(r.html, r.w, r.h);
-    //     if (!imageUrl) {
-    //       return new Response(
-    //         JSON.stringify({ error: 'Renderização indisponível.' }),
-    //         { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-    //       );
-    //     }
-    //     return new Response(
-    //       JSON.stringify({ url: imageUrl, tipo_produto: d.tipo_produto, modo: 'hibrida' }),
-    //       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-    //     );
-    //   }
+    // ── MODO HIBRIDO — caneca (teste): IA gera base, HTML/SVG aplica textos ──
+    if (d.tipo_produto === 'caneca' && d.layout_id === 'hibrida_caneca') {
+      const logo = d.logo_url ? await logoParaBase64(d.logo_url) : '';
+      const r    = await renderizarFinal(d, logo, Deno.env.toObject());
+      const imageUrl = await renderizarHCTI(r.html, r.w, r.h, r.fullDoc)
+                    ?? await renderizarBrowserless(r.html, r.w, r.h);
+      if (!imageUrl) {
+        return new Response(
+          JSON.stringify({ error: 'Renderização indisponível.', html: r.html }),
+          { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+      const mockup = await aplicarMockupCaneca(imageUrl);
+      return new Response(
+        JSON.stringify({ url: mockup ?? imageUrl, tipo_produto: 'caneca', modo: 'hibrida', layout_id: 'hibrida_caneca' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+    // ── Para expandir: adicione outros produtos aqui seguindo o mesmo padrão ──
+    //   if (d.tipo_produto === 'panfleto'     && d.layout_id === 'hibrida_panfleto')     { ... }
+    //   if (d.tipo_produto === 'cartao_visita' && d.layout_id === 'hibrida_cartao')       { ... }
+    //   if (d.tipo_produto === 'adesivo_redondo' && d.layout_id === 'hibrida_adesivo')    { ... }
 
     // ── MODO TEXTO (padrão): template HTML puro ──
     if (!d.empresa && !d.nome && !d.texto_principal) {

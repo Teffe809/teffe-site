@@ -180,6 +180,7 @@ function _construirPromptVisual(
 }
 
 function _gerarMockSVG(produto: string, cp: string, cs: string): string {
+  if (produto === 'caneca') return _mockCanecaSVG(cp, cs);
   const { w, h } = DIMENSOES[produto] ?? { w: 1200, h: 800 };
 
   return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">
@@ -199,9 +200,86 @@ function _gerarMockSVG(produto: string, cp: string, cs: string): string {
   <ellipse cx="${w * 0.10}" cy="${h * 0.50}" rx="${w * 0.24}" ry="${h * 0.50}" fill="${cs}" opacity="0.07"/>
   <polygon points="${w},0 ${w},${h} ${w * 0.62},${h} ${w * 0.78},0" fill="${cs}" opacity="0.05"/>
   <line x1="0" y1="${h * 0.5}" x2="${w}" y2="${h * 0.5}" stroke="${cs}" stroke-width="1" opacity="0.10"/>
-  <text x="${w / 2}" y="${h / 2 + 14}" text-anchor="middle"
-    font-family="Arial,sans-serif" font-size="${Math.min(w, h) * 0.045}"
-    fill="${cs}" opacity="0.12" font-weight="700">BASE IA — MOCK</text>
+</svg>`;
+}
+
+// SVG de sublimação para caneca — rica em detalhes, sem texto.
+// Estrutura: faixas topo/rodapé, arcos de borda de caneca, ondas, grid de pontos, spotlight.
+function _mockCanecaSVG(cp: string, cs: string): string {
+  return `<svg width="1800" height="700" viewBox="0 0 1800 700" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgH" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%"   stop-color="${cp}"/>
+      <stop offset="45%"  stop-color="${cp}EE"/>
+      <stop offset="100%" stop-color="${cp}CC"/>
+    </linearGradient>
+    <radialGradient id="spot" cx="50%" cy="50%" r="42%">
+      <stop offset="0%"   stop-color="${cs}" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="${cp}" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="gL" cx="18%" cy="50%" r="26%">
+      <stop offset="0%"   stop-color="${cs}" stop-opacity="0.14"/>
+      <stop offset="100%" stop-color="${cp}" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="gR" cx="82%" cy="50%" r="26%">
+      <stop offset="0%"   stop-color="${cs}" stop-opacity="0.10"/>
+      <stop offset="100%" stop-color="${cp}" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="diagLines" x="0" y="0" width="36" height="36" patternUnits="userSpaceOnUse">
+      <line x1="0" y1="36" x2="36" y2="0" stroke="${cs}" stroke-width="0.5" opacity="0.14"/>
+    </pattern>
+    <pattern id="dotGrid" x="0" y="0" width="28" height="28" patternUnits="userSpaceOnUse">
+      <circle cx="14" cy="14" r="1.6" fill="${cs}" opacity="0.22"/>
+    </pattern>
+  </defs>
+
+  <!-- Fundo base -->
+  <rect width="1800" height="700" fill="url(#bgH)"/>
+  <!-- Textura diagonal global -->
+  <rect width="1800" height="700" fill="url(#diagLines)"/>
+  <!-- Spotlights -->
+  <rect width="1800" height="700" fill="url(#spot)"/>
+  <rect width="1800" height="700" fill="url(#gL)"/>
+  <rect width="1800" height="700" fill="url(#gR)"/>
+
+  <!-- Faixa superior (cs) -->
+  <rect x="0" y="0" width="1800" height="56" fill="${cs}"/>
+  <line x1="0" y1="52" x2="1800" y2="52" stroke="#FFFFFF" stroke-width="1.2" opacity="0.18"/>
+
+  <!-- Faixa inferior (cs) -->
+  <rect x="0" y="644" width="1800" height="56" fill="${cs}"/>
+  <line x1="0" y1="648" x2="1800" y2="648" stroke="#FFFFFF" stroke-width="1.2" opacity="0.18"/>
+
+  <!-- Arcos concêntricos esquerda (borda planificada de caneca) -->
+  <ellipse cx="-10" cy="350" rx="170" ry="275" fill="none" stroke="${cs}" stroke-width="2"   opacity="0.32"/>
+  <ellipse cx="-10" cy="350" rx="215" ry="305" fill="none" stroke="${cs}" stroke-width="1.2" opacity="0.20"/>
+  <ellipse cx="-10" cy="350" rx="260" ry="330" fill="none" stroke="${cs}" stroke-width="0.8" opacity="0.13"/>
+  <ellipse cx="-10" cy="350" rx="305" ry="350" fill="none" stroke="${cs}" stroke-width="0.5" opacity="0.08"/>
+  <!-- Grid de pontos zona esquerda -->
+  <rect x="0" y="56" width="340" height="588" fill="url(#dotGrid)"/>
+
+  <!-- Arcos concêntricos direita -->
+  <ellipse cx="1810" cy="350" rx="170" ry="275" fill="none" stroke="${cs}" stroke-width="2"   opacity="0.32"/>
+  <ellipse cx="1810" cy="350" rx="215" ry="305" fill="none" stroke="${cs}" stroke-width="1.2" opacity="0.20"/>
+  <ellipse cx="1810" cy="350" rx="260" ry="330" fill="none" stroke="${cs}" stroke-width="0.8" opacity="0.13"/>
+  <ellipse cx="1810" cy="350" rx="305" ry="350" fill="none" stroke="${cs}" stroke-width="0.5" opacity="0.08"/>
+  <!-- Grid de pontos zona direita -->
+  <rect x="1460" y="56" width="340" height="588" fill="url(#dotGrid)"/>
+
+  <!-- Ondas horizontais suaves cruzando o canvas -->
+  <path d="M 0,240 C 300,170 600,340 900,270 C 1200,200 1500,320 1800,252"
+        fill="none" stroke="${cs}" stroke-width="1.8" opacity="0.22"/>
+  <path d="M 0,460 C 300,390 600,530 900,460 C 1200,390 1500,510 1800,440"
+        fill="none" stroke="${cs}" stroke-width="1.2" opacity="0.15"/>
+  <!-- Linha central -->
+  <line x1="0" y1="350" x2="1800" y2="350" stroke="${cs}" stroke-width="0.8" opacity="0.09"/>
+
+  <!-- Separadores verticais (demarcam zona central do logo) -->
+  <line x1="390" y1="56" x2="390" y2="644" stroke="${cs}" stroke-width="1.5" opacity="0.24"/>
+  <line x1="393" y1="56" x2="393" y2="644" stroke="#FFFFFF"  stroke-width="0.5" opacity="0.08"/>
+  <line x1="1410" y1="56" x2="1410" y2="644" stroke="${cs}" stroke-width="1.5" opacity="0.24"/>
+  <line x1="1407" y1="56" x2="1407" y2="644" stroke="#FFFFFF"  stroke-width="0.5" opacity="0.08"/>
+
 </svg>`;
 }
 
