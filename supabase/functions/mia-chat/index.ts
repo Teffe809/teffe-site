@@ -407,7 +407,27 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
     const dataMediaUrl = String((data as Record<string, unknown>).mediaUrl ?? '');
     const imgObj = (msgObj.imageMessage ?? msgObj.documentMessage) as Record<string, unknown>;
     const urlBruta = dataMediaUrl || String(imgObj.url ?? imgObj.mediaUrl ?? '');
-    const base64Direto = String((msgObj.imageMessage as Record<string, unknown>)?.jpegThumbnail ?? '');
+    let base64Direto = '';
+    const messageId = String(key.id ?? '');
+    if (messageId && instancia) {
+      try {
+        const b64Res = await fetch(`${EVOLUTION_URL}/chat/getBase64FromMediaMessage/${instancia}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', apikey: evolutionKey },
+          body: JSON.stringify({ message: { key: { id: messageId, remoteJid: remoteJid, fromMe: false } }, convertToMp4: false }),
+          signal: AbortSignal.timeout(15000),
+        });
+        if (b64Res.ok) {
+          const b64Data = await b64Res.json() as { base64?: string };
+          base64Direto = b64Data.base64 ?? '';
+          console.log('[mia-chat] getBase64 ok:', !!base64Direto);
+        } else {
+          console.log('[mia-chat] getBase64 falhou:', b64Res.status, await b64Res.text());
+        }
+      } catch (e) {
+        console.log('[mia-chat] getBase64 exceção:', e);
+      }
+    }
 
     console.log('[mia-chat] mídia recebida:', urlBruta.substring(0, 100), '| base64 direto:', !!base64Direto);
 
