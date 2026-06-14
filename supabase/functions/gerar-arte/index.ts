@@ -1262,6 +1262,8 @@ function tplCartaoPremiumDark(d: ProdutoInput, logo: string): string {
   const site = (d.site || '').replace(/&/g,'&amp;');
   const nomeSize = nome.length > 24 ? 44 : nome.length > 18 ? 50 : 56;
   const empresaSize = empresa.length > 20 ? 48 : empresa.length > 12 ? 62 : 76;
+  const bgDark = '#111111';
+  const bgDark2 = '#050505';
 
   return `<!DOCTYPE html>
 <html>
@@ -1277,15 +1279,18 @@ body { background: #0a0a0a; font-family: Montserrat, Arial, Helvetica, sans-seri
 <div id="canvas">
 
   <!-- FRENTE: 0px → 1050px — dark, logo centralizado -->
-  <div style="position:absolute;left:0;top:0;width:1050px;height:600px;background:${cp};overflow:hidden;">
+  <div style="position:absolute;left:0;top:0;width:1050px;height:600px;background:${bgDark};overflow:hidden;">
 
-    <!-- Faixa diagonal laranja base -->
+    <!-- Overlay radial dark -->
+    <div style="position:absolute;left:0;top:0;width:1050px;height:600px;background:radial-gradient(circle at 50% 42%, #252525 0%, ${bgDark} 48%, ${bgDark2} 100%);"></div>
+
+    <!-- Faixa diagonal dourada base -->
     <div style="position:absolute;left:0;bottom:0;width:1050px;height:110px;overflow:hidden;">
       <div style="position:absolute;left:-60px;bottom:-55px;width:1200px;height:150px;background:${cs};transform:rotate(-4deg);transform-origin:left bottom;opacity:0.90;"></div>
     </div>
-    <!-- Faixa diagonal mais escura sobre laranja -->
+    <!-- Faixa diagonal escura sobreposta -->
     <div style="position:absolute;left:0;bottom:0;width:1050px;height:82px;overflow:hidden;">
-      <div style="position:absolute;left:-60px;bottom:-45px;width:1200px;height:110px;background:#000000;transform:rotate(-4deg);transform-origin:left bottom;opacity:0.50;"></div>
+      <div style="position:absolute;left:-60px;bottom:-45px;width:1200px;height:110px;background:${bgDark2};transform:rotate(-4deg);transform-origin:left bottom;opacity:0.86;"></div>
     </div>
 
     <!-- Gradiente escuro no topo -->
