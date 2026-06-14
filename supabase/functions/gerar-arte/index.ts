@@ -2281,7 +2281,132 @@ body { background:#e0e0e0; font-family: Arial, Helvetica, sans-serif; }
 </html>`;
 }
 
-// ── tplDemoCanecaPersonalizada — próxima etapa ────────────────────────────────
+// ── tplDemoCanecaPersonalizada: arte sublimação 1800×700 ─────────────────────
+function tplDemoCanecaPersonalizada(d: ProdutoInput, logo: string): string {
+  const cp = d.cor_primaria   || '#1A2744';
+  const cs = d.cor_secundaria || '#E8A020';
+
+  const esc = (s: string) => (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const empresa   = esc(d.empresa         || '');
+  const titulo    = esc(d.texto_principal  || empresa);
+  const subtitulo = esc(d.texto_secundario || d.site || '');
+
+  const tituloSize = titulo.length > 36 ? 42 : titulo.length > 20 ? 54 : 66;
+
+  // Monograma: círculo (diferente dos hexágonos dos cartões)
+  const monogram = `<svg width="170" height="170" viewBox="0 0 170 170" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="85" cy="85" r="82" fill="${cs}"/>
+    <circle cx="85" cy="85" r="68" fill="none" stroke="#FFFFFF" stroke-width="2" opacity="0.35"/>
+    <text x="85" y="116" text-anchor="middle" font-family="Arial,sans-serif" font-weight="900" font-size="78" fill="#FFFFFF">${empresa.charAt(0).toUpperCase()}</text>
+  </svg>`;
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#c8c8c8; font-family: Arial, Helvetica, sans-serif; }
+#canvas { width:1800px; height:700px; position:relative; overflow:hidden; }
+</style>
+</head>
+<body>
+<div id="canvas">
+
+<!-- FUNDO GERAL -->
+<div style="position:absolute;left:0;top:0;width:1800px;height:700px;background:#FAFAFA;"></div>
+
+<!-- FAIXA CS TOPO (0–12px) -->
+<div style="position:absolute;left:0;top:0;width:1800px;height:12px;background:${cs};"></div>
+
+<!-- FAIXA CS RODAPÉ (688–700px) -->
+<div style="position:absolute;left:0;top:688px;width:1800px;height:12px;background:${cs};"></div>
+
+<!-- ── BORDA ESQUERDA: arcos elípticos bleeding off-canvas ── -->
+<svg style="position:absolute;left:-50px;top:50%;transform:translateY(-50%);width:290px;height:520px;opacity:0.13;" viewBox="0 0 290 520" xmlns="http://www.w3.org/2000/svg">
+  <ellipse cx="0" cy="260" rx="220" ry="220" fill="none" stroke="${cp}" stroke-width="2.5"/>
+  <ellipse cx="0" cy="260" rx="165" ry="165" fill="none" stroke="${cs}" stroke-width="2"/>
+  <ellipse cx="0" cy="260" rx="110" ry="110" fill="none" stroke="${cp}" stroke-width="1.5"/>
+  <ellipse cx="0" cy="260" rx="55"  ry="55"  fill="${cs}" opacity="0.35"/>
+</svg>
+
+<!-- ── BORDA DIREITA: raios angulares emanando do canto ── -->
+<svg style="position:absolute;right:-10px;top:50%;transform:translateY(-50%);width:240px;height:520px;opacity:0.11;" viewBox="0 0 240 520" xmlns="http://www.w3.org/2000/svg">
+  <line x1="240" y1="260" x2="0" y2="20"  stroke="${cp}" stroke-width="2.5"/>
+  <line x1="240" y1="260" x2="0" y2="100" stroke="${cs}" stroke-width="2"/>
+  <line x1="240" y1="260" x2="0" y2="180" stroke="${cp}" stroke-width="1.5"/>
+  <line x1="240" y1="260" x2="0" y2="260" stroke="${cs}" stroke-width="2.5"/>
+  <line x1="240" y1="260" x2="0" y2="340" stroke="${cp}" stroke-width="1.5"/>
+  <line x1="240" y1="260" x2="0" y2="420" stroke="${cs}" stroke-width="2"/>
+  <line x1="240" y1="260" x2="0" y2="500" stroke="${cp}" stroke-width="2.5"/>
+  <circle cx="240" cy="260" r="28" fill="${cs}" opacity="0.4"/>
+  <circle cx="240" cy="260" r="16" fill="${cs}" opacity="0.6"/>
+</svg>
+
+<!-- ── ZONA EMPRESA (12–170px) ── -->
+<div style="position:absolute;left:50%;top:68px;transform:translateX(-50%);white-space:nowrap;">
+  <span style="font-size:13px;letter-spacing:11px;color:${cp};text-transform:uppercase;opacity:0.50;">${empresa}</span>
+</div>
+<!-- Separador fino cs -->
+<div style="position:absolute;left:50%;top:100px;transform:translateX(-50%);width:48px;height:2px;background:${cs};"></div>
+
+<!-- ── BANDA PRINCIPAL CP (170–490px = 320px) ── -->
+<div style="position:absolute;left:0;top:170px;width:1800px;height:320px;background:${cp};overflow:hidden;">
+
+  <!-- Onda cs diagonal direita (watermark interno) -->
+  <svg style="position:absolute;left:0;top:0;width:1800px;height:320px;opacity:0.065;" viewBox="0 0 1800 320" xmlns="http://www.w3.org/2000/svg">
+    <polygon points="1800,0 1800,320 1260,320 1480,0" fill="${cs}"/>
+  </svg>
+
+  <!-- Arcos concêntricos dentro da banda (esquerda) -->
+  <svg style="position:absolute;left:-50px;top:50%;transform:translateY(-50%);width:270px;height:270px;opacity:0.18;" viewBox="0 0 270 270" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="0" cy="135" r="115" fill="none" stroke="${cs}" stroke-width="2"/>
+    <circle cx="0" cy="135" r="75"  fill="none" stroke="${cs}" stroke-width="1.5"/>
+    <circle cx="0" cy="135" r="35"  fill="${cs}" opacity="0.45"/>
+  </svg>
+
+  <!-- Grade de pontos dentro da banda (direita) -->
+  <svg style="position:absolute;right:110px;top:50%;transform:translateY(-50%);width:110px;height:110px;opacity:0.24;" viewBox="0 0 110 110" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="18" cy="18" r="3.5" fill="${cs}"/><circle cx="55" cy="18" r="3.5" fill="${cs}"/><circle cx="92" cy="18" r="3.5" fill="${cs}"/>
+    <circle cx="18" cy="55" r="3.5" fill="${cs}"/><circle cx="55" cy="55" r="3.5" fill="${cs}"/><circle cx="92" cy="55" r="3.5" fill="${cs}"/>
+    <circle cx="18" cy="92" r="3.5" fill="${cs}"/><circle cx="55" cy="92" r="3.5" fill="${cs}"/><circle cx="92" cy="92" r="3.5" fill="${cs}"/>
+  </svg>
+
+  <!-- Spotlight radial sutil atrás do card -->
+  <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:560px;height:320px;background:radial-gradient(ellipse at center,rgba(255,255,255,0.07) 0%,transparent 68%);"></div>
+
+  <!-- Card branco premium com logo ou monograma -->
+  <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);">
+    ${logo
+      ? `<div style="background:#FFFFFF;border-radius:18px;padding:24px 44px;box-shadow:0 12px 64px rgba(0,0,0,0.30),0 0 0 1.5px rgba(255,255,255,0.15);">
+           <img src="${logo}" style="max-width:360px;max-height:210px;object-fit:contain;display:block;">
+         </div>`
+      : monogram
+    }
+  </div>
+
+</div>
+
+<!-- ── ZONA TEXTO (490–688px = 198px) ── -->
+<div style="position:absolute;left:0;top:490px;width:1800px;height:198px;overflow:hidden;">
+
+  <!-- Título / nome / frase principal -->
+  <div style="position:absolute;left:50%;top:30px;transform:translateX(-50%);width:1560px;text-align:center;">
+    <span style="font-size:${tituloSize}px;font-weight:900;color:${cp};letter-spacing:-1px;line-height:1.05;">${titulo}</span>
+  </div>
+
+  ${subtitulo
+    ? `<div style="position:absolute;left:50%;top:${30 + tituloSize + 14}px;transform:translateX(-50%);width:1400px;text-align:center;">
+         <span style="font-size:18px;color:#888888;letter-spacing:0.5px;">${subtitulo}</span>
+       </div>`
+    : ''}
+
+</div>
+
+</div>
+</body>
+</html>`;
+}
 
 function buildHTML(d: ProdutoInput, logo: string, bgUrl?: string): RenderResult {
   const tipo = normalizarTipo(d.tipo_produto ?? 'cartao_visita');
@@ -2348,7 +2473,8 @@ function buildHTML(d: ProdutoInput, logo: string, bgUrl?: string): RenderResult 
   // ARTE_DEMO_V2 — tem prioridade máxima de roteamento
   if (layoutId === 'demo_dark')          { return { html: tplDemoCartaoDark(d, logo),    w: 2100, h: 600,  fullDoc: true }; }
   if (layoutId === 'demo_light')         { return { html: tplDemoCartaoLight(d, logo),   w: 2100, h: 600,  fullDoc: true }; }
-  if (layoutId === 'demo_panfleto_hero') { return { html: tplDemoPanfletoHero(d, logo),  w: 1240, h: 1754, fullDoc: true }; }
+  if (layoutId === 'demo_panfleto_hero')        { return { html: tplDemoPanfletoHero(d, logo),           w: 1240, h: 1754, fullDoc: true }; }
+  if (layoutId === 'demo_caneca_personalizada') { return { html: tplDemoCanecaPersonalizada(d, logo),    w: 1800, h: 700,  fullDoc: true }; }
   if (layoutId === 'cartao_premium_dark')  { return { html: tplCartaoPremiumDark(d, logo),  w: 2100, h: 630, fullDoc: true }; }
   if (layoutId === 'cartao_premium_light') { return { html: tplCartaoPremiumLight(d, logo), w: 2100, h: 630, fullDoc: true }; }
   if (layoutId === 'cartao_premium')       { return { html: tplCartaoPremium(d, logo),      w: 2100, h: 630, fullDoc: true }; }
