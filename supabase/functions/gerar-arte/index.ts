@@ -1216,7 +1216,7 @@ body { background: #1a1a1a; font-family: Montserrat, Arial, Helvetica, sans-seri
             <path d="m22 7-8.97 5.7a1.94 1.94 0 01-2.06 0L2 7"/>
           </svg>
         </div>
-        <span style="font-size:20px;font-weight:400;color:rgba(255,255,255,0.88);">${email}</span>
+        <span style="font-size:17px;font-weight:400;color:rgba(255,255,255,0.88);white-space:nowrap;">${email}</span>
       </div>` : ''}
 
       ${telefone ? `
@@ -1226,7 +1226,7 @@ body { background: #1a1a1a; font-family: Montserrat, Arial, Helvetica, sans-seri
             <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.4 1.14 2 2 0 012 1h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 8.91a16 16 0 006.18 6.18l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/>
           </svg>
         </div>
-        <span style="font-size:18px;font-weight:400;color:rgba(255,255,255,0.88);">${telefone}</span>
+        <span style="font-size:17px;font-weight:400;color:rgba(255,255,255,0.88);white-space:nowrap;">${telefone}</span>
       </div>` : ''}
 
       ${site ? `
@@ -1238,7 +1238,7 @@ body { background: #1a1a1a; font-family: Montserrat, Arial, Helvetica, sans-seri
             <path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/>
           </svg>
         </div>
-        <span style="font-size:20px;font-weight:400;color:${cs};">${site}</span>
+        <span style="font-size:17px;font-weight:400;color:${cs};white-space:nowrap;">${site}</span>
       </div>` : ''}
 
     </div>
