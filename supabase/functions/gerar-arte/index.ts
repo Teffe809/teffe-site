@@ -2694,6 +2694,29 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // ── MODO HIBRIDO: IA gera base visual, HTML/SVG aplica textos ────────────
+    // Ativado quando layout_id começa com 'hibrida_'
+    // Importação estática não usada ainda — chame renderizarFinal() aqui quando pronto:
+    //
+    //   import { renderizarFinal } from './arte_hibrida.ts';
+    //
+    //   if ((d.layout_id ?? '').startsWith('hibrida_')) {
+    //     const logo = d.logo_url ? await logoParaBase64(d.logo_url) : '';
+    //     const r    = await renderizarFinal(d, logo, Deno.env.toObject());
+    //     const imageUrl = await renderizarHCTI(r.html, r.w, r.h, r.fullDoc)
+    //                   ?? await renderizarBrowserless(r.html, r.w, r.h);
+    //     if (!imageUrl) {
+    //       return new Response(
+    //         JSON.stringify({ error: 'Renderização indisponível.' }),
+    //         { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+    //       );
+    //     }
+    //     return new Response(
+    //       JSON.stringify({ url: imageUrl, tipo_produto: d.tipo_produto, modo: 'hibrida' }),
+    //       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+    //     );
+    //   }
+
     // ── MODO TEXTO (padrão): template HTML puro ──
     if (!d.empresa && !d.nome && !d.texto_principal) {
       return new Response(
