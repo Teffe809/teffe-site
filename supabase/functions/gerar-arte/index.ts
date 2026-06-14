@@ -1250,6 +1250,188 @@ body { background: #1a1a1a; font-family: Montserrat, Arial, Helvetica, sans-seri
 </html>`;
 }
 
+function tplCartaoPremiumDark(d: ProdutoInput, logo: string): string {
+  const cp = d.cor_primaria || '#0A1628';
+  const cs = d.cor_secundaria || '#F87A13';
+  const nome = (d.nome || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const cargo = (d.cargo || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const empresa = (d.empresa || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const telefone = (d.telefone || '').replace(/&/g,'&amp;');
+  const email = (d.email || '').replace(/&/g,'&amp;');
+  const site = (d.site || '').replace(/&/g,'&amp;');
+  const nomeSize = nome.length > 24 ? 44 : nome.length > 18 ? 50 : 56;
+  const empresaSize = empresa.length > 20 ? 48 : empresa.length > 12 ? 62 : 76;
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #0a0a0a; font-family: Montserrat, Arial, Helvetica, sans-serif; }
+#canvas { width: 2100px; height: 600px; position: relative; overflow: hidden; }
+</style>
+</head>
+<body>
+<div id="canvas">
+
+  <!-- FRENTE: 0px → 1050px — dark, logo centralizado -->
+  <div style="position:absolute;left:0;top:0;width:1050px;height:600px;background:${cp};overflow:hidden;">
+
+    <!-- Faixa diagonal laranja base -->
+    <div style="position:absolute;left:0;bottom:0;width:1050px;height:110px;overflow:hidden;">
+      <div style="position:absolute;left:-60px;bottom:-55px;width:1200px;height:150px;background:${cs};transform:rotate(-4deg);transform-origin:left bottom;opacity:0.90;"></div>
+    </div>
+    <!-- Faixa diagonal mais escura sobre laranja -->
+    <div style="position:absolute;left:0;bottom:0;width:1050px;height:82px;overflow:hidden;">
+      <div style="position:absolute;left:-60px;bottom:-45px;width:1200px;height:110px;background:#000000;transform:rotate(-4deg);transform-origin:left bottom;opacity:0.50;"></div>
+    </div>
+
+    <!-- Gradiente escuro no topo -->
+    <div style="position:absolute;left:0;top:0;width:1050px;height:300px;background:linear-gradient(180deg,rgba(0,0,0,0.40) 0%,transparent 100%);"></div>
+
+    <!-- SVG Circuitos canto superior direito -->
+    <svg style="position:absolute;top:0;right:0;width:280px;height:240px;opacity:0.12;" viewBox="0 0 280 240" xmlns="http://www.w3.org/2000/svg">
+      <g stroke="${cs}" stroke-width="1.5" fill="none">
+        <path d="M280,0 L280,70 L210,70 L210,30 L150,30 L150,90 L230,90 L230,150"/>
+        <path d="M280,110 L240,110 L240,170 L180,170 L180,130 L120,130"/>
+        <circle cx="210" cy="70" r="4" fill="${cs}"/>
+        <circle cx="150" cy="30" r="4" fill="${cs}"/>
+        <circle cx="240" cy="170" r="4" fill="${cs}"/>
+        <rect x="198" y="58" width="24" height="24" rx="3" stroke="${cs}" stroke-width="1.5" fill="none"/>
+      </g>
+    </svg>
+
+    <!-- SVG Circuitos canto inferior esquerdo -->
+    <svg style="position:absolute;bottom:0;left:0;width:220px;height:180px;opacity:0.10;" viewBox="0 0 220 180" xmlns="http://www.w3.org/2000/svg">
+      <g stroke="#FFFFFF" stroke-width="1.5" fill="none">
+        <path d="M0,180 L0,110 L50,110 L50,150 L100,150 L100,100 L50,100 L50,60"/>
+        <path d="M0,80 L40,80 L40,40 L90,40 L90,80 L140,80"/>
+        <circle cx="50" cy="110" r="4" fill="#FFFFFF"/>
+        <circle cx="100" cy="150" r="4" fill="#FFFFFF"/>
+        <rect x="38" y="98" width="24" height="24" rx="3" stroke="#FFFFFF" stroke-width="1.5" fill="none"/>
+      </g>
+    </svg>
+
+    <!-- LOGO grande centralizado na frente -->
+    <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-58%);text-align:center;">
+      ${logo
+        ? `<img src="${logo}" style="max-width:420px;max-height:240px;object-fit:contain;display:block;margin:0 auto;filter:brightness(0) invert(1);">`
+        : `<div style="text-align:center;">
+             <div style="font-size:${empresaSize}px;font-weight:900;color:#FFFFFF;letter-spacing:-2px;line-height:1;">${empresa}</div>
+           </div>`
+      }
+    </div>
+
+    <!-- Pontos decorativos centralizados -->
+    <div style="position:absolute;left:50%;bottom:110px;transform:translateX(-50%);display:flex;gap:10px;">
+      <div style="width:10px;height:10px;border-radius:50%;background:${cs};"></div>
+      <div style="width:10px;height:10px;border-radius:50%;background:#FFFFFF;opacity:0.5;"></div>
+      <div style="width:10px;height:10px;border-radius:50%;background:${cs};opacity:0.4;"></div>
+    </div>
+
+  </div>
+
+  <!-- VERSO: 1050px → 2100px — preto com detalhes -->
+  <div style="position:absolute;left:1050px;top:0;width:1050px;height:600px;background:#0d0d0d;overflow:hidden;">
+
+    <!-- Gradiente overlay lateral -->
+    <div style="position:absolute;left:0;top:0;width:1050px;height:600px;background:linear-gradient(135deg,rgba(255,255,255,0.03) 0%,transparent 50%);"></div>
+
+    <!-- Borda esquerda colorida -->
+    <div style="position:absolute;left:0;top:0;width:4px;height:600px;background:linear-gradient(180deg,${cs},${cp},${cs});"></div>
+
+    <!-- SVG Circuitos verso -->
+    <svg style="position:absolute;top:0;left:0;width:1050px;height:600px;opacity:0.06;" viewBox="0 0 1050 600" xmlns="http://www.w3.org/2000/svg">
+      <g stroke="#FFFFFF" stroke-width="1.5" fill="none">
+        <path d="M0,100 L80,100 L80,40 L160,40 L160,100 L260,100"/>
+        <path d="M0,300 L60,300 L60,240 L140,240 L140,300 L200,300"/>
+        <path d="M0,480 L100,480 L100,420 L180,420"/>
+        <path d="M1050,80 L970,80 L970,140 L890,140"/>
+        <path d="M1050,300 L990,300 L990,360 L910,360"/>
+        <path d="M1050,480 L970,480 L970,420 L890,420"/>
+        <circle cx="80" cy="100" r="5" fill="#FFFFFF"/>
+        <circle cx="160" cy="40" r="5" fill="#FFFFFF"/>
+        <circle cx="60" cy="300" r="5" fill="#FFFFFF"/>
+        <circle cx="970" cy="80" r="5" fill="#FFFFFF"/>
+        <rect x="68" y="88" width="24" height="24" rx="3" stroke="#FFFFFF" stroke-width="1" fill="none"/>
+        <rect x="148" y="28" width="24" height="24" rx="3" stroke="#FFFFFF" stroke-width="1" fill="none"/>
+        <rect x="958" y="68" width="24" height="24" rx="3" stroke="#FFFFFF" stroke-width="1" fill="none"/>
+      </g>
+    </svg>
+
+    <!-- Hexágono gigante atrás do nome -->
+    <svg style="position:absolute;left:-100px;top:50%;transform:translateY(-50%);width:520px;height:520px;opacity:0.05;" viewBox="0 0 520 520" xmlns="http://www.w3.org/2000/svg">
+      <polygon points="260,20 476,142 476,378 260,500 44,378 44,142" fill="${cs}"/>
+      <polygon points="260,60 440,162 440,358 260,460 80,358 80,162" fill="none" stroke="${cs}" stroke-width="2"/>
+    </svg>
+
+    <!-- Faixa laranja diagonal -->
+    <div style="position:absolute;left:310px;top:-20px;width:5px;height:680px;background:${cs};transform:rotate(10deg);transform-origin:top left;opacity:0.40;"></div>
+    <div style="position:absolute;left:328px;top:-20px;width:2px;height:680px;background:${cs};transform:rotate(10deg);transform-origin:top left;opacity:0.15;"></div>
+
+    <!-- Hexágono decorativo canto inferior direito -->
+    <svg style="position:absolute;right:44px;bottom:44px;width:110px;height:110px;opacity:0.10;" viewBox="0 0 110 110" xmlns="http://www.w3.org/2000/svg">
+      <polygon points="55,5 100,30 100,80 55,105 10,80 10,30" fill="none" stroke="${cs}" stroke-width="2"/>
+    </svg>
+
+    <!-- Nome empresa topo direito sutil -->
+    <div style="position:absolute;right:44px;top:28px;">
+      <div style="font-size:22px;font-weight:800;color:rgba(255,255,255,0.07);letter-spacing:5px;text-transform:uppercase;">${empresa}</div>
+    </div>
+
+    <!-- Nome e cargo do profissional -->
+    <div style="position:absolute;left:60px;top:68px;width:660px;">
+      <div style="font-size:${nomeSize}px;font-weight:800;color:#FFFFFF;line-height:1.05;letter-spacing:-0.5px;">${nome}</div>
+      <div style="font-size:20px;font-weight:600;color:${cs};letter-spacing:3px;text-transform:uppercase;margin-top:10px;">${cargo}</div>
+      <div style="width:52px;height:3px;background:${cs};margin-top:12px;border-radius:2px;"></div>
+    </div>
+
+    <!-- Contatos -->
+    <div style="position:absolute;left:60px;top:290px;">
+
+      ${email ? `
+      <div style="position:absolute;top:0;left:0;display:flex;align-items:center;gap:16px;">
+        <div style="width:40px;height:40px;border-radius:50%;background:${cs};position:relative;flex-shrink:0;">
+          <svg style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="4" width="20" height="16" rx="2"/>
+            <path d="m22 7-8.97 5.7a1.94 1.94 0 01-2.06 0L2 7"/>
+          </svg>
+        </div>
+        <span style="font-size:17px;font-weight:400;color:rgba(255,255,255,0.85);white-space:nowrap;">${email}</span>
+      </div>` : ''}
+
+      ${telefone ? `
+      <div style="position:absolute;top:72px;left:0;display:flex;align-items:center;gap:16px;">
+        <div style="width:40px;height:40px;border-radius:50%;background:${cs};position:relative;flex-shrink:0;">
+          <svg style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.4 1.14 2 2 0 012 1h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 8.91a16 16 0 006.18 6.18l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/>
+          </svg>
+        </div>
+        <span style="font-size:17px;font-weight:400;color:rgba(255,255,255,0.85);white-space:nowrap;">${telefone}</span>
+      </div>` : ''}
+
+      ${site ? `
+      <div style="position:absolute;top:124px;left:0;display:flex;align-items:center;gap:16px;">
+        <div style="width:40px;height:40px;border-radius:50%;background:${cs};position:relative;flex-shrink:0;">
+          <svg style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="2" y1="12" x2="22" y2="12"/>
+            <path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/>
+          </svg>
+        </div>
+        <span style="font-size:17px;font-weight:400;color:${cs};white-space:nowrap;">${site}</span>
+      </div>` : ''}
+
+    </div>
+
+  </div>
+
+</div>
+</body>
+</html>`;
+}
+
 function buildHTML(d: ProdutoInput, logo: string, bgUrl?: string): RenderResult {
   const tipo = normalizarTipo(d.tipo_produto ?? 'cartao_visita');
   const obs  = d.observacoes ?? '';
@@ -1309,6 +1491,7 @@ function buildHTML(d: ProdutoInput, logo: string, bgUrl?: string): RenderResult 
   }
   // cartao_visita — roteado por estilo
   const estilo = (d.estilo ?? '').toLowerCase();
+  if (estilo.includes('premium-dark')) { return { html: tplCartaoPremiumDark(d, logo), w: 2100, h: 630, fullDoc: true }; }
   if (estilo.includes('premium')) { return { html: tplCartaoPremium(d, logo), w: 2100, h: 630, fullDoc: true }; }
   let inner: string;
   if (estilo.includes('tecnologico-z') || estilo === 'z') {
