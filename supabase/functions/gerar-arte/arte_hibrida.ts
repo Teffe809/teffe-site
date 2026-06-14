@@ -51,7 +51,7 @@ export interface MotorDecision {
 export interface BaseIA {
   url:      string;
   prompt:   string;
-  provider: 'replicate' | 'mock';
+  provider: 'openai' | 'mock';
   mock:     boolean;
 }
 
@@ -135,8 +135,8 @@ export function decidirMotorArte(d: ProdutoInput): MotorDecision {
  * site, nomes de pessoas ou qualquer texto que deva aparecer no produto final.
  * A IA produz APENAS: fundo, composição, formas, texturas, atmosfera visual.
  *
- * Fase atual: MOCK — retorna SVG gradiente como placeholder.
- * Para ativar Replicate: descomente chamarReplicate() e passe REPLICATE_API_KEY.
+ * Provider: OpenAI DALL-E 3 (requer OPENAI_API_KEY no ambiente).
+ * Fallback: mock SVG quando a chave não está configurada ou a chamada falha.
  */
 export async function gerarBaseIA(
   d: ProdutoInput,
@@ -147,16 +147,20 @@ export async function gerarBaseIA(
   const produto = normalizarTipo(d.tipo_produto ?? '');
   const prompt  = _construirPromptVisual(produto, cp, cs, d);
 
-  // ── Integração futura com Replicate ────────────────────────────────────────
-  // const apiKey = _env?.REPLICATE_API_KEY;
-  // if (apiKey) {
-  //   const url = await _chamarReplicate(prompt, apiKey, DIMENSOES[produto]);
-  //   return { url, prompt, provider: 'replicate', mock: false };
-  // }
+  // ── OpenAI DALL-E 3 ────────────────────────────────────────────────────────
+  const openAiKey = _env?.OPENAI_API_KEY;
+  if (openAiKey) {
+    console.log('[hibrida/openai] gerando base visual DALL-E 3 para', produto, '...');
+    const url = await _chamarOpenAI(prompt, openAiKey, produto);
+    if (url) return { url, prompt, provider: 'openai', mock: false };
+    console.warn('[hibrida/openai] falhou — usando mock SVG como fallback');
+  } else {
+    console.log('[hibrida] OPENAI_API_KEY ausente — usando mock SVG');
+  }
 
+  // ── Fallback: mock SVG ─────────────────────────────────────────────────────
   const svg     = _gerarMockSVG(produto, cp, cs);
   const baseUrl = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svg)))}`;
-
   return { url: baseUrl, prompt, provider: 'mock', mock: true };
 }
 
@@ -168,15 +172,111 @@ function _construirPromptVisual(
 ): string {
   const estilo = d.estilo ?? 'moderno';
 
+  if (produto === 'caneca') return _promptCaneca(cp, cs, estilo);
+
   const prompts: Record<string, string> = {
-    cartao_visita: `Luxury business card background, abstract geometric composition, ${estilo} aesthetic. Primary color ${cp}, accent ${cs}. Soft gradients, elegant shapes — no text, no words, no numbers, no names.`,
-    panfleto:      `Premium marketing flyer background, vibrant visual composition, ${estilo} style. Dominant ${cp} with ${cs} accents. Abstract flowing shapes, dynamic layout — no text, no words.`,
-    caneca:        `Mug sublimation art, seamless horizontal design, ${estilo} aesthetic. Colors ${cp} and ${cs}. Abstract patterns, decorative elements — no text, no words, wraps around mug.`,
-    adesivo_redondo:    `Circular sticker background, bold graphic ${estilo} style. Colors ${cp} and ${cs}. Decorative borders, abstract fill — no text, high contrast.`,
-    adesivo_retangular: `Rectangular sticker background, ${estilo} aesthetic. Colors ${cp} and ${cs}. Clean abstract shapes — no text.`,
+    cartao_visita:      `Luxury business card background, abstract geometric composition, ${estilo} aesthetic. Primary color ${_nomeCor(cp)} (${cp}), accent ${_nomeCor(cs)} (${cs}). Soft gradients, elegant shapes. NO text, NO letters, NO numbers anywhere.`,
+    panfleto:           `Premium marketing flyer background, ${estilo} style. Dominant ${_nomeCor(cp)} with ${_nomeCor(cs)} accents. Abstract flowing shapes, dynamic composition. NO text, NO words anywhere.`,
+    adesivo_redondo:    `Circular sticker background design, bold ${estilo} style. Colors ${_nomeCor(cp)} and ${_nomeCor(cs)}. Decorative borders, abstract fill, high contrast. NO text, NO letters anywhere.`,
+    adesivo_retangular: `Rectangular sticker background, ${estilo} aesthetic. Colors ${_nomeCor(cp)} and ${_nomeCor(cs)}. Clean abstract shapes. NO text anywhere.`,
   };
 
-  return prompts[produto] ?? `Abstract professional background, ${estilo}, colors ${cp} and ${cs} — no text.`;
+  return prompts[produto] ?? `Abstract professional background, ${estilo}, colors ${_nomeCor(cp)} and ${_nomeCor(cs)}. NO text of any kind.`;
+}
+
+// Prompt especializado para caneca — otimizado para sublimação horizontal.
+function _promptCaneca(cp: string, cs: string, estilo: string): string {
+  const cpNome = _nomeCor(cp);
+  const csNome = _nomeCor(cs);
+
+  return [
+    `Professional sublimation mug wrap artwork, wide horizontal panoramic format.`,
+    `Background: deep rich ${cpNome} (${cp}) gradient with ${csNome} (${cs}) accent highlights.`,
+    `Visual composition: abstract geometric patterns, concentric elliptical arc curves on the far left and right edges (simulating the planified curvature of a mug),`,
+    `smooth flowing sinusoidal wave lines traversing the center horizontally,`,
+    `a subtle repeating diagonal line texture across the entire surface,`,
+    `fine dot-grid pattern filling the lateral zones,`,
+    `a soft radial glow spotlight centered in the middle,`,
+    `bold solid color bands (${csNome}) at the very top and very bottom margins.`,
+    `Overall style: ${estilo}, high-end corporate brand, premium luxury product design.`,
+    `Technical requirements: seamless edges for wrap-around printing, vibrant CMYK-ready colors, ultra-sharp details.`,
+    `ABSOLUTE RULE: no text, no letters, no numbers, no words, no typography, no glyphs of any kind anywhere in the image.`,
+    `Pure abstract geometric visual composition only.`,
+  ].join(' ');
+}
+
+// Converte hex para nome de cor legível em inglês (para o prompt da IA).
+function _nomeCor(hex: string): string {
+  const c = hex.replace('#', '').padEnd(6, '0');
+  const r = parseInt(c.slice(0, 2), 16);
+  const g = parseInt(c.slice(2, 4), 16);
+  const b = parseInt(c.slice(4, 6), 16);
+  const lum = (r * 299 + g * 587 + b * 114) / 1000;
+
+  if (lum < 30)  return 'near-black';
+  if (lum > 230) return 'bright white';
+
+  if (b > r * 1.6 && b > g * 1.6) return lum < 90  ? 'deep navy blue' : 'rich cobalt blue';
+  if (r > 180 && g > 140 && b < 70) return r > 220 && g > 170 ? 'warm golden amber' : 'rich gold';
+  if (r > g * 1.8 && r > b * 2.5) return lum < 110 ? 'deep crimson red' : 'vibrant red';
+  if (r > 200 && g > 100 && b < 60) return 'warm orange';
+  if (g > r * 1.4 && g > b * 1.4) return lum < 100 ? 'deep forest green' : 'rich emerald green';
+  if (r > 130 && b > 150 && g < 100) return 'royal purple';
+  if (r > 60 && g > 80 && b > 110 && b > r) return 'steel blue';
+
+  return lum < 100 ? 'dark neutral' : 'medium tone';
+}
+
+// Chama OpenAI Images (DALL-E 3) e retorna data URL base64.
+// Usa b64_json para evitar expiração de URL e dependência de fetch externo no renderer.
+async function _chamarOpenAI(
+  prompt: string,
+  apiKey: string,
+  produto: string,
+): Promise<string | null> {
+  // DALL-E 3 suporta: 1024x1024, 1792x1024 (landscape), 1024x1792 (portrait)
+  const sizeMap: Record<string, string> = {
+    caneca:              '1792x1024',
+    cartao_visita:       '1792x1024',
+    panfleto:            '1024x1792',
+    adesivo_redondo:     '1024x1024',
+    adesivo_retangular:  '1792x1024',
+  };
+  const size = sizeMap[produto] ?? '1024x1024';
+
+  try {
+    const res = await fetch('https://api.openai.com/v1/images/generations', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model:           'dall-e-3',
+        prompt,
+        n:               1,
+        size,
+        quality:         'standard',
+        response_format: 'b64_json',
+      }),
+      signal: AbortSignal.timeout(55_000),
+    });
+
+    if (!res.ok) {
+      console.error(`[hibrida/openai] DALL-E 3 erro ${res.status}:`, await res.text());
+      return null;
+    }
+
+    const data  = await res.json() as { data: Array<{ b64_json?: string }> };
+    const b64   = data.data?.[0]?.b64_json;
+    if (!b64) { console.error('[hibrida/openai] resposta sem b64_json'); return null; }
+
+    console.log('[hibrida/openai] imagem gerada OK, tamanho base64:', b64.length, 'chars');
+    return `data:image/png;base64,${b64}`;
+  } catch (err) {
+    console.error('[hibrida/openai] exceção:', err);
+    return null;
+  }
 }
 
 function _gerarMockSVG(produto: string, cp: string, cs: string): string {
