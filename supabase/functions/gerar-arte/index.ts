@@ -1739,6 +1739,320 @@ body { background: #e8e8e8; font-family: Montserrat, Arial, Helvetica, sans-seri
 </html>`;
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// ARTE_DEMO_V2 — templates novos, visuais independentes dos anteriores
+// ══════════════════════════════════════════════════════════════════════════════
+
+function tplDemoCartaoDark(d: ProdutoInput, logo: string): string {
+  const gold     = '#C9A84C';
+  const bg       = '#0A0A0A';
+  const bgVerso  = '#0D0D0D';
+
+  const esc = (s: string) => (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const nome     = esc(d.nome     || '');
+  const cargo    = esc(d.cargo    || '');
+  const empresa  = esc(d.empresa  || '');
+  const telefone = esc(d.telefone || '');
+  const email    = esc(d.email    || '');
+  const site     = esc(d.site     || '');
+
+  const nomeSize = nome.length > 24 ? 42 : nome.length > 18 ? 50 : 58;
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#111; font-family: Georgia, 'Times New Roman', serif; }
+#canvas { width:2100px; height:600px; position:relative; overflow:hidden; }
+</style>
+</head>
+<body>
+<div id="canvas">
+
+<!-- ── FRENTE 0→1050px ────────────────────────────────────────────── -->
+<div style="position:absolute;left:0;top:0;width:1050px;height:600px;background:${bg};overflow:hidden;">
+
+  <!-- Hexágono triplo watermark centrado -->
+  <svg style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:700px;height:700px;opacity:0.055;" viewBox="0 0 700 700" xmlns="http://www.w3.org/2000/svg">
+    <polygon points="350,25 655,190 655,510 350,675 45,510 45,190" fill="${gold}"/>
+    <polygon points="350,62 620,218 620,482 350,638 80,482 80,218" fill="none" stroke="${gold}" stroke-width="1.5"/>
+    <polygon points="350,100 585,246 585,454 350,600 115,454 115,246" fill="none" stroke="${gold}" stroke-width="1" opacity="0.5"/>
+  </svg>
+
+  <!-- Ondas curvas canto superior esquerdo -->
+  <svg style="position:absolute;left:-20px;top:-10px;width:420px;height:300px;opacity:0.09;" viewBox="0 0 420 300" xmlns="http://www.w3.org/2000/svg">
+    <path d="M0,100 C80,60 200,140 300,80 S420,40 500,100" fill="none" stroke="${gold}" stroke-width="2"/>
+    <path d="M0,150 C80,110 200,190 300,130 S420,90 500,150" fill="none" stroke="${gold}" stroke-width="1.5"/>
+    <path d="M0,200 C80,160 200,240 300,180 S420,140 500,200" fill="none" stroke="${gold}" stroke-width="1"/>
+    <path d="M0,250 C80,210 200,290 300,230 S420,190 500,250" fill="none" stroke="${gold}" stroke-width="0.8" opacity="0.6"/>
+  </svg>
+
+  <!-- Ondas curvas canto inferior direito -->
+  <svg style="position:absolute;right:-20px;bottom:-10px;width:400px;height:260px;opacity:0.07;" viewBox="0 0 400 260" xmlns="http://www.w3.org/2000/svg">
+    <path d="M400,260 C310,200 200,240 120,180 S-20,160 -60,200" fill="none" stroke="${gold}" stroke-width="2"/>
+    <path d="M400,210 C310,150 200,190 120,130 S-20,110 -60,150" fill="none" stroke="${gold}" stroke-width="1.5"/>
+    <path d="M400,160 C310,100 200,140 120,80" fill="none" stroke="${gold}" stroke-width="1"/>
+  </svg>
+
+  <!-- Grade de pontos dourados canto superior direito -->
+  <svg style="position:absolute;right:52px;top:40px;width:88px;height:88px;opacity:0.22;" viewBox="0 0 88 88" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="11" cy="11" r="2.2" fill="${gold}"/><circle cx="33" cy="11" r="2.2" fill="${gold}"/><circle cx="55" cy="11" r="2.2" fill="${gold}"/><circle cx="77" cy="11" r="2.2" fill="${gold}"/>
+    <circle cx="11" cy="33" r="2.2" fill="${gold}"/><circle cx="33" cy="33" r="2.2" fill="${gold}"/><circle cx="55" cy="33" r="2.2" fill="${gold}"/><circle cx="77" cy="33" r="2.2" fill="${gold}"/>
+    <circle cx="11" cy="55" r="2.2" fill="${gold}"/><circle cx="33" cy="55" r="2.2" fill="${gold}"/><circle cx="55" cy="55" r="2.2" fill="${gold}"/><circle cx="77" cy="55" r="2.2" fill="${gold}"/>
+    <circle cx="11" cy="77" r="2.2" fill="${gold}"/><circle cx="33" cy="77" r="2.2" fill="${gold}"/><circle cx="55" cy="77" r="2.2" fill="${gold}"/><circle cx="77" cy="77" r="2.2" fill="${gold}"/>
+  </svg>
+
+  <!-- Card branco premium para logo -->
+  <div style="position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);">
+    ${logo
+      ? `<div style="background:#FFFFFF;border:1.5px solid ${gold};border-radius:14px;padding:30px 42px;box-shadow:0 0 80px rgba(201,168,76,0.12),0 0 160px rgba(201,168,76,0.05);">
+           <img src="${logo}" style="max-width:380px;max-height:210px;object-fit:contain;display:block;">
+         </div>`
+      : `<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+           <polygon points="100,8 186,54 186,146 100,192 14,146 14,54" fill="none" stroke="${gold}" stroke-width="2"/>
+           <polygon points="100,26 170,66 170,134 100,174 30,134 30,66" fill="${gold}" opacity="0.12"/>
+           <text x="100" y="128" text-anchor="middle" font-family="Georgia,serif" font-weight="700" font-size="88" fill="${gold}">${empresa.charAt(0).toUpperCase()}</text>
+         </svg>`
+    }
+  </div>
+
+  <!-- Nome empresa rodapé sutil -->
+  <div style="position:absolute;left:50%;bottom:32px;transform:translateX(-50%);white-space:nowrap;">
+    <span style="font-size:12px;font-weight:400;color:${gold};letter-spacing:9px;text-transform:uppercase;opacity:0.65;">${empresa}</span>
+  </div>
+
+  <!-- Linha dourada fina rodapé -->
+  <div style="position:absolute;left:90px;bottom:24px;right:90px;height:1px;background:linear-gradient(90deg,transparent,${gold},transparent);opacity:0.28;"></div>
+
+</div>
+
+<!-- ── VERSO 1050→2100px ──────────────────────────────────────────── -->
+<div style="position:absolute;left:1050px;top:0;width:1050px;height:600px;background:${bgVerso};overflow:hidden;">
+
+  <!-- Linha vertical dourada esquerda -->
+  <div style="position:absolute;left:58px;top:56px;width:1px;height:488px;background:linear-gradient(180deg,transparent 0%,${gold} 20%,${gold} 80%,transparent 100%);"></div>
+
+  <!-- Hexágono pequeno decorativo canto superior direito -->
+  <svg style="position:absolute;right:50px;top:38px;width:66px;height:66px;opacity:0.18;" viewBox="0 0 66 66" xmlns="http://www.w3.org/2000/svg">
+    <polygon points="33,4 61,19 61,47 33,62 5,47 5,19" fill="none" stroke="${gold}" stroke-width="1.5"/>
+  </svg>
+
+  <!-- Ondas sutis canto inferior direito verso -->
+  <svg style="position:absolute;right:-10px;bottom:-10px;width:440px;height:260px;opacity:0.045;" viewBox="0 0 440 260" xmlns="http://www.w3.org/2000/svg">
+    <path d="M440,260 C350,190 240,230 160,170 S20,140 -20,180" fill="none" stroke="${gold}" stroke-width="3"/>
+    <path d="M440,200 C350,130 240,170 160,110 S20,80 -20,120" fill="none" stroke="${gold}" stroke-width="2"/>
+  </svg>
+
+  <!-- Empresa sutil topo -->
+  <div style="position:absolute;left:94px;top:50px;">
+    <span style="font-size:10px;letter-spacing:7px;color:${gold};text-transform:uppercase;opacity:0.38;font-family:Georgia,serif;">${empresa}</span>
+  </div>
+
+  <!-- Nome -->
+  <div style="position:absolute;left:94px;top:106px;right:72px;">
+    <div style="font-size:${nomeSize}px;font-weight:700;color:#FFFFFF;line-height:1.05;font-family:Georgia,serif;letter-spacing:-0.5px;">${nome}</div>
+  </div>
+
+  <!-- Cargo -->
+  <div style="position:absolute;left:94px;top:232px;">
+    <span style="font-size:16px;letter-spacing:4px;color:${gold};text-transform:uppercase;font-family:Georgia,serif;">${cargo}</span>
+  </div>
+
+  <!-- Separador dourado -->
+  <div style="position:absolute;left:94px;top:274px;width:44px;height:1px;background:${gold};opacity:0.55;"></div>
+
+  <!-- Contatos -->
+  <div style="position:absolute;left:94px;top:298px;width:700px;">
+
+    ${email ? `<div style="position:absolute;top:0;left:0;width:700px;height:28px;">
+      <svg style="position:absolute;left:0;top:5px;" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="${gold}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 01-2.06 0L2 7"/></svg>
+      <span style="position:absolute;left:36px;top:0;line-height:28px;font-size:17px;color:rgba(255,255,255,0.80);font-family:Georgia,serif;">${email}</span>
+    </div>` : ''}
+
+    ${telefone ? `<div style="position:absolute;top:50px;left:0;width:700px;height:28px;">
+      <svg style="position:absolute;left:0;top:5px;" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="${gold}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.4 1.14 2 2 0 012 1h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 8.91a16 16 0 006.18 6.18l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+      <span style="position:absolute;left:36px;top:0;line-height:28px;font-size:17px;color:rgba(255,255,255,0.80);font-family:Georgia,serif;">${telefone}</span>
+    </div>` : ''}
+
+    ${site ? `<div style="position:absolute;top:100px;left:0;width:700px;height:28px;">
+      <svg style="position:absolute;left:0;top:5px;" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="${gold}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+      <span style="position:absolute;left:36px;top:0;line-height:28px;font-size:17px;color:${gold};font-family:Georgia,serif;">${site}</span>
+    </div>` : ''}
+
+  </div>
+
+</div>
+
+</div>
+</body>
+</html>`;
+}
+
+// ── tplDemoCartaoLight: branco corporativo, logo esquerda, tipo direita ──────
+function tplDemoCartaoLight(d: ProdutoInput, logo: string): string {
+  const navy    = '#1A2744';
+  const accent  = '#3B6EC4';
+  const mist    = '#8A9AB5';
+  const bgFrente = '#FFFFFF';
+  const bgVerso  = '#F4F6F9';
+  const logoZone = '#FAFBFD';
+
+  const esc = (s: string) => (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const nome     = esc(d.nome     || '');
+  const cargo    = esc(d.cargo    || '');
+  const empresa  = esc(d.empresa  || '');
+  const telefone = esc(d.telefone || '');
+  const email    = esc(d.email    || '');
+  const site     = esc(d.site     || '');
+
+  const empSize  = empresa.length > 20 ? 46 : empresa.length > 12 ? 58 : 70;
+  const nomeSize = nome.length > 24 ? 38 : nome.length > 18 ? 44 : 52;
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#ddd; font-family: Arial, Helvetica, sans-serif; }
+#canvas { width:2100px; height:600px; position:relative; overflow:hidden; }
+</style>
+</head>
+<body>
+<div id="canvas">
+
+<!-- ── FRENTE 0→1050px ────────────────────────────────────────────── -->
+<div style="position:absolute;left:0;top:0;width:1050px;height:600px;background:${bgFrente};overflow:hidden;">
+
+  <!-- Barra colorida topo -->
+  <div style="position:absolute;left:0;top:0;width:1050px;height:5px;background:${navy};"></div>
+  <div style="position:absolute;left:0;top:5px;width:300px;height:2px;background:${accent};"></div>
+
+  <!-- Zona esquerda: logo (0→410px) -->
+  <div style="position:absolute;left:0;top:0;width:410px;height:600px;background:${logoZone};overflow:hidden;">
+
+    <!-- Padrão de linhas horizontais muito sutis -->
+    <svg style="position:absolute;left:0;top:0;width:410px;height:600px;opacity:0.035;" viewBox="0 0 410 600" xmlns="http://www.w3.org/2000/svg">
+      <line x1="0" y1="60"  x2="410" y2="60"  stroke="${navy}" stroke-width="1"/>
+      <line x1="0" y1="120" x2="410" y2="120" stroke="${navy}" stroke-width="1"/>
+      <line x1="0" y1="180" x2="410" y2="180" stroke="${navy}" stroke-width="1"/>
+      <line x1="0" y1="240" x2="410" y2="240" stroke="${navy}" stroke-width="1"/>
+      <line x1="0" y1="300" x2="410" y2="300" stroke="${navy}" stroke-width="1"/>
+      <line x1="0" y1="360" x2="410" y2="360" stroke="${navy}" stroke-width="1"/>
+      <line x1="0" y1="420" x2="410" y2="420" stroke="${navy}" stroke-width="1"/>
+      <line x1="0" y1="480" x2="410" y2="480" stroke="${navy}" stroke-width="1"/>
+      <line x1="0" y1="540" x2="410" y2="540" stroke="${navy}" stroke-width="1"/>
+    </svg>
+
+    <!-- Logo centralizado -->
+    <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-52%);">
+      ${logo
+        ? `<img src="${logo}" style="max-width:270px;max-height:190px;object-fit:contain;display:block;">`
+        : `<div style="position:relative;width:110px;height:110px;border:2px solid ${navy};border-radius:14px;margin:0 auto;">
+             <span style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:60px;font-weight:900;color:${navy};font-family:Arial,sans-serif;">${empresa.charAt(0).toUpperCase()}</span>
+           </div>`
+      }
+    </div>
+
+    <!-- Empresa embaixo do logo -->
+    <div style="position:absolute;left:50%;bottom:36px;transform:translateX(-50%);white-space:nowrap;">
+      <span style="font-size:10px;letter-spacing:5px;color:${mist};text-transform:uppercase;">${empresa}</span>
+    </div>
+
+  </div>
+
+  <!-- Separador vertical -->
+  <div style="position:absolute;left:410px;top:50px;width:1px;height:500px;background:linear-gradient(180deg,transparent,${navy},transparent);opacity:0.10;"></div>
+
+  <!-- Zona direita: tipografia (440→1010px) -->
+  <div style="position:absolute;left:444px;top:0;width:578px;height:600px;overflow:hidden;">
+
+    <!-- Empresa grande -->
+    <div style="position:absolute;left:0;top:50%;transform:translateY(-56%);width:540px;">
+      <div style="font-size:${empSize}px;font-weight:900;color:${navy};line-height:0.92;letter-spacing:-2.5px;text-transform:uppercase;">${empresa}</div>
+      <div style="position:absolute;left:0;top:${empSize * 1.0 + 18}px;width:36px;height:3px;background:${accent};border-radius:2px;"></div>
+      <div style="position:absolute;left:0;top:${empSize * 1.0 + 36}px;font-size:15px;font-weight:400;color:${mist};letter-spacing:1.5px;">${cargo}</div>
+    </div>
+
+  </div>
+
+  <!-- Linha colorida rodapé -->
+  <div style="position:absolute;left:0;bottom:0;width:1050px;height:4px;background:linear-gradient(90deg,${navy} 0%,${navy} 60%,${accent} 100%);"></div>
+
+</div>
+
+<!-- ── VERSO 1050→2100px ──────────────────────────────────────────── -->
+<div style="position:absolute;left:1050px;top:0;width:1050px;height:600px;background:${bgVerso};overflow:hidden;">
+
+  <!-- Barras esquerda -->
+  <div style="position:absolute;left:0;top:0;width:5px;height:600px;background:${navy};"></div>
+  <div style="position:absolute;left:5px;top:0;width:2px;height:200px;background:${accent};"></div>
+
+  <!-- Barra topo -->
+  <div style="position:absolute;left:0;top:0;width:1050px;height:4px;background:${navy};"></div>
+
+  <!-- Forma geométrica decorativa canto inferior direito -->
+  <svg style="position:absolute;right:44px;bottom:44px;width:120px;height:120px;opacity:0.06;" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+    <rect x="4" y="4" width="112" height="112" rx="8" fill="none" stroke="${navy}" stroke-width="2"/>
+    <rect x="22" y="22" width="76" height="76" rx="4" fill="none" stroke="${navy}" stroke-width="1.5"/>
+    <rect x="40" y="40" width="40" height="40" rx="2" fill="${navy}" opacity="0.4"/>
+  </svg>
+
+  <!-- Nome -->
+  <div style="position:absolute;left:70px;top:80px;right:60px;">
+    <div style="font-size:${nomeSize}px;font-weight:900;color:${navy};line-height:1.05;letter-spacing:-0.5px;">${nome}</div>
+  </div>
+
+  <!-- Cargo -->
+  <div style="position:absolute;left:70px;top:192px;">
+    <span style="font-size:16px;font-weight:600;color:${accent};letter-spacing:2px;text-transform:uppercase;">${cargo}</span>
+  </div>
+
+  <!-- Empresa -->
+  <div style="position:absolute;left:70px;top:228px;">
+    <span style="font-size:13px;font-weight:400;color:${mist};letter-spacing:1px;">${empresa}</span>
+  </div>
+
+  <!-- Linha separadora -->
+  <div style="position:absolute;left:70px;top:272px;width:280px;height:1px;background:${navy};opacity:0.14;"></div>
+
+  <!-- Contatos -->
+  <div style="position:absolute;left:70px;top:296px;width:720px;">
+
+    ${email ? `<div style="position:absolute;top:0;left:0;width:720px;height:30px;">
+      <div style="position:absolute;left:0;top:1px;width:28px;height:28px;background:${navy};border-radius:6px;">
+        <svg style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 01-2.06 0L2 7"/></svg>
+      </div>
+      <span style="position:absolute;left:44px;top:0;line-height:30px;font-size:16px;color:${navy};">${email}</span>
+    </div>` : ''}
+
+    ${telefone ? `<div style="position:absolute;top:48px;left:0;width:720px;height:30px;">
+      <div style="position:absolute;left:0;top:1px;width:28px;height:28px;background:${navy};border-radius:6px;">
+        <svg style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.4 1.14 2 2 0 012 1h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 8.91a16 16 0 006.18 6.18l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+      </div>
+      <span style="position:absolute;left:44px;top:0;line-height:30px;font-size:16px;color:${navy};">${telefone}</span>
+    </div>` : ''}
+
+    ${site ? `<div style="position:absolute;top:96px;left:0;width:720px;height:30px;">
+      <div style="position:absolute;left:0;top:1px;width:28px;height:28px;background:${accent};border-radius:6px;">
+        <svg style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+      </div>
+      <span style="position:absolute;left:44px;top:0;line-height:30px;font-size:16px;color:${accent};">${site}</span>
+    </div>` : ''}
+
+  </div>
+
+</div>
+
+</div>
+</body>
+</html>`;
+}
+
+// ── tplDemoPanfletoHero e tplDemoCanecaPersonalizada — próxima etapa ─────────
+
 function buildHTML(d: ProdutoInput, logo: string, bgUrl?: string): RenderResult {
   const tipo = normalizarTipo(d.tipo_produto ?? 'cartao_visita');
   const obs  = d.observacoes ?? '';
@@ -1801,6 +2115,9 @@ function buildHTML(d: ProdutoInput, logo: string, bgUrl?: string): RenderResult 
   const estilo = (d.estilo ?? '').toLowerCase();
   console.log('[gerar-arte] template debug:', JSON.stringify({ tipo_produto: d.tipo_produto, layout_id: d.layout_id, estilo: d.estilo, logo_url: (d.logo_url ?? '').substring(0, 60), temLogo: !!logo, tamanhoLogo: logo?.length || 0 }));
   console.log('[gerar-arte] logo slice(0,80):', logo ? logo.slice(0, 80) : '(vazio)');
+  // ARTE_DEMO_V2 — tem prioridade máxima de roteamento
+  if (layoutId === 'demo_dark')  { return { html: tplDemoCartaoDark(d, logo),  w: 2100, h: 600, fullDoc: true }; }
+  if (layoutId === 'demo_light') { return { html: tplDemoCartaoLight(d, logo), w: 2100, h: 600, fullDoc: true }; }
   if (layoutId === 'cartao_premium_dark')  { return { html: tplCartaoPremiumDark(d, logo),  w: 2100, h: 630, fullDoc: true }; }
   if (layoutId === 'cartao_premium_light') { return { html: tplCartaoPremiumLight(d, logo), w: 2100, h: 630, fullDoc: true }; }
   if (layoutId === 'cartao_premium')       { return { html: tplCartaoPremium(d, logo),      w: 2100, h: 630, fullDoc: true }; }
