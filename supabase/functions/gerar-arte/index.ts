@@ -21,6 +21,7 @@ interface ProdutoInput {
   texto_principal?:   string;
   texto_secundario?:  string;
   estilo?:            string;
+  layout_id?:         string;
   observacoes?:       string;
 }
 
@@ -1489,8 +1490,12 @@ function buildHTML(d: ProdutoInput, logo: string, bgUrl?: string): RenderResult 
     const inner = pick(2) === 0 ? folderCorporativo(d,logo) : folderCriativo(d,logo);
     return { html: wrapHTML(inner, obs, 2480, 1748, bgUrl), w: 2480, h: 1778 };
   }
-  // cartao_visita — roteado por estilo
+  // cartao_visita — roteado por layout_id (primário) e estilo (fallback)
+  const layoutId = (d.layout_id ?? '').toLowerCase();
   const estilo = (d.estilo ?? '').toLowerCase();
+  console.log('[gerar-arte] template debug:', JSON.stringify({ tipo_produto: d.tipo_produto, layout_id: d.layout_id, estilo: d.estilo, logo_url: (d.logo_url ?? '').substring(0, 60), temLogo: !!logo, tamanhoLogo: logo?.length || 0 }));
+  if (layoutId === 'cartao_premium_dark') { return { html: tplCartaoPremiumDark(d, logo), w: 2100, h: 630, fullDoc: true }; }
+  if (layoutId === 'cartao_premium') { return { html: tplCartaoPremium(d, logo), w: 2100, h: 630, fullDoc: true }; }
   if (
     estilo.includes('premium-dark') ||
     estilo.includes('premium dark') ||

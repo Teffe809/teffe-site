@@ -620,6 +620,12 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
       const logoUrlFinal = logoUrlTabela || dadosJson.logo_url || '';
       console.log('[mia-chat] logo_url para arte:', logoUrlFinal.substring(0, 80));
 
+      const todoHistorico = historico.map(m => m.content).join(' ');
+      const isDark = /premium[\s_-]*dark|(?<![a-z])dark(?![a-z])|escuro|preto\s+e\s+dourado/i.test(todoHistorico);
+      const isPremium = !isDark && /premium/i.test(todoHistorico);
+      const layoutIdDetectado = dadosJson.layout_id || (isDark ? 'cartao_premium_dark' : isPremium ? 'cartao_premium' : '');
+      const estiloDetectado = dadosJson.estilo || (isDark ? 'premium-dark' : isPremium ? 'premium' : 'moderno');
+
       const dadosArte: Record<string, string> = {
         tipo_produto: dadosJson.tipo_produto || 'cartao_visita',
         modo: modoDados,
@@ -636,7 +642,8 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
         texto_secundario: extraido.texto_secundario || dadosJson.texto_secundario || '',
         cor_primaria: dadosJson.cor_primaria || '#1B3A6B',
         cor_secundaria: dadosJson.cor_secundaria || '#C9A84C',
-        estilo: dadosJson.estilo || (historico.some(m => m.role === 'user' && /premium[\s-]*dark/i.test(m.content)) ? 'premium-dark' : historico.some(m => m.role === 'user' && /premium/i.test(m.content)) ? 'premium' : 'moderno'),
+        estilo: estiloDetectado,
+        layout_id: layoutIdDetectado,
         observacoes: dadosJson.observacoes || (historico.some(m => m.role === 'user' && /s[oó]\s*frente|apenas\s*frente/i.test(m.content)) ? 'apenas frente' : ''),
       };
 
