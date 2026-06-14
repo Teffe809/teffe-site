@@ -2051,7 +2051,237 @@ body { background:#ddd; font-family: Arial, Helvetica, sans-serif; }
 </html>`;
 }
 
-// ── tplDemoPanfletoHero e tplDemoCanecaPersonalizada — próxima etapa ─────────
+// ── tplDemoPanfletoHero: panfleto hero 1240×1754 ─────────────────────────────
+function tplDemoPanfletoHero(d: ProdutoInput, logo: string): string {
+  const cp = d.cor_primaria   || '#1A2744';
+  const cs = d.cor_secundaria || '#E8A020';
+
+  const esc = (s: string) => (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const empresa   = esc(d.empresa         || '');
+  const titulo    = esc(d.texto_principal  || 'TÍTULO PRINCIPAL DO SEU NEGÓCIO');
+  const subtitulo = esc(d.texto_secundario || 'Descrição clara e objetiva do seu serviço ou produto em destaque.');
+  const telefone  = esc(d.telefone        || '');
+  const site      = esc(d.site            || '');
+
+  const tituloSize = titulo.length > 44 ? 54 : titulo.length > 28 ? 66 : 78;
+
+  const monogram = `<svg width="130" height="130" viewBox="0 0 130 130" xmlns="http://www.w3.org/2000/svg">
+    <polygon points="65,6 118,36 118,94 65,124 12,94 12,36" fill="${cs}" opacity="0.9"/>
+    <text x="65" y="88" text-anchor="middle" font-family="Arial,sans-serif" font-weight="900" font-size="58" fill="#FFFFFF">${empresa.charAt(0).toUpperCase()}</text>
+  </svg>`;
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#e0e0e0; font-family: Arial, Helvetica, sans-serif; }
+#canvas { width:1240px; height:1754px; position:relative; overflow:hidden; }
+</style>
+</head>
+<body>
+<div id="canvas">
+
+<!-- ── FAIXA TOPO cs ─────────────────────────────────────── -->
+<div style="position:absolute;left:0;top:0;width:1240px;height:8px;background:${cs};"></div>
+
+<!-- ── HEADER cp (8–300px = 292px) ──────────────────────── -->
+<div style="position:absolute;left:0;top:8px;width:1240px;height:292px;background:${cp};overflow:hidden;">
+
+  <!-- Linhas diagonais sutis -->
+  <svg style="position:absolute;left:0;top:0;width:1240px;height:292px;opacity:0.055;" viewBox="0 0 1240 292" xmlns="http://www.w3.org/2000/svg">
+    <line x1="-80" y1="0" x2="220" y2="292" stroke="#FFF" stroke-width="1.5"/>
+    <line x1="80"  y1="0" x2="380" y2="292" stroke="#FFF" stroke-width="1.5"/>
+    <line x1="280" y1="0" x2="580" y2="292" stroke="#FFF" stroke-width="1.5"/>
+    <line x1="480" y1="0" x2="780" y2="292" stroke="#FFF" stroke-width="1.5"/>
+    <line x1="680" y1="0" x2="980" y2="292" stroke="#FFF" stroke-width="1.5"/>
+    <line x1="880" y1="0" x2="1180" y2="292" stroke="#FFF" stroke-width="1.5"/>
+    <line x1="1060" y1="0" x2="1360" y2="292" stroke="#FFF" stroke-width="1.5"/>
+  </svg>
+
+  <!-- Arco cs canto superior direito -->
+  <svg style="position:absolute;right:-90px;top:-90px;width:320px;height:320px;opacity:0.14;" viewBox="0 0 320 320" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="270" cy="50" r="220" fill="${cs}"/>
+  </svg>
+
+  <!-- Logo ou monograma centralizado -->
+  <div style="position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);">
+    ${logo
+      ? `<div style="background:rgba(255,255,255,0.10);border:1.5px solid rgba(255,255,255,0.22);border-radius:14px;padding:22px 36px;">
+           <img src="${logo}" style="max-width:340px;max-height:150px;object-fit:contain;display:block;">
+         </div>`
+      : monogram
+    }
+  </div>
+
+  <!-- Empresa rodapé do header -->
+  <div style="position:absolute;left:50%;bottom:28px;transform:translateX(-50%);white-space:nowrap;">
+    <span style="font-size:12px;letter-spacing:8px;color:rgba(255,255,255,0.45);text-transform:uppercase;">${empresa}</span>
+  </div>
+
+</div>
+
+<!-- ── HERO BAND (300–790px = 490px) ─────────────────────── -->
+<div style="position:absolute;left:0;top:300px;width:1240px;height:490px;background:#07090F;overflow:hidden;">
+
+  <!-- Círculo cp enorme esquerda -->
+  <svg style="position:absolute;left:-180px;top:-160px;width:760px;height:760px;opacity:0.20;" viewBox="0 0 760 760" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="380" cy="380" r="350" fill="${cp}"/>
+    <circle cx="380" cy="380" r="290" fill="none" stroke="${cs}" stroke-width="1.5"/>
+    <circle cx="380" cy="380" r="220" fill="none" stroke="${cs}" stroke-width="0.8" opacity="0.5"/>
+  </svg>
+
+  <!-- Polígono cs canto direito -->
+  <svg style="position:absolute;right:-30px;top:0;width:520px;height:490px;opacity:0.10;" viewBox="0 0 520 490" xmlns="http://www.w3.org/2000/svg">
+    <polygon points="520,0 520,490 100,490 260,0" fill="${cs}"/>
+  </svg>
+
+  <!-- Linhas diagonais sutis direita -->
+  <svg style="position:absolute;right:0;top:0;width:560px;height:490px;opacity:0.06;" viewBox="0 0 560 490" xmlns="http://www.w3.org/2000/svg">
+    <line x1="0" y1="490" x2="560" y2="0" stroke="#FFFFFF" stroke-width="1.5"/>
+    <line x1="60" y1="490" x2="560" y2="55" stroke="#FFFFFF" stroke-width="1"/>
+    <line x1="120" y1="490" x2="560" y2="115" stroke="#FFFFFF" stroke-width="0.8"/>
+  </svg>
+
+  <!-- Grade de pontos cs canto inferior direito -->
+  <svg style="position:absolute;right:68px;bottom:48px;width:130px;height:130px;opacity:0.28;" viewBox="0 0 130 130" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="16" cy="16" r="3" fill="${cs}"/><circle cx="48" cy="16" r="3" fill="${cs}"/><circle cx="80" cy="16" r="3" fill="${cs}"/><circle cx="112" cy="16" r="3" fill="${cs}"/>
+    <circle cx="16" cy="48" r="3" fill="${cs}"/><circle cx="48" cy="48" r="3" fill="${cs}"/><circle cx="80" cy="48" r="3" fill="${cs}"/><circle cx="112" cy="48" r="3" fill="${cs}"/>
+    <circle cx="16" cy="80" r="3" fill="${cs}"/><circle cx="48" cy="80" r="3" fill="${cs}"/><circle cx="80" cy="80" r="3" fill="${cs}"/><circle cx="112" cy="80" r="3" fill="${cs}"/>
+    <circle cx="16" cy="112" r="3" fill="${cs}"/><circle cx="48" cy="112" r="3" fill="${cs}"/><circle cx="80" cy="112" r="3" fill="${cs}"/><circle cx="112" cy="112" r="3" fill="${cs}"/>
+  </svg>
+
+  <!-- TÍTULO GIGANTE -->
+  <div style="position:absolute;left:80px;top:86px;right:84px;">
+    <div style="font-size:${tituloSize}px;font-weight:900;color:#FFFFFF;line-height:1.06;letter-spacing:-2px;text-transform:uppercase;">${titulo}</div>
+  </div>
+
+  <!-- Linha accent cs rodapé do hero -->
+  <div style="position:absolute;left:80px;bottom:64px;width:88px;height:5px;background:${cs};border-radius:3px;"></div>
+  <div style="position:absolute;left:180px;bottom:64px;width:40px;height:5px;background:${cs};border-radius:3px;opacity:0.4;"></div>
+
+</div>
+
+<!-- ── SUBTÍTULO (790–960px = 170px) ─────────────────────── -->
+<div style="position:absolute;left:0;top:790px;width:1240px;height:170px;background:#F7F8FB;overflow:hidden;">
+
+  <!-- Barra cs esquerda -->
+  <div style="position:absolute;left:44px;top:32px;width:5px;height:106px;background:${cs};border-radius:3px;"></div>
+
+  <!-- Texto subtítulo -->
+  <div style="position:absolute;left:72px;top:36px;right:80px;">
+    <div style="font-size:25px;font-weight:400;color:#3A3A3A;line-height:1.55;letter-spacing:0.1px;">${subtitulo}</div>
+  </div>
+
+</div>
+
+<!-- ── SEÇÃO CARDS (960–1510px = 550px) ──────────────────── -->
+<div style="position:absolute;left:0;top:960px;width:1240px;height:550px;background:#FFFFFF;overflow:hidden;">
+
+  <!-- Cabeçalho seção -->
+  <div style="position:absolute;left:80px;top:40px;">
+    <span style="font-size:11px;letter-spacing:6px;color:${cs};text-transform:uppercase;font-weight:700;">Nossos Diferenciais</span>
+    <div style="position:absolute;left:0;top:26px;width:36px;height:2px;background:${cp};"></div>
+  </div>
+
+  <!-- ── Card 1 (esquerdo, claro) ── -->
+  <div style="position:absolute;left:80px;top:106px;width:330px;height:360px;background:#F4F6FA;border-radius:14px;overflow:hidden;">
+    <div style="position:absolute;left:0;top:0;width:330px;height:4px;background:${cp};"></div>
+    <!-- Número watermark -->
+    <div style="position:absolute;right:20px;top:20px;font-size:56px;font-weight:900;color:${cp};opacity:0.07;line-height:1;">01</div>
+    <!-- Ícone -->
+    <div style="position:absolute;left:28px;top:34px;width:54px;height:54px;background:${cp};border-radius:14px;">
+      <svg style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="${cs}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+      </svg>
+    </div>
+    <div style="position:absolute;left:28px;top:108px;right:28px;font-size:21px;font-weight:700;color:${cp};line-height:1.2;">Qualidade Premium</div>
+    <div style="position:absolute;left:28px;top:162px;right:28px;font-size:15px;color:#666;line-height:1.65;">Materiais de alta qualidade em cada produto, garantindo durabilidade e apresentação impecável.</div>
+  </div>
+
+  <!-- ── Card 2 (central, escuro cp) ── -->
+  <div style="position:absolute;left:455px;top:106px;width:330px;height:360px;background:${cp};border-radius:14px;overflow:hidden;">
+    <div style="position:absolute;left:0;top:0;width:330px;height:4px;background:${cs};"></div>
+    <!-- Círculo decorativo fundo -->
+    <svg style="position:absolute;right:-50px;bottom:-50px;width:210px;height:210px;opacity:0.10;" viewBox="0 0 210 210" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="105" cy="105" r="95" fill="${cs}"/>
+    </svg>
+    <!-- Número watermark -->
+    <div style="position:absolute;right:20px;top:20px;font-size:56px;font-weight:900;color:#FFFFFF;opacity:0.08;line-height:1;">02</div>
+    <!-- Ícone -->
+    <div style="position:absolute;left:28px;top:34px;width:54px;height:54px;background:${cs};border-radius:14px;">
+      <svg style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+      </svg>
+    </div>
+    <div style="position:absolute;left:28px;top:108px;right:28px;font-size:21px;font-weight:700;color:#FFFFFF;line-height:1.2;">Entrega Rápida</div>
+    <div style="position:absolute;left:28px;top:162px;right:28px;font-size:15px;color:rgba(255,255,255,0.72);line-height:1.65;">Prazo garantido e acompanhamento do pedido do início ao fim, sem surpresas.</div>
+  </div>
+
+  <!-- ── Card 3 (direito, claro) ── -->
+  <div style="position:absolute;left:830px;top:106px;width:330px;height:360px;background:#F4F6FA;border-radius:14px;overflow:hidden;">
+    <div style="position:absolute;left:0;top:0;width:330px;height:4px;background:${cs};"></div>
+    <!-- Número watermark -->
+    <div style="position:absolute;right:20px;top:20px;font-size:56px;font-weight:900;color:${cp};opacity:0.07;line-height:1;">03</div>
+    <!-- Ícone -->
+    <div style="position:absolute;left:28px;top:34px;width:54px;height:54px;background:${cs};border-radius:14px;">
+      <svg style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+      </svg>
+    </div>
+    <div style="position:absolute;left:28px;top:108px;right:28px;font-size:21px;font-weight:700;color:${cp};line-height:1.2;">Atendimento Dedicado</div>
+    <div style="position:absolute;left:28px;top:162px;right:28px;font-size:15px;color:#666;line-height:1.65;">Equipe disponível para garantir que tudo saia exatamente como você imaginou.</div>
+  </div>
+
+</div>
+
+<!-- ── RODAPÉ cp (1510–1754px = 244px) ───────────────────── -->
+<div style="position:absolute;left:0;top:1510px;width:1240px;height:244px;background:${cp};overflow:hidden;">
+
+  <!-- Faixa cs topo do rodapé -->
+  <div style="position:absolute;left:0;top:0;width:1240px;height:4px;background:${cs};"></div>
+
+  <!-- Círculo decorativo cs canto esquerdo fundo -->
+  <svg style="position:absolute;left:-70px;bottom:-70px;width:330px;height:330px;opacity:0.09;" viewBox="0 0 330 330" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="165" cy="165" r="145" fill="${cs}"/>
+  </svg>
+
+  <!-- Label "Entre em Contato" -->
+  <div style="position:absolute;left:80px;top:36px;">
+    <span style="font-size:11px;letter-spacing:6px;color:${cs};text-transform:uppercase;font-weight:700;">Entre em Contato</span>
+  </div>
+
+  <!-- Telefone -->
+  ${telefone ? `<div style="position:absolute;left:80px;top:74px;width:620px;height:34px;">
+    <svg style="position:absolute;left:0;top:7px;" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${cs}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.4 1.14 2 2 0 012 1h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 8.91a16 16 0 006.18 6.18l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+    <span style="position:absolute;left:36px;top:0;line-height:34px;font-size:23px;font-weight:700;color:#FFFFFF;">${telefone}</span>
+  </div>` : ''}
+
+  <!-- Site -->
+  ${site ? `<div style="position:absolute;left:80px;top:${telefone ? '118px' : '74px'};width:620px;height:30px;">
+    <svg style="position:absolute;left:0;top:5px;" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${cs}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+    <span style="position:absolute;left:36px;top:0;line-height:30px;font-size:18px;color:rgba(255,255,255,0.78);">${site}</span>
+  </div>` : ''}
+
+  <!-- Botão CTA direita -->
+  <div style="position:absolute;right:80px;top:86px;width:316px;height:72px;background:${cs};border-radius:12px;">
+    <span style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:16px;font-weight:900;color:#FFFFFF;text-transform:uppercase;letter-spacing:2px;white-space:nowrap;">FALE CONOSCO AGORA</span>
+  </div>
+
+  <!-- Empresa no rodapé -->
+  <div style="position:absolute;left:80px;bottom:22px;">
+    <span style="font-size:11px;letter-spacing:4px;color:rgba(255,255,255,0.28);text-transform:uppercase;">${empresa}</span>
+  </div>
+
+</div>
+
+</div>
+</body>
+</html>`;
+}
+
+// ── tplDemoCanecaPersonalizada — próxima etapa ────────────────────────────────
 
 function buildHTML(d: ProdutoInput, logo: string, bgUrl?: string): RenderResult {
   const tipo = normalizarTipo(d.tipo_produto ?? 'cartao_visita');
@@ -2116,8 +2346,9 @@ function buildHTML(d: ProdutoInput, logo: string, bgUrl?: string): RenderResult 
   console.log('[gerar-arte] template debug:', JSON.stringify({ tipo_produto: d.tipo_produto, layout_id: d.layout_id, estilo: d.estilo, logo_url: (d.logo_url ?? '').substring(0, 60), temLogo: !!logo, tamanhoLogo: logo?.length || 0 }));
   console.log('[gerar-arte] logo slice(0,80):', logo ? logo.slice(0, 80) : '(vazio)');
   // ARTE_DEMO_V2 — tem prioridade máxima de roteamento
-  if (layoutId === 'demo_dark')  { return { html: tplDemoCartaoDark(d, logo),  w: 2100, h: 600, fullDoc: true }; }
-  if (layoutId === 'demo_light') { return { html: tplDemoCartaoLight(d, logo), w: 2100, h: 600, fullDoc: true }; }
+  if (layoutId === 'demo_dark')          { return { html: tplDemoCartaoDark(d, logo),    w: 2100, h: 600,  fullDoc: true }; }
+  if (layoutId === 'demo_light')         { return { html: tplDemoCartaoLight(d, logo),   w: 2100, h: 600,  fullDoc: true }; }
+  if (layoutId === 'demo_panfleto_hero') { return { html: tplDemoPanfletoHero(d, logo),  w: 1240, h: 1754, fullDoc: true }; }
   if (layoutId === 'cartao_premium_dark')  { return { html: tplCartaoPremiumDark(d, logo),  w: 2100, h: 630, fullDoc: true }; }
   if (layoutId === 'cartao_premium_light') { return { html: tplCartaoPremiumLight(d, logo), w: 2100, h: 630, fullDoc: true }; }
   if (layoutId === 'cartao_premium')       { return { html: tplCartaoPremium(d, logo),      w: 2100, h: 630, fullDoc: true }; }
