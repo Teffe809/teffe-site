@@ -1491,7 +1491,15 @@ function buildHTML(d: ProdutoInput, logo: string, bgUrl?: string): RenderResult 
   }
   // cartao_visita — roteado por estilo
   const estilo = (d.estilo ?? '').toLowerCase();
-  if (estilo.includes('premium-dark')) { return { html: tplCartaoPremiumDark(d, logo), w: 2100, h: 630, fullDoc: true }; }
+  if (
+    estilo.includes('premium-dark') ||
+    estilo.includes('premium dark') ||
+    estilo.includes('premium_dark') ||
+    estilo.includes('dark premium') ||
+    estilo.includes('dark')
+  ) {
+    return { html: tplCartaoPremiumDark(d, logo), w: 2100, h: 630, fullDoc: true };
+  }
   if (estilo.includes('premium')) { return { html: tplCartaoPremium(d, logo), w: 2100, h: 630, fullDoc: true }; }
   let inner: string;
   if (estilo.includes('tecnologico-z') || estilo === 'z') {
