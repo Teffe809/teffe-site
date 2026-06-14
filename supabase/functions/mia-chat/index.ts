@@ -637,7 +637,7 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
         cor_primaria: dadosJson.cor_primaria || '#1B3A6B',
         cor_secundaria: dadosJson.cor_secundaria || '#C9A84C',
         estilo: dadosJson.estilo || 'moderno',
-        observacoes: dadosJson.observacoes || '',
+        observacoes: dadosJson.observacoes || (historico.some(m => m.role === 'user' && /s[oó]\s*frente|apenas\s*frente/i.test(m.content)) ? 'apenas frente' : ''),
       };
 
       if (dadosArte.ilustracao_prompt) {
