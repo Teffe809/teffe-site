@@ -629,15 +629,50 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
       console.log('[mia-chat] logo_url para arte:', logoUrlFinal.substring(0, 80));
 
       const todoHistorico = historico.map(m => m.content).join(' ');
+
+      // ── PASSO 1: tipo_produto — JSON tem prioridade; histórico é fallback apenas ──────
+      // Cor/estilo NUNCA definem produto. Varre mensagens do cliente em ordem reversa
+      // (pedido mais recente do cliente tem prioridade sobre histórico antigo).
+      const tipoFromHist = (() => {
+        for (const m of [...historico].reverse()) {
+          if (m.role !== 'user') continue;
+          const c = m.content.toLowerCase();
+          if (c.includes('caneca'))              return 'caneca';
+          if (c.includes('camiseta'))             return 'camiseta';
+          if (c.includes('panfleto') || c.includes('folheto')) return 'panfleto';
+          if (c.includes('flyer'))                return 'flyer_a5';
+          if (c.includes('banner vertical'))      return 'banner_vertical';
+          if (c.includes('banner'))               return 'banner_horizontal';
+          if (c.includes('adesivo redondo'))      return 'adesivo_redondo';
+          if (c.includes('adesivo'))              return 'adesivo_retangular';
+          if (c.includes('envelope'))             return 'envelope_a4';
+          if (c.includes('folder'))               return 'folder_a4';
+          if (c.includes('cartão') || c.includes('cartao')) return 'cartao_visita';
+        }
+        return 'cartao_visita';
+      })();
+      const tipoFinal = dadosJson.tipo_produto || tipoFromHist;
+      console.log('[mia-chat] tipo_produto: json=', dadosJson.tipo_produto, '| hist=', tipoFromHist, '| final=', tipoFinal);
+
+      // ── PASSO 2: layout_id — inferido DENTRO do produto; nunca atravessa produtos ──────
+      // Layouts de cartão (premium_dark, premium_light, impacto) só quando tipoFinal===cartao_visita
+      // Layouts de caneca (hibrida_caneca, etc.) só quando tipoFinal===caneca
       const isDark    = /premium[\s_-]*dark|(?<![a-z])dark(?![a-z])|escuro|preto\s+e\s+dourado/i.test(todoHistorico);
       const isLight   = !isDark && /premium[\s_-]*light|claro|branco\s+e\s+(azul|corp)/i.test(todoHistorico);
       const isImpacto = !isDark && !isLight && /impacto|bold|arrojado/i.test(todoHistorico);
       const isPremium = !isDark && !isLight && !isImpacto && /premium/i.test(todoHistorico);
-      const layoutIdDetectado = dadosJson.layout_id || (isDark ? 'cartao_premium_dark' : isLight ? 'cartao_premium_light' : isImpacto ? 'cartao_impacto' : isPremium ? 'cartao_premium' : '');
-      const estiloDetectado   = dadosJson.estilo    || (isDark ? 'premium-dark' : isLight ? 'light' : isImpacto ? 'impacto' : isPremium ? 'premium' : 'moderno');
+      const layoutIdDetectado = dadosJson.layout_id || (() => {
+        if (tipoFinal === 'cartao_visita') {
+          return isDark ? 'cartao_premium_dark' : isLight ? 'cartao_premium_light' : isImpacto ? 'cartao_impacto' : isPremium ? 'cartao_premium' : '';
+        }
+        return ''; // outros produtos: layout_id vem do JSON ou fica vazio
+      })();
+      // estilo: cor/estilo só informam layout dentro do cartão — nunca definem produto
+      const estiloDetectado = dadosJson.estilo ||
+        (tipoFinal === 'cartao_visita' ? (isDark ? 'premium-dark' : isLight ? 'light' : isImpacto ? 'impacto' : isPremium ? 'premium' : 'moderno') : 'moderno');
 
       const dadosArte: Record<string, string> = {
-        tipo_produto: dadosJson.tipo_produto || 'cartao_visita',
+        tipo_produto: tipoFinal,
         modo: modoDados,
         ilustracao_prompt: dadosJson.ilustracao_prompt || '',
         background_url: bgUrlResolvido,
