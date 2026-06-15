@@ -25,6 +25,7 @@ interface ProdutoInput {
   estilo?:            string;
   layout_id?:         string;
   observacoes?:       string;
+  modo_caneca?:       string;
 }
 
 // ── Utilitários ───────────────────────────────────────────────────────────────
@@ -2677,6 +2678,54 @@ Deno.serve(async (req: Request) => {
         panfleto: [1050, 1500], folder_a4: [1240, 874],
         envelope_a4: [1240, 877], adesivo_retangular: [1050, 400],
       };
+      // ── CANECA PERSONAGEM ISOLADO: OpenAI gera personagem, HCTI aplica nome abaixo ──
+      if (d.tipo_produto === 'caneca') {
+        const ilp = d.ilustracao_prompt ?? '';
+        const isPersonagem = d.modo_caneca === 'personagem_isolado' ||
+          (/personagem|mascote|anime|super.?her[oó]i|homer|bart|goku|naruto|gato|cachorro|pet|caricatura|cartoon|character/i.test(ilp) &&
+           !/\bfundo\b|cen[aá]rio|paisagem|composi[cç][aã]o completa|arte elaborada|ambiente|cidade|gal[aá]xia|natureza/i.test(ilp));
+        if (isPersonagem) {
+          d.modo_caneca = 'personagem_isolado';
+          console.log('[gerar-arte] caneca personagem_isolado | prompt:', ilp.slice(0, 60));
+          const logoP      = d.logo_url ? await logoParaBase64(d.logo_url) : '';
+          const openAiKeyP = Deno.env.get('OPENAI_API_KEY') ?? '';
+          const baseP = await gerarBaseIA(d, openAiKeyP ? { OPENAI_API_KEY: openAiKeyP } : {});
+          console.log('[personagem] provider:', baseP.provider, '| url prefix:', baseP.url.slice(0, 40));
+          let baseUrlP = baseP.url;
+          if (baseP.provider === 'openai' && baseP.url.startsWith('data:image/')) {
+            const supUrlP = Deno.env.get('SUPABASE_URL') ?? '';
+            const supKeyP = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+            if (supUrlP && supKeyP) {
+              const b64sP = baseP.url.replace(/^data:image\/png;base64,/, '');
+              const binsP = atob(b64sP);
+              const pngsP = Uint8Array.from({ length: binsP.length }, (_, i) => binsP.charCodeAt(i));
+              const fileP = `personagem-${Date.now()}.png`;
+              const upP   = await fetch(`${supUrlP}/storage/v1/object/artes/${fileP}`, {
+                method: 'POST',
+                headers: { apikey: supKeyP, Authorization: `Bearer ${supKeyP}`, 'Content-Type': 'image/png', 'x-upsert': 'true' },
+                body: pngsP,
+              });
+              if (upP.ok) baseUrlP = `${supUrlP}/storage/v1/object/public/artes/${fileP}`;
+            }
+          }
+          const htmlP     = aplicarOverlayHTML(d, logoP, baseUrlP);
+          const renderedP = await renderizarHCTI(htmlP, 2100, 800, true)
+                         ?? await renderizarBrowserless(htmlP, 2100, 800);
+          const imgUrlP   = renderedP ?? (baseUrlP.startsWith('http') ? baseUrlP : null);
+          if (!imgUrlP) {
+            return new Response(
+              JSON.stringify({ error: 'Renderização indisponível.' }),
+              { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+            );
+          }
+          const mockupP = await aplicarMockupCaneca(imgUrlP);
+          return new Response(
+            JSON.stringify({ url: mockupP ?? imgUrlP, tipo_produto: 'caneca', modo: 'personagem_isolado', _ia_provider: baseP.provider }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+          );
+        }
+      }
+
       const [pw, ph] = dimMap[d.tipo_produto] ?? [1024, 1024];
       const imageUrl = await gerarIlustracaoReplicate(d.ilustracao_prompt, pw, ph);
 
@@ -2819,9 +2868,52 @@ Deno.serve(async (req: Request) => {
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }
+    // ── MODO HÍBRIDO — cartão de visita (hibrida_cartao_dark / light / impacto) ──
+    if (d.tipo_produto === 'cartao_visita' && /^hibrida_cartao/.test(d.layout_id ?? '')) {
+      const logoC      = d.logo_url ? await logoParaBase64(d.logo_url) : '';
+      const openAiKeyC = Deno.env.get('OPENAI_API_KEY') ?? '';
+      if (!d.estilo) {
+        d.estilo = d.layout_id === 'hibrida_cartao_light'   ? 'clean bright corporate'
+          : d.layout_id === 'hibrida_cartao_impacto'        ? 'bold high-contrast modern'
+          : 'dark executive luxury';
+      }
+      console.log('[hibrida/cartao] layout:', d.layout_id, '| estilo:', d.estilo);
+      const baseC = await gerarBaseIA(d, openAiKeyC ? { OPENAI_API_KEY: openAiKeyC } : {});
+      let baseUrlC = baseC.url;
+      if (baseC.provider === 'openai' && baseC.url.startsWith('data:image/')) {
+        const supUrlC = Deno.env.get('SUPABASE_URL') ?? '';
+        const supKeyC = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+        if (supUrlC && supKeyC) {
+          const b64sC = baseC.url.replace(/^data:image\/png;base64,/, '');
+          const binsC = atob(b64sC);
+          const pngsC = Uint8Array.from({ length: binsC.length }, (_, i) => binsC.charCodeAt(i));
+          const fileC = `cartao-hibrido-${Date.now()}.png`;
+          const upC   = await fetch(`${supUrlC}/storage/v1/object/artes/${fileC}`, {
+            method: 'POST',
+            headers: { apikey: supKeyC, Authorization: `Bearer ${supKeyC}`, 'Content-Type': 'image/png', 'x-upsert': 'true' },
+            body: pngsC,
+          });
+          if (upC.ok) baseUrlC = `${supUrlC}/storage/v1/object/public/artes/${fileC}`;
+        }
+      }
+      const htmlC     = aplicarOverlayHTML(d, logoC, baseUrlC);
+      const renderedC = await renderizarHCTI(htmlC, 2100, 600, true)
+                     ?? await renderizarBrowserless(htmlC, 2100, 600);
+      const urlFinalC = renderedC ?? (baseUrlC.startsWith('http') ? baseUrlC : null);
+      if (!urlFinalC) {
+        return new Response(
+          JSON.stringify({ error: 'Renderização indisponível.' }),
+          { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+      return new Response(
+        JSON.stringify({ url: urlFinalC, tipo_produto: 'cartao_visita', modo: 'hibrida', layout_id: d.layout_id, _ia_provider: baseC.provider }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+
     // ── Para expandir: adicione outros produtos aqui seguindo o mesmo padrão ──
     //   if (d.tipo_produto === 'panfleto'     && d.layout_id === 'hibrida_panfleto')     { ... }
-    //   if (d.tipo_produto === 'cartao_visita' && d.layout_id === 'hibrida_cartao')       { ... }
     //   if (d.tipo_produto === 'adesivo_redondo' && d.layout_id === 'hibrida_adesivo')    { ... }
 
     // ── MODO TEXTO (padrão): template HTML puro ──

@@ -39,6 +39,7 @@ export interface ProdutoInput {
   observacoes?:        string;
   preco?:              string;
   cta?:                string;
+  modo_caneca?:        string;
 }
 
 export interface MotorDecision {
@@ -182,7 +183,10 @@ function _construirPromptVisual(
 ): string {
   const estilo = d.estilo ?? 'moderno';
 
-  if (produto === 'caneca') return _promptCaneca(cp, cs, estilo);
+  if (produto === 'caneca') {
+    if (d.modo_caneca === 'personagem_isolado') return _promptPersonagemCaneca(d);
+    return _promptCaneca(cp, cs, estilo);
+  }
 
   const prompts: Record<string, string> = {
     cartao_visita:      `Luxury business card background, abstract geometric composition, ${estilo} aesthetic. Primary color ${_nomeCor(cp)} (${cp}), accent ${_nomeCor(cs)} (${cs}). Soft gradients, elegant shapes. NO text, NO letters, NO numbers anywhere.`,
@@ -212,6 +216,18 @@ function _promptCaneca(cp: string, cs: string, estilo: string): string {
     `Technical requirements: seamless edges for wrap-around printing, vibrant CMYK-ready colors, ultra-sharp details.`,
     `ABSOLUTE RULE: no text, no letters, no numbers, no words, no typography, no glyphs of any kind anywhere in the image.`,
     `Pure abstract geometric visual composition only.`,
+  ].join(' ');
+}
+
+function _promptPersonagemCaneca(d: ProdutoInput): string {
+  const base = d.ilustracao_prompt ?? 'character illustration';
+  return [
+    `${base}.`,
+    `Isolated character on pure white background, no background elements, no scenery, no frames,`,
+    `no rectangles, no banners, no text, no letters, no watermarks.`,
+    `Character is large, centered, high detail, professional illustration quality.`,
+    `Clean cutout look suitable for product sublimation printing.`,
+    `ABSOLUTE RULE: solid white background only — no gradients, no textures, nothing behind the character.`,
   ].join(' ');
 }
 
@@ -462,14 +478,22 @@ export function aplicarOverlayHTML(
 ): string {
   const produto = normalizarTipo(d.tipo_produto ?? '');
 
+  if (produto === 'caneca' && d.modo_caneca === 'personagem_isolado') {
+    return _overlayPersonagemCaneca(d, logo, baseUrl);
+  }
+
   const overlays: Record<string, (d: ProdutoInput, logo: string, url: string) => string> = {
-    cartao_visita:   _overlayCartao,
-    panfleto:        _overlayPanfleto,
-    caneca:          _overlayCaneca,
-    adesivo_redondo: _overlayAdesivo,
+    cartao_visita:          _overlayCartao,
+    panfleto:               _overlayPanfleto,
+    caneca:                 _overlayCaneca,
+    adesivo_redondo:        _overlayAdesivo,
+    hibrida_cartao_dark:    _overlayHibridaCartaoDark,
+    hibrida_cartao_light:   _overlayHibridaCartaoLight,
+    hibrida_cartao_impacto: _overlayHibridaCartaoImpacto,
+    hibrida_cartao:         _overlayHibridaCartaoDark,
   };
 
-  const fn = overlays[produto] ?? _overlayGenerico;
+  const fn = overlays[d.layout_id ?? ''] ?? overlays[produto] ?? _overlayGenerico;
   return fn(d, logo, baseUrl);
 }
 
@@ -683,6 +707,44 @@ function _overlayCaneca(d: ProdutoInput, logo: string, baseUrl: string): string 
 </div></body></html>`;
 }
 
+// ── Overlay: caneca personagem isolado (2100×800) ────────────────────────────
+
+function _overlayPersonagemCaneca(d: ProdutoInput, logo: string, baseUrl: string): string {
+  const cp    = d.cor_primaria   ?? '#1A2744';
+  const cs    = d.cor_secundaria ?? '#E8A020';
+  const nome  = e(d.nome || d.empresa || '');
+  const frase = e(d.texto_principal || '');
+  const main  = frase || nome;
+  const sub   = frase ? nome : e(d.texto_secundario || '');
+  const mLen  = main.length;
+  const mainFs = mLen > 40 ? 68 : mLen > 28 ? 86 : mLen > 18 ? 110 : mLen > 12 ? 136 : 160;
+
+  return `<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<style>*{margin:0;padding:0;box-sizing:border-box;}body{font-family:Arial,Helvetica,sans-serif;background:#fff;}</style>
+</head><body>
+<div style="width:2100px;height:800px;position:relative;overflow:hidden;background:#fff;">
+  <div style="position:absolute;top:0;left:0;width:2100px;height:14px;background:linear-gradient(90deg,${cp},${cs},${cp});"></div>
+  <div style="position:absolute;top:14px;left:0;width:2100px;height:556px;overflow:hidden;text-align:center;">
+    <img src="${baseUrl}" style="max-height:540px;max-width:1900px;object-fit:contain;vertical-align:top;">
+  </div>
+  <div style="position:absolute;top:570px;left:120px;width:1860px;height:2px;background:${cs};opacity:0.4;"></div>
+  <div style="position:absolute;top:580px;left:0;width:2100px;text-align:center;">
+    <span style="font-size:${mainFs}px;font-weight:900;color:${cp};letter-spacing:-1px;text-shadow:0 2px 8px rgba(0,0,0,0.12);">${main}</span>
+  </div>
+  ${sub ? `<div style="position:absolute;top:${580 + mainFs + 6}px;left:0;width:2100px;text-align:center;">
+    <span style="font-size:${Math.round(mainFs * 0.44)}px;font-weight:600;color:${cs};">${sub}</span>
+  </div>` : ''}
+  ${logo ? `<div style="position:absolute;top:588px;right:48px;height:${Math.min(mainFs + 20, 168)}px;width:180px;overflow:hidden;text-align:right;">
+    <img src="${logo}" style="max-height:${Math.min(mainFs + 20, 168)}px;max-width:180px;object-fit:contain;vertical-align:middle;">
+  </div>` : ''}
+  <div style="position:absolute;bottom:30px;left:0;width:2100px;height:14px;background:linear-gradient(90deg,${cs},${cp},${cs});"></div>
+  <div style="position:absolute;bottom:0;left:0;width:2100px;height:30px;background:rgba(0,0,0,0.52);text-align:center;">
+    <span style="font-size:14px;line-height:30px;color:rgba(255,255,255,0.6);">Prévia — Arte gerada pela Maya IA • Gráfica Damasceno</span>
+  </div>
+</div></body></html>`;
+}
+
 // ── Overlay: adesivo redondo (800×800) ────────────────────────────────────────
 
 function _overlayAdesivo(d: ProdutoInput, logo: string, baseUrl: string): string {
@@ -725,6 +787,211 @@ function _overlayAdesivo(d: ProdutoInput, logo: string, baseUrl: string): string
     <span style="font-size:${tSize}px;font-weight:900;color:#FFFFFF;letter-spacing:2px;text-shadow:0 3px 14px rgba(0,0,0,0.62);">${titulo}</span>
   </div>
 
+</div></body></html>`;
+}
+
+// ── Overlay: cartão híbrido DARK (2100×600) ───────────────────────────────────
+
+function _overlayHibridaCartaoDark(d: ProdutoInput, logo: string, baseUrl: string): string {
+  const cp   = d.cor_primaria   ?? '#1A2744';
+  const cs   = d.cor_secundaria ?? '#C9A84C';
+  const nome = e(d.nome || '');
+  const carg = e(d.cargo || '');
+  const emp  = e(d.empresa || '');
+  const tel  = e(d.telefone || '');
+  const mail = e(d.email || '');
+  const web  = e(d.site || '');
+  const nFs  = nome.length > 22 ? 42 : nome.length > 16 ? 52 : 62;
+  const ini  = emp.charAt(0).toUpperCase() || 'E';
+
+  return `<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<style>*{margin:0;padding:0;box-sizing:border-box;}body{font-family:Arial,Helvetica,sans-serif;}</style>
+</head><body>
+<div style="width:2100px;height:600px;position:relative;overflow:hidden;">
+  <!-- FRENTE (0–1050) -->
+  <div style="position:absolute;left:0;top:0;width:1050px;height:600px;overflow:hidden;">
+    <img src="${baseUrl}" style="position:absolute;left:0;top:0;width:1050px;height:600px;object-fit:cover;">
+    <div style="position:absolute;left:0;top:0;width:1050px;height:600px;background:rgba(0,0,0,0.22);"></div>
+    <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);">
+      ${logo
+        ? `<div style="background:rgba(255,255,255,0.95);border:2px solid ${cs};border-radius:16px;padding:22px 40px;">
+             <img src="${logo}" style="max-width:380px;max-height:220px;object-fit:contain;display:block;">
+           </div>`
+        : `<svg width="140" height="140" viewBox="0 0 140 140" xmlns="http://www.w3.org/2000/svg">
+             <circle cx="70" cy="70" r="66" fill="${cs}"/>
+             <text x="70" y="97" text-anchor="middle" font-family="Arial,sans-serif" font-weight="900" font-size="60" fill="#000">${ini}</text>
+           </svg>`}
+    </div>
+    <div style="position:absolute;bottom:22px;left:0;width:1050px;text-align:center;">
+      <span style="font-size:11px;letter-spacing:5px;color:rgba(255,255,255,0.50);text-transform:uppercase;">${emp}</span>
+    </div>
+    <div style="position:absolute;bottom:0;left:0;width:1050px;height:5px;background:linear-gradient(90deg,${cp},${cs},${cp});"></div>
+  </div>
+  <!-- VERSO (1050–2100) -->
+  <div style="position:absolute;left:1050px;top:0;width:1050px;height:600px;overflow:hidden;">
+    <img src="${baseUrl}" style="position:absolute;left:-1050px;top:0;width:2100px;height:600px;object-fit:cover;">
+    <div style="position:absolute;left:0;top:0;width:1050px;height:600px;background:rgba(0,0,0,0.68);"></div>
+    <div style="position:absolute;left:0;top:0;width:4px;height:600px;background:linear-gradient(180deg,${cs},${cp},${cs});"></div>
+    <div style="position:absolute;left:50px;top:60px;right:36px;">
+      <div style="font-size:${nFs}px;font-weight:900;color:#FFFFFF;line-height:1.05;">${nome}</div>
+      ${carg ? `<div style="font-size:14px;letter-spacing:3.5px;color:${cs};text-transform:uppercase;margin-top:8px;">${carg}</div>` : ''}
+      <div style="width:44px;height:2px;background:${cs};margin-top:10px;"></div>
+    </div>
+    <div style="position:absolute;left:50px;top:260px;">
+      ${mail ? `<div style="position:absolute;top:0;left:0;width:740px;height:26px;">
+        <svg style="position:absolute;left:0;top:4px;" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${cs}" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 01-2.06 0L2 7"/></svg>
+        <span style="position:absolute;left:26px;top:0;line-height:26px;font-size:15px;color:rgba(255,255,255,0.84);">${mail}</span>
+      </div>` : ''}
+      ${tel ? `<div style="position:absolute;top:42px;left:0;width:740px;height:26px;">
+        <svg style="position:absolute;left:0;top:4px;" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${cs}" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.4 1.14 2 2 0 012 1h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 8.91a16 16 0 006.18 6.18l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+        <span style="position:absolute;left:26px;top:0;line-height:26px;font-size:15px;color:rgba(255,255,255,0.84);">${tel}</span>
+      </div>` : ''}
+      ${web ? `<div style="position:absolute;top:84px;left:0;width:740px;height:26px;">
+        <svg style="position:absolute;left:0;top:4px;" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${cs}" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+        <span style="position:absolute;left:26px;top:0;line-height:26px;font-size:15px;color:${cs};">${web}</span>
+      </div>` : ''}
+    </div>
+    <div style="position:absolute;right:36px;bottom:22px;">
+      <span style="font-size:10px;letter-spacing:4px;color:rgba(255,255,255,0.22);text-transform:uppercase;">${emp}</span>
+    </div>
+    <div style="position:absolute;bottom:0;left:0;width:1050px;height:5px;background:linear-gradient(90deg,${cs},${cp},${cs});"></div>
+  </div>
+</div></body></html>`;
+}
+
+// ── Overlay: cartão híbrido LIGHT (2100×600) ──────────────────────────────────
+
+function _overlayHibridaCartaoLight(d: ProdutoInput, logo: string, baseUrl: string): string {
+  const cp   = d.cor_primaria   ?? '#1A2744';
+  const cs   = d.cor_secundaria ?? '#C9A84C';
+  const nome = e(d.nome || '');
+  const carg = e(d.cargo || '');
+  const emp  = e(d.empresa || '');
+  const tel  = e(d.telefone || '');
+  const mail = e(d.email || '');
+  const web  = e(d.site || '');
+  const nFs  = nome.length > 22 ? 42 : nome.length > 16 ? 52 : 62;
+  const ini  = emp.charAt(0).toUpperCase() || 'E';
+
+  return `<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<style>*{margin:0;padding:0;box-sizing:border-box;}body{font-family:Arial,Helvetica,sans-serif;}</style>
+</head><body>
+<div style="width:2100px;height:600px;position:relative;overflow:hidden;">
+  <img src="${baseUrl}" style="position:absolute;left:0;top:0;width:2100px;height:600px;object-fit:cover;">
+  <!-- FRENTE (0–1050): véu claro -->
+  <div style="position:absolute;left:0;top:0;width:1050px;height:600px;overflow:hidden;">
+    <div style="position:absolute;left:0;top:0;width:1050px;height:600px;background:rgba(255,255,255,0.82);"></div>
+    <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-56%);">
+      ${logo
+        ? `<img src="${logo}" style="max-width:420px;max-height:240px;object-fit:contain;display:block;filter:drop-shadow(0 4px 18px rgba(0,0,0,0.16));">`
+        : `<svg width="140" height="140" viewBox="0 0 140 140" xmlns="http://www.w3.org/2000/svg">
+             <circle cx="70" cy="70" r="66" fill="${cp}"/>
+             <text x="70" y="97" text-anchor="middle" font-family="Arial,sans-serif" font-weight="900" font-size="60" fill="#FFF">${ini}</text>
+           </svg>`}
+    </div>
+    <div style="position:absolute;bottom:40px;left:0;width:1050px;text-align:center;">
+      <span style="font-size:11px;letter-spacing:5px;color:${cp};opacity:0.5;text-transform:uppercase;">${emp}</span>
+    </div>
+    <div style="position:absolute;bottom:0;left:0;width:1050px;height:5px;background:linear-gradient(90deg,${cp},${cs});"></div>
+  </div>
+  <!-- VERSO (1050–2100): véu branco -->
+  <div style="position:absolute;left:1050px;top:0;width:1050px;height:600px;overflow:hidden;">
+    <div style="position:absolute;left:0;top:0;width:1050px;height:600px;background:rgba(255,255,255,0.90);"></div>
+    <div style="position:absolute;top:0;left:0;width:1050px;height:5px;background:linear-gradient(90deg,${cp},${cs});"></div>
+    <div style="position:absolute;left:50px;top:56px;right:36px;">
+      <div style="font-size:${nFs}px;font-weight:900;color:${cp};line-height:1.05;">${nome}</div>
+      ${carg ? `<div style="font-size:13px;letter-spacing:3px;color:${cs};text-transform:uppercase;margin-top:8px;">${carg}</div>` : ''}
+      <div style="width:44px;height:2px;background:${cp};margin-top:10px;opacity:0.28;"></div>
+    </div>
+    <div style="position:absolute;left:50px;top:250px;">
+      ${mail ? `<div style="position:absolute;top:0;left:0;width:740px;height:26px;">
+        <svg style="position:absolute;left:0;top:4px;" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${cp}" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 01-2.06 0L2 7"/></svg>
+        <span style="position:absolute;left:26px;top:0;line-height:26px;font-size:15px;color:${cp};">${mail}</span>
+      </div>` : ''}
+      ${tel ? `<div style="position:absolute;top:42px;left:0;width:740px;height:26px;">
+        <svg style="position:absolute;left:0;top:4px;" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${cp}" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.4 1.14 2 2 0 012 1h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 8.91a16 16 0 006.18 6.18l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+        <span style="position:absolute;left:26px;top:0;line-height:26px;font-size:15px;color:${cp};">${tel}</span>
+      </div>` : ''}
+      ${web ? `<div style="position:absolute;top:84px;left:0;width:740px;height:26px;">
+        <svg style="position:absolute;left:0;top:4px;" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${cs}" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+        <span style="position:absolute;left:26px;top:0;line-height:26px;font-size:15px;color:${cs};">${web}</span>
+      </div>` : ''}
+    </div>
+    <div style="position:absolute;right:36px;bottom:22px;">
+      <span style="font-size:10px;letter-spacing:4px;color:${cp};opacity:0.28;text-transform:uppercase;">${emp}</span>
+    </div>
+    <div style="position:absolute;bottom:0;left:0;width:1050px;height:5px;background:linear-gradient(90deg,${cs},${cp});"></div>
+  </div>
+</div></body></html>`;
+}
+
+// ── Overlay: cartão híbrido IMPACTO (2100×600) ────────────────────────────────
+
+function _overlayHibridaCartaoImpacto(d: ProdutoInput, logo: string, baseUrl: string): string {
+  const cp   = d.cor_primaria   ?? '#1A2744';
+  const cs   = d.cor_secundaria ?? '#C9A84C';
+  const nome = e(d.nome || '');
+  const carg = e(d.cargo || '');
+  const emp  = e(d.empresa || '');
+  const tel  = e(d.telefone || '');
+  const mail = e(d.email || '');
+  const web  = e(d.site || '');
+  const nFs  = nome.length > 22 ? 46 : nome.length > 16 ? 58 : 68;
+  const ini  = emp.charAt(0).toUpperCase() || 'E';
+
+  return `<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<style>*{margin:0;padding:0;box-sizing:border-box;}body{font-family:Arial,Helvetica,sans-serif;}</style>
+</head><body>
+<div style="width:2100px;height:600px;position:relative;overflow:hidden;">
+  <img src="${baseUrl}" style="position:absolute;left:0;top:0;width:2100px;height:600px;object-fit:cover;">
+  <!-- FRENTE (0–1050) -->
+  <div style="position:absolute;left:0;top:0;width:1050px;height:600px;overflow:hidden;">
+    <div style="position:absolute;left:0;top:0;width:200px;height:600px;background:${cp};opacity:0.88;"></div>
+    <div style="position:absolute;left:200px;top:0;width:0;height:0;border-bottom:600px solid transparent;border-left:80px solid ${cp};opacity:0.88;"></div>
+    <div style="position:absolute;left:50%;top:50%;transform:translate(-40%,-50%);">
+      ${logo
+        ? `<img src="${logo}" style="max-width:400px;max-height:230px;object-fit:contain;display:block;filter:drop-shadow(0 6px 22px rgba(0,0,0,0.38));">`
+        : `<svg width="150" height="150" viewBox="0 0 150 150" xmlns="http://www.w3.org/2000/svg">
+             <rect width="150" height="150" rx="20" fill="${cs}"/>
+             <text x="75" y="107" text-anchor="middle" font-family="Arial,sans-serif" font-weight="900" font-size="72" fill="#000">${ini}</text>
+           </svg>`}
+    </div>
+    <div style="position:absolute;bottom:20px;right:24px;">
+      <span style="font-size:11px;letter-spacing:5px;color:rgba(255,255,255,0.60);text-transform:uppercase;">${emp}</span>
+    </div>
+    <div style="position:absolute;bottom:0;left:0;width:1050px;height:4px;background:${cs};"></div>
+  </div>
+  <!-- VERSO (1050–2100) -->
+  <div style="position:absolute;left:1050px;top:0;width:1050px;height:600px;overflow:hidden;">
+    <div style="position:absolute;left:0;top:0;width:1050px;height:600px;background:rgba(0,0,0,0.75);"></div>
+    <div style="position:absolute;left:0;top:0;width:5px;height:600px;background:${cs};"></div>
+    <div style="position:absolute;left:50px;top:52px;right:36px;">
+      <div style="font-size:${nFs}px;font-weight:900;color:#FFFFFF;line-height:1.0;letter-spacing:-1px;">${nome}</div>
+      ${carg ? `<div style="font-size:13px;letter-spacing:4px;color:${cs};text-transform:uppercase;margin-top:10px;font-weight:700;">${carg}</div>` : ''}
+    </div>
+    <div style="position:absolute;left:50px;top:224px;width:240px;height:3px;background:${cs};"></div>
+    <div style="position:absolute;left:50px;top:248px;">
+      ${mail ? `<div style="position:absolute;top:0;left:0;width:740px;height:28px;">
+        <svg style="position:absolute;left:0;top:5px;" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${cs}" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 01-2.06 0L2 7"/></svg>
+        <span style="position:absolute;left:26px;top:0;line-height:28px;font-size:16px;color:rgba(255,255,255,0.88);font-weight:600;">${mail}</span>
+      </div>` : ''}
+      ${tel ? `<div style="position:absolute;top:44px;left:0;width:740px;height:28px;">
+        <svg style="position:absolute;left:0;top:5px;" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${cs}" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.4 1.14 2 2 0 012 1h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 8.91a16 16 0 006.18 6.18l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+        <span style="position:absolute;left:26px;top:0;line-height:28px;font-size:16px;color:rgba(255,255,255,0.88);font-weight:600;">${tel}</span>
+      </div>` : ''}
+      ${web ? `<div style="position:absolute;top:88px;left:0;width:740px;height:28px;">
+        <svg style="position:absolute;left:0;top:5px;" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${cs}" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+        <span style="position:absolute;left:26px;top:0;line-height:28px;font-size:16px;color:${cs};font-weight:700;">${web}</span>
+      </div>` : ''}
+    </div>
+    <div style="position:absolute;right:36px;bottom:22px;">
+      <span style="font-size:10px;letter-spacing:5px;color:rgba(255,255,255,0.20);text-transform:uppercase;">${emp}</span>
+    </div>
+    <div style="position:absolute;bottom:0;left:0;width:1050px;height:4px;background:${cs};"></div>
+  </div>
 </div></body></html>`;
 }
 
