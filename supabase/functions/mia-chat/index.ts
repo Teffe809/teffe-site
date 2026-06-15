@@ -300,13 +300,15 @@ async function gerarOrdemProducaoPDF(dados: { cliente: string; telefone: string;
 
 // ── Handler WhatsApp ────────────────────────────────────────────────────────
 async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> {
-  console.log('[mia-chat] payload recebido:', JSON.stringify(body).substring(0, 200));
+  const _dataRaw = Array.isArray(body.data) ? (body.data as unknown[])[0] : (body.data ?? {});
+  const _dataKeys = Object.keys(_dataRaw as Record<string, unknown>).join(',');
+  console.log('[mia-chat] entrada | event:', body.event, '| instance:', body.instance, '| data:', Array.isArray(body.data) ? `array[${(body.data as unknown[]).length}]` : typeof body.data, '| data keys:', _dataKeys);
 
   const evt = String(body.event ?? '').toUpperCase().replace(/[.\s-]/g, '_');
   const isUpsert = evt === 'MESSAGES_UPSERT';
   const isSendMessage = evt === 'SEND_MESSAGE';
   if (!isUpsert && !isSendMessage) {
-    console.log('[mia-chat] evento ignorado:', body.event);
+    console.log('[mia-chat] evento ignorado (tipo real):', body.event, '| evt normalizado:', evt);
     return new Response('OK', { status: 200 });
   }
 
@@ -397,12 +399,29 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
     ''
   ).trim();
 
+  // ── DIAGNÓSTICO: logar sempre para rastrear fluxo de imagem ──────────────
+  console.log('[mia-chat] msg | instancia:', instancia,
+    '| fromMe:', fromMe,
+    '| msgObj keys:', Object.keys(msgObj).join(',') || '(vazio)',
+    '| imageMessage:', !!msgObj.imageMessage,
+    '| documentMessage:', !!msgObj.documentMessage,
+    '| texto len:', texto.length,
+    '| telefone:', telefone.substring(0, 8) + '...',
+  );
+  if (msgObj.imageMessage || msgObj.documentMessage) {
+    console.log('[mia-chat] imagem detectada no payload | instancia === teffe-press?', instancia === 'teffe-press', '| instancia real:', instancia);
+  }
+
   const nome = String(data.pushName ?? '');
   const h = (new Date().getUTCHours() + 21) % 24;
   const periodo = h >= 5 && h < 12 ? 'manhã' : h >= 12 && h < 18 ? 'tarde' : 'noite';
   const saudacao = h >= 6 && h < 12 ? 'Bom dia' : h >= 12 && h < 18 ? 'Boa tarde' : h >= 18 && h < 23 ? 'Boa noite' : 'Olá';
 
   // ── FLUXO DE IMAGEM (logo) ─────────────────────────────────────────────
+  // Verifica se há imagem mas a instância não está ativa para logo — evita silêncio
+  if ((msgObj.imageMessage || msgObj.documentMessage) && instancia !== 'teffe-press') {
+    console.warn('[logo] imagem recebida mas instancia não é teffe-press | instancia:', instancia, '— ignorando fluxo de logo');
+  }
   if (instancia === 'teffe-press' && (msgObj.imageMessage || msgObj.documentMessage)) {
     console.log('[logo] recebido | telefone:', telefone, '| messageId:', String(key.id ?? ''));
     const dataMediaUrl = String((data as Record<string, unknown>).mediaUrl ?? '');
@@ -540,7 +559,13 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
 
   // ── FLUXO TEXTO NORMAL ─────────────────────────────────────────────────
   const textoFinal = texto;
-  if (!textoFinal) return new Response('OK', { status: 200 });
+  if (!textoFinal) {
+    // Imagem sem legenda chegou aqui — significa que o check acima não a capturou
+    if (msgObj.imageMessage || msgObj.documentMessage) {
+      console.warn('[mia-chat] imagem sem legenda caiu no fluxo de texto | instancia:', instancia, '| imageMessage:', !!msgObj.imageMessage, '— retornando sem resposta');
+    }
+    return new Response('OK', { status: 200 });
+  }
 
   // Carrega histórico
   let historico: Msg[] = [];
