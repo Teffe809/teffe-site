@@ -789,45 +789,97 @@ function panfletoElegante(d: ProdutoInput, logo: string): string {
 // ════════════════════════════════════════════════════════════════════════════
 // CANECA  2100×800 (área de impressão lateral)
 // ════════════════════════════════════════════════════════════════════════════
+// CANECA — templates fullDoc 2100×800 (área de sublimação completa)
+// Hierarquia: frase/nome = destaque máximo | logo = secundário | empresa = terciário
+// ════════════════════════════════════════════════════════════════════════════
 function canecaBasico(d: ProdutoInput, logo: string): string {
-  const cp=d.cor_primaria, cs=d.cor_secundaria, emp=esc(d.empresa);
-  const tp=esc(d.texto_principal);
-  return `<div style="width:2100px;height:800px;background:#fff;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;">
-  <div style="width:4px;height:100%;background:linear-gradient(180deg,${cp},${cs});position:absolute;left:0;top:0;"></div>
-  <div style="width:4px;height:100%;background:linear-gradient(180deg,${cp},${cs});position:absolute;right:0;top:0;"></div>
-  <div style="width:1px;height:100%;background:${cp}22;position:absolute;left:50%;top:0;"></div>
-  <div style="text-align:center;max-width:1600px;padding:0 100px;">
-    ${logo?`<div class="logo-area" style="margin-bottom:28px;"><img src="${logo}" style="max-height:140px;max-width:400px;object-fit:contain;display:inline-block;"></div>`:''}
-    <div style="font-size:${logo?'64px':'80px'};font-weight:900;color:#111;letter-spacing:6px;text-transform:uppercase;line-height:1.05;">${emp}</div>
-    ${tp?`<div style="margin-top:20px;font-size:28px;color:#555;letter-spacing:2px;">${tp}</div>`:''}
-    <div style="margin-top:24px;display:flex;align-items:center;justify-content:center;gap:20px;">
-      <div style="width:80px;height:2px;background:linear-gradient(90deg,transparent,${cp});"></div>
-      <div style="width:10px;height:10px;border-radius:50%;background:${cp};"></div>
-      <div style="width:80px;height:2px;background:linear-gradient(90deg,${cp},transparent);"></div>
+  const cp       = d.cor_primaria   || '#1B3A6B';
+  const cs       = d.cor_secundaria || '#C9A84C';
+  const empresa  = esc(d.empresa || d.nome || '');
+  const frase    = esc(d.texto_principal  || '');
+  const sub      = esc(d.texto_secundario || '');
+  const mainText = frase || empresa;
+  const subLabel = frase ? empresa : sub;
+  const mLen     = mainText.length;
+  const mainFs   = mLen > 40 ? 68 : mLen > 30 ? 86 : mLen > 20 ? 108 : mLen > 14 ? 132 : 158;
+  const subFs    = 62;
+
+  const logoBlock = logo
+    ? `<div style="margin-bottom:28px;display:flex;justify-content:center;align-items:center;">
+         <img src="${logo}" style="max-height:340px;max-width:1600px;width:auto;height:auto;object-fit:contain;filter:drop-shadow(0 8px 24px rgba(0,0,0,0.15));">
+       </div>`
+    : `<div style="width:200px;height:200px;border-radius:50%;background:${cp};display:flex;align-items:center;justify-content:center;margin:0 auto 28px;box-shadow:0 12px 40px rgba(0,0,0,0.18);">
+         <span style="font-size:120px;font-weight:900;color:#fff;font-family:'Montserrat',Arial,sans-serif;line-height:1;">${(empresa||'G').charAt(0).toUpperCase()}</span>
+       </div>`;
+
+  return `<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<style>*{margin:0;padding:0;box-sizing:border-box;}body{background:#FAFAFA;font-family:'Montserrat',Arial,sans-serif;width:2100px;height:800px;overflow:hidden;}</style>
+</head><body>
+<div style="width:2100px;height:800px;background:#FAFAFA;display:flex;flex-direction:column;overflow:hidden;">
+  <div style="width:100%;height:16px;background:linear-gradient(90deg,${cp} 0%,${cs} 50%,${cp} 100%);flex-shrink:0;"></div>
+  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:18px 80px 0;gap:0;overflow:hidden;">
+    ${logoBlock}
+    <div style="font-size:${mainFs}px;font-weight:900;color:${cp};text-align:center;line-height:1.06;letter-spacing:-1px;max-width:1940px;word-break:break-word;">${mainText}</div>
+    ${subLabel ? `<div style="margin-top:14px;font-size:${subFs}px;font-weight:700;color:${cs};text-align:center;letter-spacing:2px;max-width:1900px;">${subLabel}</div>` : ''}
+    ${sub && frase ? `<div style="margin-top:8px;font-size:38px;color:#999;text-align:center;">${sub}</div>` : ''}
+  </div>
+  <div style="flex-shrink:0;">
+    <div style="width:100%;height:16px;background:linear-gradient(90deg,${cs} 0%,${cp} 50%,${cs} 100%);"></div>
+    <div style="width:100%;height:30px;background:rgba(0,0,0,0.52);display:flex;align-items:center;justify-content:center;gap:10px;">
+      <span style="font-size:14px;font-weight:400;color:rgba(255,255,255,.62);letter-spacing:1px;">Prévia — Arte gerada pela Maya IA</span>
+      <span style="font-size:14px;color:rgba(255,255,255,.28);">•</span>
+      <span style="font-size:14px;font-weight:700;color:rgba(255,255,255,.62);letter-spacing:.8px;">Gráfica Damasceno</span>
     </div>
   </div>
-</div>`;
+</div>
+</body></html>`;
 }
 
 function canecaColorido(d: ProdutoInput, logo: string): string {
-  const cp=d.cor_primaria, cs=d.cor_secundaria, emp=esc(d.empresa);
-  const tp=esc(d.texto_principal);
-  return `<div style="width:2100px;height:800px;background:linear-gradient(135deg,${cp} 0%,${cs} 100%);position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;">
-  <div style="position:absolute;top:-150px;left:-150px;width:600px;height:600px;border-radius:50%;background:rgba(255,255,255,.08);"></div>
-  <div style="position:absolute;bottom:-150px;right:-150px;width:600px;height:600px;border-radius:50%;background:rgba(255,255,255,.06);"></div>
-  <div style="position:absolute;top:0;left:0;right:0;height:4px;background:rgba(255,255,255,.35);"></div>
-  <div style="position:absolute;bottom:0;left:0;right:0;height:4px;background:rgba(255,255,255,.35);"></div>
-  <div style="text-align:center;max-width:1600px;padding:0 100px;position:relative;">
-    ${logo?`<div class="logo-area" style="margin-bottom:28px;"><img src="${logo}" style="max-height:140px;max-width:400px;filter:brightness(0) invert(1);object-fit:contain;display:inline-block;"></div>`:''}
-    <div style="font-size:${logo?'60px':'80px'};font-weight:900;color:#fff;letter-spacing:6px;text-transform:uppercase;text-shadow:0 4px 20px rgba(0,0,0,.2);">${emp}</div>
-    ${tp?`<div style="margin-top:18px;font-size:26px;color:rgba(255,255,255,.80);letter-spacing:2px;">${tp}</div>`:''}
-    <div style="margin-top:24px;display:flex;align-items:center;justify-content:center;gap:20px;">
-      <div style="width:100px;height:2px;background:rgba(255,255,255,.4);"></div>
-      <div style="width:12px;height:12px;border-radius:50%;background:rgba(255,255,255,.9);"></div>
-      <div style="width:100px;height:2px;background:rgba(255,255,255,.4);"></div>
+  const cp       = d.cor_primaria   || '#1B3A6B';
+  const cs       = d.cor_secundaria || '#C9A84C';
+  const empresa  = esc(d.empresa || d.nome || '');
+  const frase    = esc(d.texto_principal  || '');
+  const sub      = esc(d.texto_secundario || '');
+  const mainText = frase || empresa;
+  const subLabel = frase ? empresa : sub;
+  const mLen     = mainText.length;
+  const mainFs   = mLen > 40 ? 72 : mLen > 30 ? 92 : mLen > 20 ? 115 : mLen > 14 ? 140 : 168;
+  const subFs    = 66;
+
+  const logoBlock = logo
+    ? `<div style="background:#FFFFFF;border-radius:20px;padding:22px 52px;box-shadow:0 16px 60px rgba(0,0,0,0.38),0 0 0 2px rgba(255,255,255,0.18);margin-bottom:32px;display:inline-flex;align-items:center;justify-content:center;max-width:1700px;">
+         <img src="${logo}" style="max-height:320px;max-width:1500px;width:auto;height:auto;object-fit:contain;">
+       </div>`
+    : `<div style="width:210px;height:210px;border-radius:50%;background:${cs};display:flex;align-items:center;justify-content:center;margin-bottom:32px;box-shadow:0 14px 50px rgba(0,0,0,0.32);">
+         <span style="font-size:128px;font-weight:900;color:#fff;font-family:'Montserrat',Arial,sans-serif;line-height:1;">${(empresa||'G').charAt(0).toUpperCase()}</span>
+       </div>`;
+
+  return `<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<style>*{margin:0;padding:0;box-sizing:border-box;}body{background:${cp};font-family:'Montserrat',Arial,sans-serif;width:2100px;height:800px;overflow:hidden;}</style>
+</head><body>
+<div style="width:2100px;height:800px;background:linear-gradient(140deg,${cp} 0%,${cp}f0 55%,${cp}cc 100%);position:relative;display:flex;flex-direction:column;overflow:hidden;">
+  <div style="position:absolute;top:-180px;right:-180px;width:580px;height:580px;border-radius:50%;background:rgba(255,255,255,0.06);pointer-events:none;"></div>
+  <div style="position:absolute;bottom:-100px;left:-100px;width:440px;height:440px;border-radius:50%;background:rgba(255,255,255,0.05);pointer-events:none;"></div>
+  <div style="position:absolute;top:40%;left:-80px;width:300px;height:300px;border-radius:50%;border:3px solid rgba(255,255,255,0.07);pointer-events:none;"></div>
+  <div style="width:100%;height:12px;background:${cs};flex-shrink:0;position:relative;z-index:2;"></div>
+  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:18px 80px 0;gap:0;position:relative;z-index:2;overflow:hidden;">
+    ${logoBlock}
+    <div style="font-size:${mainFs}px;font-weight:900;color:#FFFFFF;text-align:center;line-height:1.06;letter-spacing:-1px;max-width:1940px;word-break:break-word;text-shadow:0 4px 28px rgba(0,0,0,0.28);">${mainText}</div>
+    ${subLabel ? `<div style="margin-top:16px;font-size:${subFs}px;font-weight:700;color:${cs};text-align:center;letter-spacing:2px;max-width:1900px;">${subLabel}</div>` : ''}
+  </div>
+  <div style="flex-shrink:0;position:relative;z-index:2;">
+    <div style="width:100%;height:12px;background:${cs};"></div>
+    <div style="width:100%;height:30px;background:rgba(0,0,0,0.50);display:flex;align-items:center;justify-content:center;gap:10px;">
+      <span style="font-size:14px;font-weight:400;color:rgba(255,255,255,.62);letter-spacing:1px;">Prévia — Arte gerada pela Maya IA</span>
+      <span style="font-size:14px;color:rgba(255,255,255,.28);">•</span>
+      <span style="font-size:14px;font-weight:700;color:rgba(255,255,255,.62);letter-spacing:.8px;">Gráfica Damasceno</span>
     </div>
   </div>
-</div>`;
+</div>
+</body></html>`;
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -2452,8 +2504,8 @@ function buildHTML(d: ProdutoInput, logo: string, bgUrl?: string): RenderResult 
     return { html: wrapHTML(inner, obs, 2100, 1500, bgUrl), w: 2100, h: 1530 };
   }
   if (tipo === 'caneca') {
-    const inner = pick(2) === 0 ? canecaBasico(d,logo) : canecaColorido(d,logo);
-    return { html: wrapHTML(inner, obs, 2100, 800, bgUrl), w: 2100, h: 830 };
+    const fn = pick(2) === 0 ? canecaBasico : canecaColorido;
+    return { html: fn(d, logo), w: 2100, h: 800, fullDoc: true };
   }
   if (tipo === 'camiseta') {
     const inner = pick(2) === 0 ? camisetaBasico(d,logo) : camisetaBold(d,logo);
