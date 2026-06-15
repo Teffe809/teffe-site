@@ -404,6 +404,7 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
 
   // ── FLUXO DE IMAGEM (logo) ─────────────────────────────────────────────
   if (instancia === 'teffe-press' && (msgObj.imageMessage || msgObj.documentMessage)) {
+    console.log('[logo] recebido | telefone:', telefone, '| messageId:', String(key.id ?? ''));
     const dataMediaUrl = String((data as Record<string, unknown>).mediaUrl ?? '');
     const imgObj = (msgObj.imageMessage ?? msgObj.documentMessage) as Record<string, unknown>;
     const urlBruta = dataMediaUrl || String(imgObj.url ?? imgObj.mediaUrl ?? '');
@@ -420,13 +421,15 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
         if (b64Res.ok) {
           const b64Data = await b64Res.json() as { base64?: string };
           base64Direto = b64Data.base64 ?? '';
-          console.log('[mia-chat] getBase64 ok:', !!base64Direto);
+          console.log('[logo] download ok | base64 presente:', !!base64Direto, '| tamanho chars:', base64Direto.length);
         } else {
-          console.log('[mia-chat] getBase64 falhou:', b64Res.status, await b64Res.text());
+          console.log('[logo] download falhou | status:', b64Res.status, '| body:', (await b64Res.text()).substring(0, 200));
         }
       } catch (e) {
-        console.log('[mia-chat] getBase64 exceção:', e);
+        console.log('[logo] download exceção:', String(e));
       }
+    } else {
+      console.log('[logo] download pulado | messageId ausente:', !messageId);
     }
 
     console.log('[mia-chat] mídia recebida:', urlBruta.substring(0, 100), '| base64 direto:', !!base64Direto);
@@ -452,7 +455,14 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
         ? `data:${imgMime};base64,${base64Direto}`
         : await salvarLogoStorage(urlBruta, telefone, supabaseUrl, storageKey, evolutionKey);
 
+      if (base64Direto) {
+        console.log('[logo] upload storage ok | via base64 direto | mime:', imgMime);
+      } else {
+        console.log('[logo] upload storage ok | url:', urlPermanente.substring(0, 120));
+      }
+
       // 2. Analisa cores do logo
+      console.log('[logo] analisando cores com Claude Vision...');
       const analise = await analisarLogo(urlPermanente, apiKey);
       console.log('[mia-chat] logo analise:', JSON.stringify(analise));
 
@@ -473,7 +483,10 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
         }
       } catch (_) {}
 
-      if (pausado) return new Response('OK', { status: 200 });
+      if (pausado) {
+        console.log('[logo] conversa pausada — sem resposta ao cliente');
+        return new Response('OK', { status: 200 });
+      }
 
       // 5. Monta mensagem para o histórico com logo + cores
       const coresTag = analise ? ` [cores_logo: ${JSON.stringify(analise)}]` : '';
@@ -485,14 +498,17 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
       historico.push({ role: 'user', content: textoLogo });
 
       // 6. Chama Claude para responder ao logo
+      console.log('[logo] chamando Claude para responder ao logo...');
       const system = buildSystemFromBase(systemPromptBase, periodo, nome, primeiraMsg, saudacao);
       const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
         body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 600, system, messages: historico }),
+        signal: AbortSignal.timeout(30_000),
       });
       const claudeData = await claudeRes.json() as { content?: Array<{ text: string }> };
       const resposta = claudeData.content?.[0]?.text ?? '';
+      console.log('[logo] Claude respondeu | status HTTP:', claudeRes.status, '| resposta presente:', !!resposta, '| chars:', resposta.length);
 
       historico.push({ role: 'assistant', content: resposta });
       if (historico.length > 40) historico = historico.slice(-40);
@@ -506,12 +522,17 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
 
       // 8. Envia resposta
       if (resposta) {
+        console.log('[logo] enviando resposta ao cliente via Evolution...');
         fetch(`${EVOLUTION_URL}/message/sendText/${instancia}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', apikey: evolutionKey },
           body: JSON.stringify({ number: telefone, text: resposta }),
-        }).catch(console.error);
+        }).catch((err) => console.error('[logo] erro ao enviar resposta Evolution:', err));
+      } else {
+        console.warn('[logo] Claude retornou resposta vazia — nada enviado ao cliente');
       }
+    } else {
+      console.log('[logo] sem urlBruta nem base64 — fluxo de imagem abortado');
     }
 
     return new Response('OK', { status: 200 });
@@ -654,22 +675,36 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
       const tipoFinal = dadosJson.tipo_produto || tipoFromHist;
       console.log('[mia-chat] tipo_produto: json=', dadosJson.tipo_produto, '| hist=', tipoFromHist, '| final=', tipoFinal);
 
-      // ── PASSO 2: layout_id — inferido DENTRO do produto; nunca atravessa produtos ──────
-      // Layouts de cartão (premium_dark, premium_light, impacto) só quando tipoFinal===cartao_visita
-      // Layouts de caneca (hibrida_caneca, etc.) só quando tipoFinal===caneca
-      const isDark    = /premium[\s_-]*dark|(?<![a-z])dark(?![a-z])|escuro|preto\s+e\s+dourado/i.test(todoHistorico);
-      const isLight   = !isDark && /premium[\s_-]*light|claro|branco\s+e\s+(azul|corp)/i.test(todoHistorico);
-      const isImpacto = !isDark && !isLight && /impacto|bold|arrojado/i.test(todoHistorico);
-      const isPremium = !isDark && !isLight && !isImpacto && /premium/i.test(todoHistorico);
-      const layoutIdDetectado = dadosJson.layout_id || (() => {
-        if (tipoFinal === 'cartao_visita') {
-          return isDark ? 'hibrida_cartao_dark' : isLight ? 'hibrida_cartao_light' : isImpacto ? 'hibrida_cartao_impacto' : isPremium ? 'cartao_premium' : '';
-        }
-        return ''; // outros produtos: layout_id vem do JSON ou fica vazio
+      // ── PASSO 2: layout_id — cartao_visita SEMPRE usa hibrida_cartao_* ──────────────
+      // Templates legados só via modo:'legado' ou layout_id:'legado_cartao_*' explícito.
+      const MAPA_LEGADO: Record<string, string> = {
+        'cartao_premium_dark':  'hibrida_cartao_dark',
+        'cartao_premium_light': 'hibrida_cartao_light',
+        'cartao_impacto':       'hibrida_cartao_impacto',
+        'cartao_premium':       'hibrida_cartao_dark',
+      };
+      const layoutIdDetectado = (() => {
+        if (tipoFinal !== 'cartao_visita') return dadosJson.layout_id || '';
+        // Modo legado explícito: respeitar sem forçar híbrido
+        if (modoDados === 'legado' || (dadosJson.layout_id ?? '').startsWith('legado_')) return dadosJson.layout_id || '';
+        // JSON já veio com hibrida_cartao_* → usar direto
+        if (/^hibrida_cartao/.test(dadosJson.layout_id ?? '')) return dadosJson.layout_id ?? '';
+        // JSON com nome legado → mapear para híbrido equivalente
+        if (MAPA_LEGADO[dadosJson.layout_id ?? '']) return MAPA_LEGADO[dadosJson.layout_id ?? ''];
+        // Inferir pelo histórico: mais específico primeiro, para evitar falso positivo com "premium light"
+        if (/light|claro|branco/i.test(todoHistorico))          return 'hibrida_cartao_light';
+        if (/impacto|bold|arrojado|forte/i.test(todoHistorico)) return 'hibrida_cartao_impacto';
+        // dark/escuro/preto/dourado/premium → dark; nada detectado → dark (padrão absoluto)
+        return 'hibrida_cartao_dark';
       })();
-      // estilo: cor/estilo só informam layout dentro do cartão — nunca definem produto
-      const estiloDetectado = dadosJson.estilo ||
-        (tipoFinal === 'cartao_visita' ? (isDark ? 'dark executive luxury' : isLight ? 'clean bright corporate' : isImpacto ? 'bold high-contrast modern' : isPremium ? 'premium' : 'moderno') : 'moderno');
+      console.log('[mia-chat] layout_final_cartao:', tipoFinal === 'cartao_visita' ? layoutIdDetectado : 'n/a');
+      // estilo derivado do layout final — garante coerência com o prompt OpenAI em gerar-arte
+      const estiloDetectado = dadosJson.estilo || (() => {
+        if (tipoFinal !== 'cartao_visita') return 'moderno';
+        if (layoutIdDetectado === 'hibrida_cartao_light')   return 'clean bright corporate';
+        if (layoutIdDetectado === 'hibrida_cartao_impacto') return 'bold high-contrast modern';
+        return 'dark executive luxury';
+      })();
 
       const dadosArte: Record<string, string> = {
         tipo_produto: tipoFinal,
@@ -698,7 +733,9 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
 
       console.log('[mia-chat] dados arte:', JSON.stringify(dadosArte));
       console.log(`[mia-chat] arte pronta tipo_produto=${dadosArte.tipo_produto} layout_id=${dadosArte.layout_id || ''} estilo=${dadosArte.estilo || ''}`);
+      console.log('[logo] gerar arte iniciado | logo_url presente:', !!dadosArte.logo_url, '| tipo:', dadosArte.tipo_produto);
       const imageUrl = await chamarGerarArte(dadosArte, supabaseUrl, serviceKey);
+      console.log('[logo] gerar arte concluído | url gerada:', imageUrl ? imageUrl.substring(0, 100) : 'null — falhou');
 
       if (imageUrl) {
         const isIlustracao = dadosArte.modo === 'ilustracao';
