@@ -663,13 +663,13 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
       const isPremium = !isDark && !isLight && !isImpacto && /premium/i.test(todoHistorico);
       const layoutIdDetectado = dadosJson.layout_id || (() => {
         if (tipoFinal === 'cartao_visita') {
-          return isDark ? 'cartao_premium_dark' : isLight ? 'cartao_premium_light' : isImpacto ? 'cartao_impacto' : isPremium ? 'cartao_premium' : '';
+          return isDark ? 'hibrida_cartao_dark' : isLight ? 'hibrida_cartao_light' : isImpacto ? 'hibrida_cartao_impacto' : isPremium ? 'cartao_premium' : '';
         }
         return ''; // outros produtos: layout_id vem do JSON ou fica vazio
       })();
       // estilo: cor/estilo só informam layout dentro do cartão — nunca definem produto
       const estiloDetectado = dadosJson.estilo ||
-        (tipoFinal === 'cartao_visita' ? (isDark ? 'premium-dark' : isLight ? 'light' : isImpacto ? 'impacto' : isPremium ? 'premium' : 'moderno') : 'moderno');
+        (tipoFinal === 'cartao_visita' ? (isDark ? 'dark executive luxury' : isLight ? 'clean bright corporate' : isImpacto ? 'bold high-contrast modern' : isPremium ? 'premium' : 'moderno') : 'moderno');
 
       const dadosArte: Record<string, string> = {
         tipo_produto: tipoFinal,
@@ -697,6 +697,7 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
       }
 
       console.log('[mia-chat] dados arte:', JSON.stringify(dadosArte));
+      console.log(`[mia-chat] arte pronta tipo_produto=${dadosArte.tipo_produto} layout_id=${dadosArte.layout_id || ''} estilo=${dadosArte.estilo || ''}`);
       const imageUrl = await chamarGerarArte(dadosArte, supabaseUrl, serviceKey);
 
       if (imageUrl) {
