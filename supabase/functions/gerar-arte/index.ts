@@ -2907,7 +2907,7 @@ Deno.serve(async (req: Request) => {
         );
       }
       return new Response(
-        JSON.stringify({ url: urlFinalC, tipo_produto: 'cartao_visita', modo: 'hibrida', layout_id: d.layout_id, _ia_provider: baseC.provider }),
+        JSON.stringify({ url: urlFinalC, tipo_produto: 'cartao_visita', modo: 'hibrida', layout_id: d.layout_id, _ia_provider: baseC.provider, _base_url: baseUrlC.startsWith('http') ? baseUrlC : '[data_url]' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }
