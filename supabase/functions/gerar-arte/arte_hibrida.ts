@@ -156,8 +156,9 @@ export async function gerarBaseIA(
   console.log('[hibrida] OPENAI_API_KEY presente:', !!openAiKey);
 
   if (openAiKey) {
-    console.log('[hibrida/openai] gerando base visual gpt-image-1 para', produto, '...');
-    const resultado = await _chamarOpenAI(prompt, openAiKey, produto);
+    const bg = d.modo_caneca === 'personagem_isolado' ? 'transparent' : 'opaque';
+    console.log('[hibrida/openai] gerando base visual gpt-image-1 para', produto, '| background:', bg);
+    const resultado = await _chamarOpenAI(prompt, openAiKey, produto, bg);
     if (resultado.url) return { url: resultado.url, prompt, provider: 'openai', mock: false };
     console.warn('[hibrida/openai] falhou:', resultado.erro);
     const svg = _gerarMockSVG(produto, cp, cs);
@@ -295,6 +296,7 @@ async function _chamarOpenAI(
   prompt: string,
   apiKey: string,
   produto: string,
+  background: 'transparent' | 'opaque' = 'opaque',
 ): Promise<{ url: string | null; erro?: string }> {
   // gpt-image-1: sizes suportados: 1024x1024 | 1536x1024 | 1024x1536
   const size = '1024x1024';
@@ -307,11 +309,13 @@ async function _chamarOpenAI(
         'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model:   'gpt-image-1',
+        model:         'gpt-image-1',
         prompt,
-        n:       1,
+        n:             1,
         size,
-        quality: 'low',
+        quality:       'low',
+        background,
+        output_format: 'png',
       }),
       signal: AbortSignal.timeout(55_000),
     });
@@ -709,7 +713,7 @@ function _overlayCaneca(d: ProdutoInput, logo: string, baseUrl: string): string 
 
 // ── Overlay: caneca personagem isolado (2100×800) ────────────────────────────
 
-function _overlayPersonagemCaneca(d: ProdutoInput, logo: string, baseUrl: string): string {
+function _overlayPersonagemCaneca(d: ProdutoInput, _logo: string, baseUrl: string): string {
   const cp    = d.cor_primaria   ?? '#1A2744';
   const cs    = d.cor_secundaria ?? '#E8A020';
   const nome  = e(d.nome || d.empresa || '');
@@ -717,31 +721,30 @@ function _overlayPersonagemCaneca(d: ProdutoInput, logo: string, baseUrl: string
   const main  = frase || nome;
   const sub   = frase ? nome : e(d.texto_secundario || '');
   const mLen  = main.length;
-  const mainFs = mLen > 40 ? 68 : mLen > 28 ? 86 : mLen > 18 ? 110 : mLen > 12 ? 136 : 160;
+  const mainFs = mLen > 40 ? 72 : mLen > 28 ? 90 : mLen > 18 ? 116 : mLen > 12 ? 144 : 170;
+  const subFs  = Math.round(mainFs * 0.46);
+  const textTop = 610;
 
   return `<!DOCTYPE html>
 <html><head><meta charset="UTF-8">
-<style>*{margin:0;padding:0;box-sizing:border-box;}body{font-family:Arial,Helvetica,sans-serif;background:#fff;}</style>
+<style>*{margin:0;padding:0;box-sizing:border-box;}body{background:transparent;font-family:Arial,Helvetica,sans-serif;}</style>
 </head><body>
-<div style="width:2100px;height:800px;position:relative;overflow:hidden;background:#fff;">
-  <div style="position:absolute;top:0;left:0;width:2100px;height:14px;background:linear-gradient(90deg,${cp},${cs},${cp});"></div>
-  <div style="position:absolute;top:14px;left:0;width:2100px;height:556px;overflow:hidden;text-align:center;">
-    <img src="${baseUrl}" style="max-height:540px;max-width:1900px;object-fit:contain;vertical-align:top;">
+<div style="width:2100px;height:800px;position:relative;">
+
+  <!-- Personagem: ocupa toda a zona superior, objeto-fit contain para preservar proporção -->
+  <div style="position:absolute;top:0;left:0;width:2100px;height:600px;text-align:center;line-height:600px;">
+    <img src="${baseUrl}" style="max-height:590px;max-width:1960px;object-fit:contain;vertical-align:middle;">
   </div>
-  <div style="position:absolute;top:570px;left:120px;width:1860px;height:2px;background:${cs};opacity:0.4;"></div>
-  <div style="position:absolute;top:580px;left:0;width:2100px;text-align:center;">
-    <span style="font-size:${mainFs}px;font-weight:900;color:${cp};letter-spacing:-1px;text-shadow:0 2px 8px rgba(0,0,0,0.12);">${main}</span>
+
+  <!-- Nome/texto principal abaixo do personagem -->
+  <div style="position:absolute;top:${textTop}px;left:40px;width:2020px;text-align:center;">
+    <span style="font-size:${mainFs}px;font-weight:900;color:${cp};letter-spacing:-1px;text-shadow:0 1px 6px rgba(255,255,255,0.9),0 2px 10px rgba(0,0,0,0.18);">${main}</span>
   </div>
-  ${sub ? `<div style="position:absolute;top:${580 + mainFs + 6}px;left:0;width:2100px;text-align:center;">
-    <span style="font-size:${Math.round(mainFs * 0.44)}px;font-weight:600;color:${cs};">${sub}</span>
+
+  ${sub ? `<div style="position:absolute;top:${textTop + mainFs + 8}px;left:40px;width:2020px;text-align:center;">
+    <span style="font-size:${subFs}px;font-weight:700;color:${cs};text-shadow:0 1px 4px rgba(255,255,255,0.8),0 2px 6px rgba(0,0,0,0.14);">${sub}</span>
   </div>` : ''}
-  ${logo ? `<div style="position:absolute;top:588px;right:48px;height:${Math.min(mainFs + 20, 168)}px;width:180px;overflow:hidden;text-align:right;">
-    <img src="${logo}" style="max-height:${Math.min(mainFs + 20, 168)}px;max-width:180px;object-fit:contain;vertical-align:middle;">
-  </div>` : ''}
-  <div style="position:absolute;bottom:30px;left:0;width:2100px;height:14px;background:linear-gradient(90deg,${cs},${cp},${cs});"></div>
-  <div style="position:absolute;bottom:0;left:0;width:2100px;height:30px;background:rgba(0,0,0,0.52);text-align:center;">
-    <span style="font-size:14px;line-height:30px;color:rgba(255,255,255,0.6);">Prévia — Arte gerada pela Maya IA • Gráfica Damasceno</span>
-  </div>
+
 </div></body></html>`;
 }
 
