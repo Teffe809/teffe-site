@@ -1,0 +1,380 @@
+/* ═══════════════════════════════════════════════
+   PORTAL DO CLIENTE — Sidebar layout
+═══════════════════════════════════════════════ */
+
+#area-cliente { flex-direction: column; overflow: hidden; }
+
+/* ── LAYOUT ── */
+.cp-layout {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ── SIDEBAR ── */
+.cp-sidebar {
+  width: 240px;
+  min-width: 240px;
+  flex-shrink: 0;
+  background: #0A4B8D;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  z-index: 10;
+  transition: transform 0.25s ease;
+}
+
+.cp-sidebar-info {
+  padding: 22px 20px 14px;
+}
+
+.cp-sidebar-nome {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 2px;
+}
+
+.cp-sidebar-emp {
+  font-size: 11.5px;
+  color: rgba(255,255,255,0.5);
+  font-weight: 400;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cp-sidebar-divider {
+  height: 1px;
+  background: rgba(255,255,255,0.1);
+  margin: 0 16px 6px;
+}
+
+.cp-nav { padding: 4px 0 24px; }
+
+.cp-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 12px 20px;
+  background: transparent;
+  border: none;
+  border-left: 3px solid transparent;
+  color: rgba(255,255,255,0.62);
+  font-size: 13.5px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  transition: background 0.14s, color 0.14s, border-color 0.14s;
+}
+
+.cp-nav-item i { font-size: 17px; flex-shrink: 0; }
+
+.cp-nav-item:hover {
+  color: #fff;
+  background: rgba(255,255,255,0.07);
+}
+
+.cp-nav-item.cp-nav-active {
+  color: #fff;
+  background: rgba(248,122,19,0.18);
+  border-left-color: #F87A13;
+  font-weight: 600;
+}
+
+/* Hamburguer toggle — só visível no mobile */
+.cp-sidebar-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #1A3F80;
+  font-size: 22px;
+  padding: 4px 6px 4px 0;
+  line-height: 1;
+}
+
+/* Overlay escuro no mobile */
+.cp-sidebar-overlay {
+  display: none;
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.42);
+  z-index: 9;
+}
+.cp-sidebar-overlay.cp-visible { display: block; }
+
+/* ── CONTEÚDO PRINCIPAL ── */
+.cp-main {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  padding: 32px 40px;
+  background: #F5F7FA;
+}
+
+/* ── BOTÕES DE AÇÃO RÁPIDA ── */
+.cp-acoes-rapidas {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 32px;
+  flex-wrap: wrap;
+}
+
+.cp-acao-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 13px 22px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 2px solid transparent;
+  font-family: inherit;
+  transition: all 0.14s;
+}
+
+.cp-acao-primary {
+  background: #1A3F80;
+  color: #fff;
+  border-color: #1A3F80;
+}
+.cp-acao-primary:hover { background: #0A4B8D; border-color: #0A4B8D; }
+
+.cp-acao-outline {
+  background: transparent;
+  color: #1A3F80;
+  border-color: #1A3F80;
+}
+.cp-acao-outline:hover { background: #EEF3FB; }
+
+/* ── FINANCEIRO: BOLETOS ── */
+.cp-boletos-filtros {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.cp-filtro-btn {
+  padding: 7px 16px;
+  border-radius: 20px;
+  border: 1.5px solid #D1D9E6;
+  background: #fff;
+  color: #4A5568;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.14s;
+}
+.cp-filtro-btn:hover { border-color: #1A3F80; color: #1A3F80; }
+.cp-filtro-btn.cp-filtro-ativo { background: #1A3F80; border-color: #1A3F80; color: #fff; }
+
+.cp-boletos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.cp-boleto-card {
+  background: #fff;
+  border-radius: 10px;
+  border: 1px solid #E8ECF2;
+  border-left: 4px solid #D1D9E6;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: 0 2px 8px rgba(26,63,128,0.05);
+}
+
+.cp-boleto-pago    { border-left-color: #2d8a40; }
+.cp-boleto-avencer { border-left-color: #E07820; }
+.cp-boleto-vencido { border-left-color: #e53e3e; }
+
+.cp-boleto-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.cp-boleto-num {
+  font-weight: 700;
+  font-size: 14px;
+  color: #1A3F80;
+}
+
+.cp-boleto-badge {
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 12px;
+  cursor: default;
+}
+
+.cp-st-pago    { background: #E8F7EC; color: #2d8a40; }
+.cp-st-avencer { background: #FFF4E6; color: #C96000; }
+.cp-st-vencido { background: #FFF0F0; color: #c0392b; }
+
+.cp-boleto-body {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+}
+
+.cp-boleto-info { display: flex; flex-direction: column; gap: 2px; }
+
+.cp-boleto-lbl {
+  font-size: 10.5px;
+  color: #8896AB;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.cp-boleto-val { font-size: 13.5px; color: #2D3748; font-weight: 500; }
+.cp-boleto-valor { font-weight: 700; color: #1A3F80; }
+
+.cp-boleto-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 8px;
+  border-top: 1px solid #EEF1F7;
+}
+
+.cp-boleto-download {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #1A3F80;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  padding: 5px 12px;
+  border-radius: 6px;
+  border: 1.5px solid #1A3F80;
+  transition: all 0.14s;
+}
+.cp-boleto-download:hover { background: #1A3F80; color: #fff; }
+
+.cp-boleto-sem-pdf { color: #8896AB; font-size: 13px; }
+
+/* ── CONTRATOS ── */
+.cp-contrato-card {
+  background: #fff;
+  border-radius: 10px;
+  border: 1px solid #E8ECF2;
+  padding: 20px 24px;
+  margin-bottom: 14px;
+  box-shadow: 0 2px 8px rgba(26,63,128,0.05);
+}
+
+.cp-contrato-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.cp-contrato-num {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1A3F80;
+  margin-right: 10px;
+}
+
+.cp-contrato-status {
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 12px;
+}
+
+.cp-cont-ativo { background: #E8F7EC; color: #2d8a40; }
+.cp-cont-enc   { background: #F3F4F6; color: #6B7280; }
+
+.cp-contrato-desc {
+  font-size: 13.5px;
+  color: #4A5568;
+  margin-bottom: 12px;
+  font-weight: 300;
+  line-height: 1.5;
+}
+
+.cp-contrato-infos {
+  display: flex;
+  gap: 32px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.cp-contrato-info-item { display: flex; flex-direction: column; gap: 2px; }
+
+.cp-servicos-badges { display: flex; gap: 6px; flex-wrap: wrap; }
+
+.cp-servico-badge {
+  background: #EEF3FB;
+  color: #1A3F80;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 12px;
+  border: 1px solid #C7D8F0;
+}
+
+.cp-contrato-download {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #1A3F80;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: 1.5px solid #1A3F80;
+  white-space: nowrap;
+  transition: all 0.14s;
+}
+.cp-contrato-download:hover { background: #1A3F80; color: #fff; }
+
+/* Card: próximo vencimento usa fonte menor */
+.cp-prox-venc-num { font-size: 17px !important; }
+
+/* ── RESPONSIVO ── */
+@media (max-width: 900px) {
+  .cp-main { padding: 24px 20px; }
+}
+
+@media (max-width: 768px) {
+  .cp-sidebar {
+    position: absolute;
+    top: 0; left: 0; bottom: 0;
+    z-index: 10;
+    transform: translateX(-100%);
+    height: 100%;
+    box-shadow: none;
+  }
+  .cp-sidebar.cp-sidebar-open {
+    transform: translateX(0);
+    box-shadow: 4px 0 24px rgba(0,0,0,0.18);
+  }
+  .cp-sidebar-toggle { display: flex; }
+  .cp-main { padding: 20px 16px; width: 100%; }
+  .cp-boleto-body { grid-template-columns: 1fr 1fr; }
+  .cp-boletos-grid { grid-template-columns: 1fr; }
+  .cp-acoes-rapidas { flex-direction: column; }
+  .cp-acao-btn { justify-content: center; }
+  .cp-contrato-infos { gap: 16px; }
+}

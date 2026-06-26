@@ -153,7 +153,7 @@ async function confirmarAlterarSenha(){
 // ── CARREGAR ÁREA ──
 async function carregarArea(){
   document.documentElement.classList.add('no-scroll');
-  document.getElementById('area-cliente').style.display='block';
+  document.getElementById('area-cliente').style.display='flex';
   history.pushState(null,'','#cliente');
   _iniciarInatividade();
   const {data:cl}=await sf('/rest/v1/clientes?user_id=eq.'+_uid+'&limit=1&select=*');
@@ -167,6 +167,7 @@ async function carregarArea(){
   carregarChamados();
   carregarEquips();
   carregarContratos();
+  if(typeof cpOnAreaLoad==='function') cpOnAreaLoad();
 }
 
 // ── NAVEGAÇÃO ENTRE VIEWS ──
