@@ -68,8 +68,16 @@ function _resetarModalLogin(){
 async function fazerLogout(inatividade=false){
   _pararInatividade();
   document.documentElement.classList.remove('no-scroll');
+  // Invalida o token no servidor (fire-and-forget)
+  if(_tok){
+    fetch(SURL+'/auth/v1/logout',{
+      method:'POST',
+      headers:{'apikey':SKEY,'Authorization':'Bearer '+_tok,'Content-Type':'application/json'}
+    }).catch(()=>{});
+  }
   _tok=null;_uid=null;_cid=null;_email=null;
   localStorage.clear();
+  sessionStorage.clear();
   window.location.href='https://teffe.com.br';
 }
 
@@ -152,6 +160,20 @@ async function confirmarAlterarSenha(){
 
 // ── CARREGAR ÁREA ──
 async function carregarArea(){
+  // Valida sessão antes de mostrar qualquer dado
+  if(!_tok||!_uid){
+    document.getElementById('modal').classList.add('open');
+    return;
+  }
+  const _sessCheck=await fetch(SURL+'/auth/v1/user',{
+    headers:{'apikey':SKEY,'Authorization':'Bearer '+_tok}
+  }).catch(()=>null);
+  if(!_sessCheck||!_sessCheck.ok){
+    _tok=null;_uid=null;_cid=null;_email=null;
+    localStorage.clear();sessionStorage.clear();
+    document.getElementById('modal').classList.add('open');
+    return;
+  }
   document.documentElement.classList.add('no-scroll');
   document.getElementById('area-cliente').style.display='flex';
   history.pushState(null,'','#cliente');
