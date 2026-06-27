@@ -373,6 +373,70 @@
 /* Card: próximo vencimento usa fonte menor */
 .cp-prox-venc-num { font-size: 17px !important; }
 
+/* ── ACESSO RÁPIDO MOBILE (oculto no desktop) ── */
+.cp-acesso-rapido { display: none; }
+
+.cp-acesso-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  background: #E8F0FB;
+  border: 1.5px solid #0A4B8D;
+  border-radius: 10px;
+  padding: 14px 8px;
+  color: #0A4B8D;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  min-height: 80px;
+  transition: background 0.14s;
+}
+.cp-acesso-card i { font-size: 24px; }
+.cp-acesso-card:active { background: #c9d9f5; }
+
+/* ── BOTÃO SAIR na sidebar mobile (oculto no desktop) ── */
+.cp-sidebar-sair {
+  display: none;
+  width: calc(100% - 32px);
+  margin: 8px 16px 24px;
+  padding: 14px;
+  background: #DC2626;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background 0.14s;
+}
+.cp-sidebar-sair:active { background: #B91C1C; }
+
+/* ── BOTÃO SAIR no header mobile (oculto no desktop) ── */
+.cp-navbar-sair {
+  display: none;
+  align-items: center;
+  gap: 5px;
+  background: none;
+  border: 1.5px solid #DC2626;
+  color: #DC2626;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 7px 12px;
+  border-radius: 7px;
+  font-family: inherit;
+  white-space: nowrap;
+  transition: background 0.14s;
+}
+.cp-navbar-sair:active { background: #FEE2E2; }
+
 /* ── RESPONSIVO ── */
 @media (max-width: 900px) {
   .cp-main { padding: 24px 20px; }
@@ -433,4 +497,15 @@
 
   /* ── Contratos ── */
   .cp-contrato-infos { gap: 16px; }
+
+  /* ── Acesso rápido: grade 3 colunas ── */
+  .cp-acesso-rapido { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-top: 20px; }
+
+  /* ── Sair na sidebar: visível e empurrado para baixo ── */
+  .cp-nav { flex: 1; }
+  .cp-sidebar-sair { display: flex; }
+
+  /* ── Sair no header: visível; esconde direita da navbar ── */
+  .cp-navbar-sair { display: flex; }
+  .ac-navbar > div:last-of-type { display: none; }
 }

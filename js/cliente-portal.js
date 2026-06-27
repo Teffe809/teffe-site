@@ -28,6 +28,43 @@ function cpOnAreaLoad(){
     sidebarInfo.appendChild(closeBtn);
   }
 
+  // Injeta botão Sair no rodapé da sidebar (visível só no mobile via CSS)
+  var cpNav = document.querySelector('.cp-sidebar .cp-nav');
+  if(cpNav && !document.querySelector('.cp-sidebar-sair')){
+    var sairSidebar = document.createElement('button');
+    sairSidebar.className = 'cp-sidebar-sair';
+    sairSidebar.innerHTML = '<i class="ti ti-logout"></i> Sair';
+    sairSidebar.onclick = fazerLogout;
+    cpNav.insertAdjacentElement('afterend', sairSidebar);
+  }
+
+  // Injeta botão Sair no header mobile (ao lado direito do hamburguer)
+  var navbar = document.querySelector('.ac-navbar');
+  if(navbar && !navbar.querySelector('.cp-navbar-sair')){
+    var sairNavbar = document.createElement('button');
+    sairNavbar.className = 'cp-navbar-sair';
+    sairNavbar.innerHTML = '<i class="ti ti-logout"></i> Sair';
+    sairNavbar.onclick = fazerLogout;
+    navbar.appendChild(sairNavbar);
+  }
+
+  // Injeta cards de acesso rápido no dashboard (visível só no mobile via CSS)
+  var acoes = document.querySelector('#ac-view-dash .cp-acoes-rapidas');
+  if(acoes && !document.querySelector('.cp-acesso-rapido')){
+    var atalhos = [
+      {icon:'ti-file-description', label:'Contratos', view:'contratos'},
+      {icon:'ti-receipt-2',        label:'Financeiro', view:'financeiro'},
+      {icon:'ti-history',          label:'Histórico',  view:'historico'}
+    ];
+    var grid = document.createElement('div');
+    grid.className = 'cp-acesso-rapido';
+    grid.innerHTML = atalhos.map(function(a){
+      return '<button class="cp-acesso-card" onclick="cpNavegar(\''+a.view+'\')">' +
+        '<i class="ti '+a.icon+'"></i><span>'+a.label+'</span></button>';
+    }).join('');
+    acoes.insertAdjacentElement('afterend', grid);
+  }
+
   cpSetNavAtivo('dash');
   cpCarregarBoletosResumo();
 }
