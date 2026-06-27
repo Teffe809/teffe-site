@@ -1,6 +1,6 @@
 const SURL='https://hlfjcpgrxiktgctozilk.supabase.co';
 const SKEY='sb_publishable_-Iu8PbqhLeZAXSBcczr2mQ_lzlGr4_g';
-let _tok=null,_uid=null,_cid=null,_atEquipId=null,_spEquipId=null,_spUltimoContador=null,_spTipoImpressao='monocromatico',_chamadosCache={};
+let _tok=null,_uid=null,_cid=null,_email=null,_atEquipId=null,_spEquipId=null,_spUltimoContador=null,_spTipoImpressao='monocromatico',_chamadosCache={};
 let _equipsAC=[];
 let _tecHistData=[],_tecHistPage=0,_tecHistEquip=null;
 const TEC_HIST_PG=10;
@@ -48,8 +48,8 @@ async function fazerLogin(){
   });
   const d=await r.json();
   if(!r.ok){erro.style.display='block';erro.textContent='E-mail ou senha incorretos.';btn.textContent='Entrar →';btn.disabled=false;return;}
-  _tok=d.access_token;_uid=d.user.id;
-  localStorage.setItem('tt',_tok);localStorage.setItem('tu',_uid);
+  _tok=d.access_token;_uid=d.user.id;_email=d.user.email||null;
+  localStorage.setItem('tt',_tok);localStorage.setItem('tu',_uid);if(_email)localStorage.setItem('te',_email);
   _resetarModalLogin();
   document.getElementById('modal').classList.remove('open');
   document.getElementById('login-inatividade').style.display='none';
@@ -68,7 +68,7 @@ function _resetarModalLogin(){
 async function fazerLogout(inatividade=false){
   _pararInatividade();
   document.documentElement.classList.remove('no-scroll');
-  _tok=null;_uid=null;_cid=null;
+  _tok=null;_uid=null;_cid=null;_email=null;
   localStorage.clear();
   window.location.href='https://teffe.com.br';
 }
@@ -159,7 +159,12 @@ async function carregarArea(){
   const {data:cl}=await sf('/rest/v1/clientes?user_id=eq.'+_uid+'&limit=1&select=*');
   const c=cl&&cl[0];
   _cid=c?c.id:null;
-  const primeiroNome=c?c.nome.split(' ')[0]:'cliente';
+  let primeiroNome=c?c.nome.split(' ')[0]:'cliente';
+  if(_email){
+    const {data:cu}=await sf('/rest/v1/cliente_usuarios?email=eq.'+encodeURIComponent(_email)+'&limit=1&select=nome');
+    if(cu&&cu[0]&&cu[0].nome) primeiroNome=cu[0].nome.split(' ')[0];
+  }
+  window.clienteLogado={nome:primeiroNome};
   document.getElementById('ac-nome').textContent=primeiroNome;
   document.getElementById('ac-empresa').textContent=c?c.empresa:'Minha Área';
   if(typeof miaIniciarSupporte==='function') setTimeout(function(){miaIniciarSupporte(primeiroNome);},1500);
@@ -747,7 +752,7 @@ function equipAcSelecionar(p,eq){
 
 window.addEventListener('DOMContentLoaded',function(){
   const t=localStorage.getItem('tt'),u=localStorage.getItem('tu');
-  if(t&&u){_tok=t;_uid=u;} // Restaura tokens mas NÃO abre área do cliente automaticamente
+  if(t&&u){_tok=t;_uid=u;_email=localStorage.getItem('te')||null;} // Restaura tokens mas NÃO abre área do cliente automaticamente
   initPasswordToggles();
 });
 

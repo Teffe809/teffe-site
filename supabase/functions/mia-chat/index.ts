@@ -8,8 +8,21 @@ const EVOLUTION_URL = 'https://evolution-api-production-baf4.up.railway.app';
 type Msg = { role: string; content: string };
 
 // ── Prompts do site (sem mudança) ──────────────────────────────────────────
-const BASE = 'Você é a Mia, assistente inteligente da Teffe Tecnologia. Personalidade humana, calorosa, natural e elegante — nunca pareça um robô. Respostas curtas e naturais, como uma conversa humana. Nunca mencione valores ou preços. Nunca use Sr./Sra./Srta. — apenas o nome. O cliente está sempre no comando, nunca pressione.';
-const PROMPT_SUPORTE = 'Você é a Mia, assistente de suporte da Teffe. O cliente já está logado na área dele. NUNCA ofereça produtos ou serviços — ele já é cliente. Sua função é ajudar com qualquer dúvida relacionada à conta dele: contratos, boletos, chamados, suprimentos e equipamentos. Seja cordial, natural e humanizada — responda como um atendente de suporte experiente, não como um robô. Use o nome do cliente quando possível. Nunca tente vender nada.';
+const BASE = 'Você é a Mia, consultora comercial inteligente da Teffe Tecnologia. Personalidade humana, calorosa, natural e elegante — nunca pareça um robô. Respostas curtas e naturais, como uma conversa humana. Nunca mencione valores ou preços específicos. Nunca use Sr./Sra./Srta. — apenas o nome. O visitante está sempre no comando, nunca pressione. A Teffe oferece: Outsourcing de Impressão, Locação de Notebooks e Desktops, e Teffe IA (atendimento automatizado com IA). Contatos da Teffe: WhatsApp (14) 99828-9248, e-mail contato@teffe.com.br, site teffe.com.br.';
+const PROMPT_SUPORTE = `Você é a Mia, assistente de suporte da Teffe Tecnologia. O cliente já está logado na área dele.
+
+Sua função é ajudar com qualquer dúvida sobre a conta: contratos, boletos, chamados técnicos, suprimentos e histórico de atendimentos. NUNCA ofereça ou mencione produtos ou serviços novos — ele já é cliente.
+
+Orientação de navegação na área do cliente:
+- Boletos e financeiro → menu lateral "Financeiro"
+- Contratos → menu lateral "Contratos"
+- Histórico de chamados → menu lateral "Histórico"
+- Abrir chamado técnico → botão "Abrir Chamado de Assistência Técnica" no painel principal (dashboard)
+- Solicitar suprimentos (toner, papel etc.) → botão "Solicitar Suprimentos" no painel principal (dashboard)
+
+Para situações urgentes ou que precisem de atendimento humano imediato: WhatsApp (14) 99828-9248.
+
+Tom: prestativo, direto e humano. Use o nome do cliente quando possível.`;
 const PROMPT_ABERTURA = BASE + `\n\nSua missão agora: descobrir o nome do visitante e, em seguida, perguntar o que a empresa mais precisa nesse momento.\nApós saber o nome, use-o em todas as mensagens seguintes.`;
 const CAMINHO_1 = BASE + `\n\nO visitante tem interesse em outsourcing de impressão. Use o nome do visitante.\n\nPergunte se tem impressoras próprias ou contrato de locação/manutenção.\n- Se tiver próprias: reconheça que está buscando solução para os problemas que impressoras sem suporte apresentam; pergunte quantas impressoras e volume de impressão (diga que se não souber o volume não tem problema).\n- Se já tiver contrato: diga que acredita que está buscando uma nova alternativa e que a Teffe é sem sombra de dúvida a melhor opção; peça para descrever como é o contrato atual e o que está incluso.\n- Se quiser entender melhor: explique que com o outsourcing da Teffe não há investimento inicial, equipamentos novos instalados, todo suporte de instalação, manutenção, insumos e peças inclusos.\n\nQuando tiver situação atual e quantidade/volume: diga "Agora que já tenho o que preciso, estarei encaminhando para nossa equipe comercial — eles vão montar uma proposta personalizada de acordo com a sua necessidade." e pergunte "Você prefere contato pelo WhatsApp, e-mail ou ligação?"`;
 const CAMINHO_2 = BASE + `\n\nO visitante tem interesse em locação de notebooks. Use o nome do visitante.\n\nPergunte se tem notebooks próprios ou já tem contrato de locação/manutenção.\n- Se tiver próprios: reconheça que está buscando solução para os desafios que equipamentos sem suporte apresentam; pergunte quantos notebooks utiliza e como está sendo a experiência.\n- Se já tiver contrato: diga que acredita que está buscando uma nova alternativa e que a Teffe é a melhor opção; peça para descrever o contrato atual.\n- Se quiser entender melhor: explique que com a locação da Teffe não há investimento inicial, equipamentos novos, manutenção e suporte inclusos, sem surpresa no orçamento.\n\nQuando tiver situação atual e quantidade: diga "Agora que já tenho o que preciso, estarei encaminhando para nossa equipe comercial — eles vão montar uma proposta personalizada de acordo com a sua necessidade." e pergunte "Você prefere contato pelo WhatsApp, e-mail ou ligação?"`;
@@ -133,8 +146,52 @@ async function buscarLogoUrl(instancia: string, telefone: string, supabaseUrl: s
   return '';
 }
 
+// ── Cost logger (observer only — never throws, never blocks) ─────────────────
+type LogCtx = { supabaseUrl: string; serviceKey: string; instancia: string; telefone: string };
+type Usage   = { input_tokens: number; output_tokens: number };
+
+const PRECOS_USD_POR_MILHAO: Record<string, { input: number; output: number }> = {
+  'claude-haiku-4-5-20251001': { input: 0.80,  output: 4.00  },
+  'claude-sonnet-4-6':         { input: 3.00,  output: 15.00 },
+};
+
+async function registrarCusto(
+  ctx: LogCtx, modelo: string, tipo: string, usage: Usage,
+  metadata?: Record<string, unknown>,
+): Promise<void> {
+  try {
+    const p = PRECOS_USD_POR_MILHAO[modelo] ?? { input: 3.00, output: 15.00 };
+    const custo_usd = (usage.input_tokens * p.input + usage.output_tokens * p.output) / 1_000_000;
+    await fetch(`${ctx.supabaseUrl}/rest/v1/mia_cost_log`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: ctx.serviceKey,
+        Authorization: `Bearer ${ctx.serviceKey}`,
+        Prefer: 'return=minimal',
+      },
+      body: JSON.stringify({
+        instancia: ctx.instancia,
+        telefone:  ctx.telefone,
+        modelo,
+        tipo,
+        input_tokens:  usage.input_tokens,
+        output_tokens: usage.output_tokens,
+        custo_usd,
+        metadata: metadata ?? null,
+      }),
+    });
+  } catch (e) {
+    console.error('[cost-log] erro ao registrar custo:', e);
+  }
+}
+
 // ── Analisa cores do logo via Claude Vision ────────────────────────────────
-async function analisarLogo(url: string, anthropicApiKey: string): Promise<{ cor_primaria: string; cor_secundaria: string; descricao: string } | null> {
+async function analisarLogo(url: string, anthropicApiKey: string, logCtx?: LogCtx): Promise<{
+  cor_primaria: string; cor_secundaria: string; descricao: string;
+  formas: string; geometria: string; personalidade_visual: string;
+  linguagem_visual: string; sugestao_direcao_arte: string;
+} | null> {
   if (!url) return null;
   try {
     let b64: string;
@@ -161,18 +218,19 @@ async function analisarLogo(url: string, anthropicApiKey: string): Promise<{ cor
       headers: { 'Content-Type': 'application/json', 'x-api-key': anthropicApiKey, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
-        max_tokens: 150,
+        max_tokens: 400,
         messages: [{
           role: 'user',
           content: [
             { type: 'image', source: { type: 'base64', media_type: mediaType, data: b64 } },
-            { type: 'text', text: 'Analise este logo e responda APENAS com JSON válido, sem markdown.\nCampos:\n- cor_primaria: hex\n- cor_secundaria: hex\n- descricao: até 12 palavras em português\nJSON:' },
+            { type: 'text', text: 'Analise este logo. Responda APENAS com JSON válido, sem markdown, sem explicações.\nCampos:\n- cor_primaria: hex da cor dominante\n- cor_secundaria: hex da cor de destaque\n- descricao: até 10 palavras em português\n- formas: formas geométricas predominantes em português (ex: "círculos", "hexágonos", "curvas orgânicas")\n- geometria: "angular", "orgânico", "simétrico" ou combinação\n- personalidade_visual: 3 adjetivos em português separados por vírgula\n- linguagem_visual: vocabulário visual em inglês para arte (ex: "hexagonal nodes, circuit traces, glowing connections")\n- sugestao_direcao_arte: instrução criativa em inglês para o prompt de imagem (1 frase concisa)\nJSON:' },
           ],
         }],
       }),
     });
     if (!res.ok) return null;
-    const d = await res.json() as { content?: Array<{ text: string }> };
+    const d = await res.json() as { content?: Array<{ text: string }>; usage?: Usage };
+    if (logCtx && d.usage) registrarCusto(logCtx, 'claude-haiku-4-5-20251001', 'analise_logo', d.usage).catch(console.error);
     const txt = (d.content?.[0]?.text ?? '').trim();
     const m = txt.match(/\{[\s\S]*\}/);
     if (!m) return null;
@@ -180,22 +238,152 @@ async function analisarLogo(url: string, anthropicApiKey: string): Promise<{ cor
   } catch (e) { console.log('[analisar-logo] erro:', e); return null; }
 }
 
-// ── Chama gerar-arte ────────────────────────────────────────────────────────
-async function chamarGerarArte(dados: Record<string, string>, supabaseUrl: string, serviceKey: string): Promise<string | null> {
+// ── Memória da última arte gerada por conversa ────────────────────────────────
+interface UltimaArte {
+  base_url:        string;
+  tipo_produto:    string;
+  layout_id?:      string;
+  estilo_visual?:  string;
+  nome?:           string;
+  empresa?:        string;
+  texto_principal?: string;
+  telefone?:       string;
+  email?:          string;
+  site?:           string;
+  cor_primaria?:   string;
+  cor_secundaria?: string;
+  observacoes?:    string;
+  layout_texto?:   string;
+}
+
+function salvarUltimaArte(
+  params: { supabaseUrl: string; serviceKey: string; instancia: string; telefone: string },
+  dados: Record<string, string>,
+  base_url: string,
+): void {
+  const ultima_arte: UltimaArte = {
+    base_url,
+    tipo_produto:    dados.tipo_produto || '',
+    layout_id:       dados.layout_id || '',
+    estilo_visual:   dados.estilo_visual || '',
+    nome:            dados.nome || '',
+    empresa:         dados.empresa || '',
+    texto_principal: dados.texto_principal || '',
+    telefone:        dados.telefone || '',
+    email:           dados.email || '',
+    site:            dados.site || '',
+    cor_primaria:    dados.cor_primaria || '',
+    cor_secundaria:  dados.cor_secundaria || '',
+    observacoes:     dados.observacoes || '',
+    layout_texto:    dados.layout_texto || '',
+  };
+  fetch(`${params.supabaseUrl}/rest/v1/mia_conversas_whatsapp?on_conflict=instancia,telefone`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', apikey: params.serviceKey, Authorization: `Bearer ${params.serviceKey}`, Prefer: 'resolution=merge-duplicates' },
+    body: JSON.stringify({ instancia: params.instancia, telefone: params.telefone, ultima_arte, updated_at: new Date().toISOString() }),
+  }).catch(console.error);
+}
+
+async function buscarUltimaArte(
+  params: { supabaseUrl: string; serviceKey: string; instancia: string; telefone: string },
+): Promise<UltimaArte | null> {
   try {
+    const res = await fetch(
+      `${params.supabaseUrl}/rest/v1/mia_conversas_whatsapp?instancia=eq.${encodeURIComponent(params.instancia)}&telefone=eq.${encodeURIComponent(params.telefone)}&select=ultima_arte`,
+      { headers: { apikey: params.serviceKey, Authorization: `Bearer ${params.serviceKey}` } },
+    );
+    if (!res.ok) return null;
+    const rows = await res.json() as Array<{ ultima_arte?: UltimaArte }>;
+    return rows[0]?.ultima_arte ?? null;
+  } catch { return null; }
+}
+
+// ── Memória de jobs/trabalhos por conversa ────────────────────────────────────
+interface Job {
+  id:          string;
+  instancia:   string;
+  telefone:    string;
+  produto:     string | null;
+  status:      string;
+  dados_arte:  Record<string, string> | null;
+  ultima_arte: Record<string, unknown> | null;
+  ajustes:     number;
+}
+
+async function criarJob(
+  params: { supabaseUrl: string; serviceKey: string; instancia: string; telefone: string },
+  dados: Record<string, string>,
+): Promise<string | null> {
+  try {
+    const res = await fetch(`${params.supabaseUrl}/rest/v1/mia_jobs`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: params.serviceKey, Authorization: `Bearer ${params.serviceKey}`, Prefer: 'return=representation' },
+      body: JSON.stringify({ instancia: params.instancia, telefone: params.telefone, produto: dados.tipo_produto ?? '', status: 'em_andamento', dados_arte: dados, ajustes: 0 }),
+    });
+    if (!res.ok) return null;
+    const rows = await res.json() as Array<{ id: string }>;
+    return rows[0]?.id ?? null;
+  } catch { return null; }
+}
+
+async function buscarJob(
+  params: { supabaseUrl: string; serviceKey: string },
+  jobId: string,
+): Promise<Job | null> {
+  if (!jobId) return null;
+  try {
+    const res = await fetch(
+      `${params.supabaseUrl}/rest/v1/mia_jobs?id=eq.${encodeURIComponent(jobId)}&select=id,instancia,telefone,produto,status,dados_arte,ultima_arte,ajustes&limit=1`,
+      { headers: { apikey: params.serviceKey, Authorization: `Bearer ${params.serviceKey}` } },
+    );
+    if (!res.ok) return null;
+    const rows = await res.json() as Job[];
+    return rows[0] ?? null;
+  } catch { return null; }
+}
+
+function atualizarJob(
+  params: { supabaseUrl: string; serviceKey: string },
+  jobId: string,
+  campos: Partial<Pick<Job, 'status' | 'ajustes' | 'dados_arte' | 'ultima_arte'>>,
+): void {
+  fetch(`${params.supabaseUrl}/rest/v1/mia_jobs?id=eq.${encodeURIComponent(jobId)}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', apikey: params.serviceKey, Authorization: `Bearer ${params.serviceKey}` },
+    body: JSON.stringify({ ...campos, updated_at: new Date().toISOString() }),
+  }).catch(console.error);
+}
+
+function salvarJobIdAtual(
+  params: { supabaseUrl: string; serviceKey: string; instancia: string; telefone: string },
+  jobId: string | null,
+): void {
+  fetch(`${params.supabaseUrl}/rest/v1/mia_conversas_whatsapp?on_conflict=instancia,telefone`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', apikey: params.serviceKey, Authorization: `Bearer ${params.serviceKey}`, Prefer: 'resolution=merge-duplicates' },
+    body: JSON.stringify({ instancia: params.instancia, telefone: params.telefone, job_id_atual: jobId, updated_at: new Date().toISOString() }),
+  }).catch(console.error);
+}
+
+// ── Chama gerar-arte ────────────────────────────────────────────────────────
+async function chamarGerarArte(dados: Record<string, string>, supabaseUrl: string, serviceKey: string): Promise<{ url: string | null; base_url?: string }> {
+  try {
+    const t0Arte = Date.now();
+    console.log('[timing/mia] gerar_arte_inicio | tipo:', dados.tipo_produto, '| layout:', dados.layout_id);
     const res = await fetch(`${supabaseUrl}/functions/v1/gerar-arte`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${serviceKey}` },
       body: JSON.stringify(dados),
     });
-    if (!res.ok) { console.log('[gerar-arte] erro:', res.status, await res.text()); return null; }
-    const data = await res.json() as { url: string };
-    return data.url ?? null;
-  } catch (e) { console.log('[gerar-arte] exceção:', e); return null; }
+    console.log('[timing/mia] gerar_arte_fim | elapsed:', Date.now() - t0Arte, 'ms | status:', res.status);
+    if (!res.ok) { console.log('[gerar-arte] erro:', res.status, await res.text()); return { url: null }; }
+    const data = await res.json() as { url: string; _base_url?: string };
+    return { url: data.url ?? null, base_url: data._base_url };
+  } catch (e) { console.log('[gerar-arte] exceção:', e); return { url: null }; }
 }
 
 // ── Extrai dados do produto via Claude Haiku ───────────────────────────────
-async function extrairDadosProduto(historico: Msg[], apiKey: string): Promise<Record<string, string>> {
+async function extrairDadosProduto(historico: Msg[], apiKey: string, logCtx?: LogCtx): Promise<Record<string, string>> {
   try {
     const msgs = historico.filter(m => m.role === 'user').map(m => m.content).join('\n---\n');
     const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -218,7 +406,8 @@ JSON:`,
       }),
     });
     if (!res.ok) return {};
-    const data = await res.json() as { content?: Array<{ text: string }> };
+    const data = await res.json() as { content?: Array<{ text: string }>; usage?: Usage };
+    if (logCtx && data.usage) registrarCusto(logCtx, 'claude-haiku-4-5-20251001', 'extracao_dados', data.usage).catch(console.error);
     const text = (data.content?.[0]?.text ?? '').trim();
     const m = text.match(/\{[\s\S]*\}/);
     return m ? (JSON.parse(m[0]) as Record<string, string>) : {};
@@ -226,7 +415,7 @@ JSON:`,
 }
 
 // ── Enriquece prompt de ilustração ─────────────────────────────────────────
-async function enriquecerPromptIlustracao(promptOriginal: string, apiKey: string): Promise<string> {
+async function enriquecerPromptIlustracao(promptOriginal: string, apiKey: string, logCtx?: LogCtx): Promise<string> {
   if (!promptOriginal) return promptOriginal;
   if (promptOriginal.trim().split(/\s+/).length >= 80) return promptOriginal;
   try {
@@ -252,7 +441,8 @@ Expanded prompt:`,
       }),
     });
     if (!res.ok) return promptOriginal;
-    const data = await res.json() as { content?: Array<{ text: string }> };
+    const data = await res.json() as { content?: Array<{ text: string }>; usage?: Usage };
+    if (logCtx && data.usage) registrarCusto(logCtx, 'claude-haiku-4-5-20251001', 'enriquecimento_prompt', data.usage).catch(console.error);
     return (data.content?.[0]?.text ?? '').trim() || promptOriginal;
   } catch (e) { console.log('[enriquecer-prompt] erro:', e); return promptOriginal; }
 }
@@ -296,6 +486,15 @@ async function gerarOrdemProducaoPDF(dados: { cliente: string; telefone: string;
     const bytes = await doc.save();
     return btoa(bytes.reduce((acc: string, b: number) => acc + String.fromCharCode(b), ''));
   } catch (e) { console.log('[pdf] erro:', e); return null; }
+}
+
+function sanitizarHistorico(hist: Msg[]): Msg[] {
+  return hist.map(m => {
+    if (typeof m.content !== 'string') return m;
+    let c = m.content.replace(/data:image\/[^;]+;base64,[A-Za-z0-9+/=]{100,}/g, '[imagem recebida]');
+    if (c.length > 3000) c = c.substring(0, 3000) + '…[truncado]';
+    return { ...m, content: c };
+  });
 }
 
 // ── Handler WhatsApp ────────────────────────────────────────────────────────
@@ -482,7 +681,7 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
 
       // 2. Analisa cores do logo
       console.log('[logo] analisando cores com Claude Vision...');
-      const analise = await analisarLogo(urlPermanente, apiKey);
+      const analise = await analisarLogo(urlPermanente, apiKey, { supabaseUrl, serviceKey, instancia, telefone });
       console.log('[mia-chat] logo analise:', JSON.stringify(analise));
 
       // 3. Salva URL permanente na coluna logo_url da tabela
@@ -501,6 +700,17 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
           if (rows.length > 0) { historico = rows[0].historico ?? []; pausado = rows[0].pausado ?? false; }
         }
       } catch (_) {}
+      let jobIdAtualLogo = '';
+      try {
+        const jobRes = await fetch(
+          `${supabaseUrl}/rest/v1/mia_conversas_whatsapp?instancia=eq.${encodeURIComponent(instancia)}&telefone=eq.${encodeURIComponent(telefone)}&select=job_id_atual`,
+          { headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` } },
+        );
+        if (jobRes.ok) {
+          const jobRows = await jobRes.json() as Array<{ job_id_atual?: string }>;
+          jobIdAtualLogo = jobRows[0]?.job_id_atual ?? '';
+        }
+      } catch (_) {}
 
       if (pausado) {
         console.log('[logo] conversa pausada — sem resposta ao cliente');
@@ -510,8 +720,8 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
       // 5. Monta mensagem para o histórico com logo + cores
       const coresTag = analise ? ` [cores_logo: ${JSON.stringify(analise)}]` : '';
       const textoLogo = texto
-        ? `${texto} [logo recebido: ${urlPermanente}]${coresTag}`
-        : `[logo recebido: ${urlPermanente}]${coresTag}`;
+        ? `${texto} [logo_recebido]${coresTag}`
+        : `[logo_recebido]${coresTag}`;
 
       const primeiraMsg = historico.length === 0;
       historico.push({ role: 'user', content: textoLogo });
@@ -522,14 +732,19 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
       const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-        body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 600, system, messages: historico }),
+        body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 600, system, messages: sanitizarHistorico(historico) }),
         signal: AbortSignal.timeout(30_000),
       });
-      const claudeData = await claudeRes.json() as { content?: Array<{ text: string }> };
-      const resposta = claudeData.content?.[0]?.text ?? '';
-      console.log('[logo] Claude respondeu | status HTTP:', claudeRes.status, '| resposta presente:', !!resposta, '| chars:', resposta.length);
+      const claudeData = await claudeRes.json() as { content?: Array<{ text: string }>; usage?: Usage };
+      const rawLogo = claudeData.content?.[0]?.text ?? '';
+      console.log('[logo] Claude respondeu | status HTTP:', claudeRes.status, '| resposta presente:', !!rawLogo, '| chars:', rawLogo.length);
+      if (claudeData.usage) registrarCusto({ supabaseUrl, serviceKey, instancia, telefone }, 'claude-sonnet-4-6', 'conversa_logo', claudeData.usage).catch(console.error);
 
-      historico.push({ role: 'assistant', content: resposta });
+      const isArteLogo = rawLogo.includes('[ARTE_PRONTA]');
+      const msgClienteLogo = rawLogo.replace(/\[ARTE_PRONTA\][\s\S]*/, '').trim()
+        || (isArteLogo ? 'Perfeito! Estou preparando sua arte agora 🎨 Já te mando.' : '');
+
+      historico.push({ role: 'assistant', content: msgClienteLogo || rawLogo });
       if (historico.length > 40) historico = historico.slice(-40);
 
       // 7. Salva histórico
@@ -539,16 +754,117 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
         body: JSON.stringify({ instancia, telefone, historico, logo_url: urlPermanente, updated_at: new Date().toISOString() }),
       }).catch(console.error);
 
-      // 8. Envia resposta
-      if (resposta) {
+      // 8. Envia resposta ao cliente (nunca enviar [ARTE_PRONTA] ou JSON)
+      if (msgClienteLogo) {
         console.log('[logo] enviando resposta ao cliente via Evolution...');
         fetch(`${EVOLUTION_URL}/message/sendText/${instancia}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', apikey: evolutionKey },
-          body: JSON.stringify({ number: telefone, text: resposta }),
+          body: JSON.stringify({ number: telefone, text: msgClienteLogo }),
         }).catch((err) => console.error('[logo] erro ao enviar resposta Evolution:', err));
-      } else {
+      } else if (!isArteLogo) {
         console.warn('[logo] Claude retornou resposta vazia — nada enviado ao cliente');
+      }
+
+      // 9. Se [ARTE_PRONTA] detectado no fluxo de logo, gera arte
+      if (isArteLogo) {
+        const arteMatchLogo = rawLogo.match(/\[ARTE_PRONTA\]\s*([\s\S]+)/);
+        const arteJsonLogo = arteMatchLogo?.[1]?.trim() ?? '';
+        if (arteJsonLogo) {
+          let dadosLogoJson: Record<string, string> = {};
+          try { dadosLogoJson = JSON.parse(arteJsonLogo); } catch { /* continua */ }
+          const dadosArte: Record<string, string> = {
+            tipo_produto: dadosLogoJson.tipo_produto || 'cartao_visita',
+            modo: dadosLogoJson.modo || 'texto',
+            layout_id: dadosLogoJson.layout_id || 'hibrida_cartao_dark',
+            estilo: dadosLogoJson.estilo || 'dark executive luxury',
+            estilo_visual: dadosLogoJson.estilo_visual || '',
+            layout_texto: dadosLogoJson.layout_texto || '',
+            edit_type: dadosLogoJson.edit_type || '',
+            nome: dadosLogoJson.nome || '',
+            cargo: dadosLogoJson.cargo || '',
+            empresa: dadosLogoJson.empresa || '',
+            telefone: dadosLogoJson.telefone || '',
+            email: dadosLogoJson.email || '',
+            site: dadosLogoJson.site || '',
+            logo_url: urlPermanente || dadosLogoJson.logo_url || '',
+            texto_principal: dadosLogoJson.texto_principal || '',
+            texto_secundario: dadosLogoJson.texto_secundario || '',
+            cor_primaria: dadosLogoJson.cor_primaria || analise?.cor_primaria || '#1B3A6B',
+            cor_secundaria: dadosLogoJson.cor_secundaria || analise?.cor_secundaria || '#C9A84C',
+            modo_caneca:  dadosLogoJson.modo_caneca  || '',
+            observacoes:  dadosLogoJson.observacoes  || '',
+            background_url: '',
+            // Cartão: sempre ia_pura — OpenAI gera o card completo, sem HTML/HCTI
+            modo_criacao: (dadosLogoJson.tipo_produto || 'cartao_visita') === 'cartao_visita' ? 'ia_pura' : (dadosLogoJson.modo_criacao || ''),
+            segmento:     dadosLogoJson.segmento     || '',
+            instagram:    dadosLogoJson.instagram    || '',
+            facebook:     dadosLogoJson.facebook     || '',
+            servicos:     dadosLogoJson.servicos     || '',
+            // Instrução explícita do cliente: faces e background — verificação na Maya + varredura no histórico
+            faces: (() => {
+              if (dadosLogoJson.faces) return dadosLogoJson.faces;
+              const h = historico.map(m => m.content).join(' ');
+              if (/frente\s+e\s+verso|dois\s+lados|frente\/verso|frente\s*\+\s*verso/i.test(h)) return 'frente_verso';
+              return 'frente'; // padrão: só a frente
+            })(),
+            background_preference: (() => {
+              if (dadosLogoJson.background_preference) return dadosLogoJson.background_preference;
+              const h = historico.map(m => m.content).join(' ');
+              if (/fundo\s+branco|background\s+branco|fundo\s+claro|cor\s+branca/i.test(h)) return 'branco';
+              if (/fundo\s+escuro|background\s+escuro|fundo\s+preto|fundo\s+dark/i.test(h)) return 'escuro';
+              if (/fundo\s+colorido/i.test(h)) return 'colorido';
+              return 'auto';
+            })(),
+          };
+          if (dadosLogoJson.edit_type === 'text_only') {
+            const ultimaArte = await buscarUltimaArte({ supabaseUrl, serviceKey, instancia, telefone });
+            if (ultimaArte?.base_url) {
+              dadosArte.background_url = ultimaArte.base_url;
+              console.log('[edit_type/text_only] logo_flow | reutilizando base_url:', ultimaArte.base_url.substring(0, 60));
+            } else {
+              console.log('[edit_type/text_only] logo_flow | ultima_arte não encontrada — regenerando');
+            }
+          }
+          const { url: imageUrl, base_url: baseUrlArte } = await chamarGerarArte(dadosArte, supabaseUrl, serviceKey);
+          if (imageUrl) {
+            if (baseUrlArte) salvarUltimaArte({ supabaseUrl, serviceKey, instancia, telefone }, dadosArte, baseUrlArte);
+            // Job management: create new ou incrementa ajustes
+            const isAjusteLogo = dadosArte.edit_type === 'text_only' || dadosArte.edit_type === 'image_only';
+            if (!isAjusteLogo) {
+              criarJob({ supabaseUrl, serviceKey, instancia, telefone }, dadosArte).then(novoJobId => {
+                if (novoJobId) salvarJobIdAtual({ supabaseUrl, serviceKey, instancia, telefone }, novoJobId);
+              }).catch(console.error);
+            } else if (jobIdAtualLogo) {
+              buscarJob({ supabaseUrl, serviceKey }, jobIdAtualLogo).then(job => {
+                atualizarJob({ supabaseUrl, serviceKey }, jobIdAtualLogo, { ajustes: (job?.ajustes ?? 0) + 1, dados_arte: dadosArte });
+              }).catch(console.error);
+            }
+            const tipoProd = dadosArte.tipo_produto.replace(/_/g, ' ');
+            const msgArte = `Aqui está a prévia do seu ${tipoProd}! 😊 O que acha? Precisa de algum ajuste?`;
+            const _t0WppLogo = Date.now();
+            console.log('[timing/mia] whatsapp_sendmedia_inicio (logo flow)');
+            fetch(`${EVOLUTION_URL}/message/sendMedia/${instancia}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', apikey: evolutionKey },
+              body: JSON.stringify({ number: telefone, mediatype: 'image', mimetype: 'image/png', caption: msgArte, media: imageUrl, fileName: 'arte.png' }),
+            }).then(() => console.log('[timing/mia] whatsapp_sendmedia_fim (logo flow) | elapsed:', Date.now() - _t0WppLogo, 'ms')).catch(console.error);
+            historico.push({ role: 'assistant', content: `[Arte gerada e enviada: ${imageUrl}] ${msgArte}` });
+          } else {
+            const msgFalha = 'Tive um probleminha ao gerar a arte agora. 😅 Nossa equipe vai preparar e te envia em breve!';
+            fetch(`${EVOLUTION_URL}/message/sendText/${instancia}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', apikey: evolutionKey },
+              body: JSON.stringify({ number: telefone, text: msgFalha }),
+            }).catch(console.error);
+            historico.push({ role: 'assistant', content: msgFalha });
+          }
+          fetch(`${supabaseUrl}/rest/v1/mia_conversas_whatsapp?on_conflict=instancia,telefone`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, Prefer: 'resolution=merge-duplicates' },
+            body: JSON.stringify({ instancia, telefone, historico, updated_at: new Date().toISOString() }),
+          }).catch(console.error);
+        }
       }
     } else {
       console.log('[logo] sem urlBruta nem base64 — fluxo de imagem abortado');
@@ -580,6 +896,17 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
       if (rows.length > 0) { historico = rows[0].historico ?? []; pausado = rows[0].pausado ?? false; }
     }
   } catch (_) {}
+  let jobIdAtual = '';
+  try {
+    const jobRes = await fetch(
+      `${supabaseUrl}/rest/v1/mia_conversas_whatsapp?instancia=eq.${encodeURIComponent(instancia)}&telefone=eq.${encodeURIComponent(telefone)}&select=job_id_atual`,
+      { headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` } },
+    );
+    if (jobRes.ok) {
+      const jobRows = await jobRes.json() as Array<{ job_id_atual?: string }>;
+      jobIdAtual = jobRows[0]?.job_id_atual ?? '';
+    }
+  } catch (_) {}
 
   if (pausado) return new Response('OK', { status: 200 });
 
@@ -591,16 +918,31 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
   const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-    body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 600, system, messages: historico }),
+    body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 600, system, messages: sanitizarHistorico(historico) }),
   });
-  const claudeData = await claudeRes.json() as { content?: Array<{ text: string }> };
+  const claudeData = await claudeRes.json() as { content?: Array<{ text: string }>; usage?: Usage };
   const raw = claudeData.content?.[0]?.text ?? '';
   const isLead = raw.startsWith('[LEAD_PRONTO]');
-  const isArte = instancia === 'teffe-press' && raw.includes('[ARTE_PRONTA]');
-  const isAprovada = instancia === 'teffe-press' && raw.includes('[ARTE_APROVADA]');
-  const resposta = isLead ? raw.replace('[LEAD_PRONTO]', '').trim() : raw;
+  const isArte = raw.includes('[ARTE_PRONTA]');
+  const isAprovada = raw.includes('[ARTE_APROVADA]');
+  const isJobAprovado = raw.includes('[JOB_APROVADO]');
+  const isNovoJob = raw.includes('[NOVO_JOB]');
+  if (claudeData.usage) registrarCusto(
+    { supabaseUrl, serviceKey, instancia, telefone },
+    'claude-sonnet-4-6', 'conversa_texto', claudeData.usage,
+    { gerou_arte: isArte, tipo_evento: isAprovada ? 'aprovacao' : isLead ? 'lead' : 'conversa' },
+  ).catch(console.error);
+  // Strip internal command markers — never leak to client
+  let resposta = isLead ? raw.replace('[LEAD_PRONTO]', '').trim() : raw;
+  resposta = resposta
+    .replace(/\[ARTE_PRONTA\][\s\S]*/g, '')
+    .replace(/\[ARTE_APROVADA\][\s\S]*/g, '')
+    .replace(/\[JOB_APROVADO\]/g, '')
+    .replace(/\[NOVO_JOB\]/g, '')
+    .trim();
 
-  if (!resposta) return new Response('OK', { status: 200 });
+  // Guard: only skip on truly empty responses that aren't internal commands
+  if (!resposta && !isArte && !isAprovada && !isJobAprovado && !isNovoJob) return new Response('OK', { status: 200 });
 
   // ── ARTE_APROVADA ──────────────────────────────────────────────────────
   if (isAprovada) {
@@ -624,6 +966,10 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
         headers: { 'Content-Type': 'application/json', apikey: evolutionKey },
         body: JSON.stringify({ number: telefone, mediatype: 'document', mimetype: 'application/pdf', caption: '📋 Ordem de produção gerada!', media: `data:application/pdf;base64,${pdfBase64}`, fileName: 'ordem-producao.pdf' }),
       }).catch(console.error);
+    }
+    if (jobIdAtual) {
+      atualizarJob({ supabaseUrl, serviceKey }, jobIdAtual, { status: 'aprovado' });
+      salvarJobIdAtual({ supabaseUrl, serviceKey, instancia, telefone }, null);
     }
     fetch(`${supabaseUrl}/rest/v1/mia_conversas_whatsapp?on_conflict=instancia,telefone`, {
       method: 'POST',
@@ -664,7 +1010,7 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
       const ilustUrlHist = ilustMatch?.[1]?.trim() ?? '';
 
       // Extração via Haiku
-      const extraido = await extrairDadosProduto(historico, apiKey);
+      const extraido = await extrairDadosProduto(historico, apiKey, { supabaseUrl, serviceKey, instancia, telefone });
 
       const modoDados = dadosJson.modo || 'texto';
       const bgUrlResolvido = dadosJson.background_url || (modoDados === 'combinado' && !dadosJson.ilustracao_prompt ? ilustUrlHist : '');
@@ -675,6 +1021,24 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
       console.log('[mia-chat] logo_url para arte:', logoUrlFinal.substring(0, 80));
 
       const todoHistorico = historico.map(m => m.content).join(' ');
+
+      // Extrai análise expandida do logo salva em [cores_logo: {...}] no histórico
+      const logoAnalise = (() => {
+        const tag = '[cores_logo:';
+        const idx = todoHistorico.lastIndexOf(tag);
+        if (idx === -1) return null;
+        const jsonStart = todoHistorico.indexOf('{', idx);
+        if (jsonStart === -1) return null;
+        let depth = 0, jsonEnd = -1;
+        for (let i = jsonStart; i < todoHistorico.length; i++) {
+          if (todoHistorico[i] === '{') depth++;
+          else if (todoHistorico[i] === '}') { depth--; if (depth === 0) { jsonEnd = i; break; } }
+        }
+        if (jsonEnd === -1) return null;
+        try { return JSON.parse(todoHistorico.substring(jsonStart, jsonEnd + 1)) as Record<string, string>; }
+        catch { return null; }
+      })();
+      console.log('[mia-chat] logoAnalise:', logoAnalise ? `formas=${logoAnalise.formas} | personalidade=${logoAnalise.personalidade_visual}` : 'ausente');
 
       // ── PASSO 1: tipo_produto — JSON tem prioridade; histórico é fallback apenas ──────
       // Cor/estilo NUNCA definem produto. Varre mensagens do cliente em ordem reversa
@@ -745,34 +1109,110 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
         logo_url: logoUrlFinal,
         texto_principal: extraido.texto_principal || dadosJson.texto_principal || '',
         texto_secundario: extraido.texto_secundario || dadosJson.texto_secundario || '',
-        cor_primaria: dadosJson.cor_primaria || '#1B3A6B',
-        cor_secundaria: dadosJson.cor_secundaria || '#C9A84C',
+        cor_primaria: dadosJson.cor_primaria || logoAnalise?.cor_primaria || '#1B3A6B',
+        cor_secundaria: dadosJson.cor_secundaria || logoAnalise?.cor_secundaria || '#C9A84C',
         estilo: estiloDetectado,
+        estilo_visual: dadosJson.estilo_visual || '',
         layout_id: layoutIdDetectado,
-        observacoes: dadosJson.observacoes || (historico.some(m => m.role === 'user' && /s[oó]\s*frente|apenas\s*frente/i.test(m.content)) ? 'apenas frente' : ''),
+        layout_texto: dadosJson.layout_texto || '',
+        edit_type:    dadosJson.edit_type    || '',
+        modo_caneca:  dadosJson.modo_caneca  || '',
+        // Cartão: sempre ia_pura — OpenAI gera o card completo, sem HTML/HCTI
+        modo_criacao: tipoFinal === 'cartao_visita' ? 'ia_pura' : (dadosJson.modo_criacao || ''),
+        segmento:     dadosJson.segmento     || '',
+        instagram:    dadosJson.instagram    || '',
+        facebook:     dadosJson.facebook     || '',
+        servicos:     dadosJson.servicos     || '',
+        // Instrução explícita do cliente: faces e background — verificação na Maya + varredura no histórico
+        faces: (() => {
+          if (dadosJson.faces) return dadosJson.faces;
+          const h = historico.map(m => m.content).join(' ');
+          if (/frente\s+e\s+verso|dois\s+lados|frente\/verso|frente\s*\+\s*verso/i.test(h)) return 'frente_verso';
+          return 'frente'; // padrão: só a frente
+        })(),
+        background_preference: (() => {
+          if (dadosJson.background_preference) return dadosJson.background_preference;
+          const h = historico.map(m => m.content).join(' ');
+          if (/fundo\s+branco|background\s+branco|fundo\s+claro|cor\s+branca/i.test(h)) return 'branco';
+          if (/fundo\s+escuro|background\s+escuro|fundo\s+preto|fundo\s+dark/i.test(h)) return 'escuro';
+          if (/fundo\s+colorido/i.test(h)) return 'colorido';
+          return 'auto';
+        })(),
+        observacoes: (() => {
+          const partes: string[] = [];
+          if (dadosJson.observacoes) partes.push(dadosJson.observacoes);
+          if (logoAnalise?.linguagem_visual) partes.push(logoAnalise.linguagem_visual);
+          if (logoAnalise?.sugestao_direcao_arte) partes.push(logoAnalise.sugestao_direcao_arte);
+          return partes.join('. ');
+        })(),
       };
 
       if (dadosArte.ilustracao_prompt) {
-        dadosArte.ilustracao_prompt = await enriquecerPromptIlustracao(dadosArte.ilustracao_prompt, apiKey);
+        dadosArte.ilustracao_prompt = await enriquecerPromptIlustracao(dadosArte.ilustracao_prompt, apiKey, { supabaseUrl, serviceKey, instancia, telefone });
+      }
+
+      // text_only: reutiliza arte base anterior, pula OpenAI
+      if (dadosJson.edit_type === 'text_only') {
+        const ultimaArte = await buscarUltimaArte({ supabaseUrl, serviceKey, instancia, telefone });
+        if (ultimaArte?.base_url) {
+          dadosArte.background_url = ultimaArte.base_url;
+          console.log('[edit_type/text_only] reutilizando base_url:', ultimaArte.base_url.substring(0, 60));
+        } else {
+          console.log('[edit_type/text_only] ultima_arte não encontrada — regenerando tudo');
+        }
       }
 
       console.log('[mia-chat] dados arte:', JSON.stringify(dadosArte));
       console.log(`[mia-chat] arte pronta tipo_produto=${dadosArte.tipo_produto} layout_id=${dadosArte.layout_id || ''} estilo=${dadosArte.estilo || ''}`);
       console.log('[logo] gerar arte iniciado | logo_url presente:', !!dadosArte.logo_url, '| tipo:', dadosArte.tipo_produto);
-      const imageUrl = await chamarGerarArte(dadosArte, supabaseUrl, serviceKey);
+
+      // Limite de ajustes: text_only/image_only com job ativo e ajustes >= 2 → escalar
+      const isAjusteTexto = dadosArte.edit_type === 'text_only' || dadosArte.edit_type === 'image_only';
+      let jobAtualTexto: Job | null = null;
+      if (jobIdAtual) jobAtualTexto = await buscarJob({ supabaseUrl, serviceKey }, jobIdAtual);
+      if (isAjusteTexto && jobAtualTexto && jobAtualTexto.ajustes >= 2) {
+        const msgLimite = 'Já realizamos os 2 ajustes automáticos incluídos! 🎨 Vou encaminhar para nosso setor de artes que vai cuidar do próximo ajuste com atenção especial. Te aviso quando estiver pronto!';
+        fetch(`${EVOLUTION_URL}/message/sendText/${instancia}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', apikey: evolutionKey },
+          body: JSON.stringify({ number: telefone, text: msgLimite }),
+        }).catch(console.error);
+        atualizarJob({ supabaseUrl, serviceKey }, jobIdAtual, { status: 'em_revisao_manual' });
+        historico.push({ role: 'assistant', content: msgLimite });
+        if (historico.length > 40) historico = historico.slice(-40);
+        fetch(`${supabaseUrl}/rest/v1/mia_conversas_whatsapp?on_conflict=instancia,telefone`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, Prefer: 'resolution=merge-duplicates' },
+          body: JSON.stringify({ instancia, telefone, historico, updated_at: new Date().toISOString() }),
+        }).catch(console.error);
+        return new Response('OK', { status: 200 });
+      }
+
+      const { url: imageUrl, base_url: baseUrlArte } = await chamarGerarArte(dadosArte, supabaseUrl, serviceKey);
       console.log('[logo] gerar arte concluído | url gerada:', imageUrl ? imageUrl.substring(0, 100) : 'null — falhou');
 
       if (imageUrl) {
+        if (baseUrlArte) salvarUltimaArte({ supabaseUrl, serviceKey, instancia, telefone }, dadosArte, baseUrlArte);
+        // Job management: cria novo job ou incrementa ajustes
+        if (!isAjusteTexto) {
+          criarJob({ supabaseUrl, serviceKey, instancia, telefone }, dadosArte).then(novoJobId => {
+            if (novoJobId) salvarJobIdAtual({ supabaseUrl, serviceKey, instancia, telefone }, novoJobId);
+          }).catch(console.error);
+        } else if (jobIdAtual) {
+          atualizarJob({ supabaseUrl, serviceKey }, jobIdAtual, { ajustes: (jobAtualTexto?.ajustes ?? 0) + 1, dados_arte: dadosArte });
+        }
         const isIlustracao = dadosArte.modo === 'ilustracao';
         const tipoProd = dadosArte.tipo_produto.replace(/_/g, ' ');
         const msgArte = isIlustracao
           ? 'Aqui está sua ilustração! 😊 O que acha? Se quiser posso adicionar seu nome, empresa ou contato por cima!'
           : `Aqui está a prévia do seu ${tipoProd}! 😊 O que acha? Precisa de algum ajuste?`;
+        const _t0WppText = Date.now();
+        console.log('[timing/mia] whatsapp_sendmedia_inicio (text flow)');
         fetch(`${EVOLUTION_URL}/message/sendMedia/${instancia}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', apikey: evolutionKey },
           body: JSON.stringify({ number: telefone, mediatype: 'image', mimetype: 'image/png', caption: msgArte, media: imageUrl, fileName: 'arte.png' }),
-        }).catch(console.error);
+        }).then(() => console.log('[timing/mia] whatsapp_sendmedia_fim (text flow) | elapsed:', Date.now() - _t0WppText, 'ms')).catch(console.error);
         const histContent = isIlustracao
           ? `[ilustracao_gerada: ${imageUrl}] ${msgArte}`
           : `[Arte gerada e enviada: ${imageUrl}] ${msgArte}`;
@@ -798,6 +1238,16 @@ async function handleWhatsApp(body: Record<string, unknown>): Promise<Response> 
   }
 
   // ── RESPOSTA NORMAL ────────────────────────────────────────────────────
+  // Aprovação informal: "gostei", "pode ser" etc. → marca job como aprovado sem gerar PDF
+  if (isJobAprovado && jobIdAtual) {
+    atualizarJob({ supabaseUrl, serviceKey }, jobIdAtual, { status: 'aprovado' });
+    salvarJobIdAtual({ supabaseUrl, serviceKey, instancia, telefone }, null);
+  }
+  // Cliente quer novo trabalho diferente → limpa job atual para criar novo na próxima arte
+  if (isNovoJob) {
+    salvarJobIdAtual({ supabaseUrl, serviceKey, instancia, telefone }, null);
+  }
+
   historico.push({ role: 'assistant', content: resposta });
   if (historico.length > 40) historico = historico.slice(-40);
 
@@ -837,6 +1287,8 @@ Deno.serve(async (req: Request) => {
     const periodo = h >= 5 && h < 12 ? 'manhã' : h >= 12 && h < 18 ? 'tarde' : 'noite';
     const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
     if (!apiKey) return new Response(JSON.stringify({ error: 'ANTHROPIC_API_KEY not set' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    const supabaseUrlApi = Deno.env.get('SUPABASE_URL') ?? '';
+    const serviceKeyApi  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 
     let system: string;
     if (modo === 'suporte') {
@@ -852,12 +1304,18 @@ Deno.serve(async (req: Request) => {
       headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 1000, system, messages }),
     });
-    const data = await res.json();
+    const data = await res.json() as { content?: Array<{ text: string }>; usage?: Usage };
     if (!res.ok) return new Response(JSON.stringify(data), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: res.status });
+    if (data.usage && supabaseUrlApi && serviceKeyApi) registrarCusto(
+      { supabaseUrl: supabaseUrlApi, serviceKey: serviceKeyApi, instancia: 'api', telefone: 'n/a' },
+      'claude-sonnet-4-6', 'conversa_api', data.usage,
+      { modo: modo ?? null, cliente_nome: cliente_nome ?? null },
+    ).catch(console.error);
 
     const raw = data.content?.[0]?.text ?? '';
     const salvar_lead = modo !== 'suporte' && raw.startsWith('[LEAD_PRONTO]');
-    const text = salvar_lead ? raw.replace('[LEAD_PRONTO]', '').trim() : raw;
+    let text = salvar_lead ? raw.replace('[LEAD_PRONTO]', '').trim() : raw;
+    text = text.replace(/\[ARTE_PRONTA\][\s\S]*/g, '').replace(/\[ARTE_APROVADA\][\s\S]*/g, '').trim();
     return new Response(JSON.stringify({ text, salvar_lead }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   } catch (err) {
     return new Response(JSON.stringify({ error: String(err) }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
