@@ -2350,7 +2350,10 @@
 
       <!-- CHAMADOS -->
       <div id="adm-view-chamados" class="adm-view">
-        <h1 class="adm-pg-title">Chamados de Assistência Técnica</h1>
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:8px;">
+          <h1 class="adm-pg-title" style="margin:0;">Chamados</h1>
+          <button class="adm-btn" onclick="admAbrirNovoChamado()"><i class="ti ti-plus"></i> Novo Chamado</button>
+        </div>
         <div class="adm-filters">
           <label>Status</label>
           <select id="adm-filtro-status" onchange="admCarregarChamados()">
@@ -2370,6 +2373,54 @@
         </div>
       </div>
 
+    </div>
+  </div>
+
+  <!-- MODAL NOVO CHAMADO (admin) -->
+  <div class="modal-bg" id="adm-novo-cham-bg" style="z-index:6000;">
+    <div class="modal" style="max-width:560px;">
+      <button class="modal-x" onclick="admFecharNovoChamado()">✕</button>
+      <h2 style="margin-bottom:20px;"><i class="ti ti-plus"></i> Novo Chamado</h2>
+      <div id="adm-novo-cham-erro" class="adm-err" style="display:none;margin-bottom:12px;"></div>
+      <div class="adm-grid-2" style="margin-bottom:12px;">
+        <div class="ac-fg"><label class="ac-label">Tipo *</label>
+          <select id="adm-nc-tipo" class="ac-input">
+            <option value="instalacao">Instalação</option>
+            <option value="desinstalacao">Desinstalação</option>
+            <option value="vistoria">Vistoria</option>
+            <option value="manutencao">Manutenção</option>
+          </select>
+        </div>
+        <div class="ac-fg"><label class="ac-label">Prioridade</label>
+          <select id="adm-nc-prio" class="ac-input">
+            <option value="normal">Normal</option>
+            <option value="alta">Alta</option>
+            <option value="urgente">Urgente</option>
+          </select>
+        </div>
+      </div>
+      <div class="ac-fg" style="margin-bottom:12px;"><label class="ac-label">Cliente *</label>
+        <select id="adm-nc-cliente" class="ac-input" onchange="admNcOnClienteChange()">
+          <option value="">Selecione o cliente...</option>
+        </select>
+      </div>
+      <div class="ac-fg" style="margin-bottom:12px;"><label class="ac-label">Equipamento</label>
+        <select id="adm-nc-equip" class="ac-input">
+          <option value="">Selecione o cliente primeiro...</option>
+        </select>
+      </div>
+      <div class="ac-fg" style="margin-bottom:12px;"><label class="ac-label">Técnico responsável</label>
+        <select id="adm-nc-tec" class="ac-input">
+          <option value="">Sem técnico atribuído</option>
+        </select>
+      </div>
+      <div class="ac-fg" style="margin-bottom:16px;"><label class="ac-label">Descrição *</label>
+        <textarea id="adm-nc-desc" class="ac-input" rows="4" placeholder="Descreva o serviço a ser realizado..." style="resize:vertical;"></textarea>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <button class="adm-btn adm-btn-outline" onclick="admFecharNovoChamado()">Cancelar</button>
+        <button class="adm-btn" id="adm-nc-btn-salvar" onclick="admSalvarNovoChamado()"><i class="ti ti-check"></i> Criar Chamado</button>
+      </div>
     </div>
   </div>
 

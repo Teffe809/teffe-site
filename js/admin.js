@@ -278,7 +278,7 @@ async function admCarregarChamados(){
   if(!_admTecs.length) await admCarregarTecnicos();
   const filtroStatus=document.getElementById('adm-filtro-status').value;
   const filtroTec=document.getElementById('adm-filtro-tec').value;
-  let q='/rest/v1/chamados?tipo_chamado=eq.assistencia&order=created_at.desc&select=*,clientes(nome,empresa)';
+  let q='/rest/v1/chamados?order=created_at.desc&select=*,clientes(nome,empresa)';
   if(filtroStatus) q+='&status=eq.'+filtroStatus;
   if(filtroTec==='is_null') q+='&tecnico_id=is.null';
   else if(filtroTec) q+='&tecnico_id=eq.'+filtroTec;
@@ -357,6 +357,83 @@ async function admAbrirDetalhe(jsonStr){
 
 function admFecharDetalhe(){
   document.getElementById('adm-detalhe-bg').classList.remove('open');
+}
+
+// ── NOVO CHAMADO (admin) ──
+async function admAbrirNovoChamado(){
+  if(!_admTecs.length) await admCarregarTecnicos();
+  const {data:clis}=await admHttp('/rest/v1/clientes?order=empresa&select=id,empresa,nome');
+  const selCli=document.getElementById('adm-nc-cliente');
+  selCli.innerHTML='<option value="">Selecione o cliente...</option>';
+  (clis||[]).forEach(c=>{
+    const o=document.createElement('option');
+    o.value=c.id; o.textContent=c.empresa||c.nome||c.id;
+    selCli.appendChild(o);
+  });
+  const selTec=document.getElementById('adm-nc-tec');
+  selTec.innerHTML='<option value="">Sem técnico atribuído</option>';
+  _admTecs.forEach(t=>{
+    const o=document.createElement('option');
+    o.value=t.id; o.textContent=t.nome;
+    selTec.appendChild(o);
+  });
+  document.getElementById('adm-nc-equip').innerHTML='<option value="">Selecione o cliente primeiro...</option>';
+  document.getElementById('adm-nc-tipo').value='instalacao';
+  document.getElementById('adm-nc-prio').value='normal';
+  document.getElementById('adm-nc-desc').value='';
+  const erroEl=document.getElementById('adm-novo-cham-erro');
+  erroEl.style.display='none'; erroEl.textContent='';
+  const btn=document.getElementById('adm-nc-btn-salvar');
+  btn.disabled=false; btn.innerHTML='<i class="ti ti-check"></i> Criar Chamado';
+  document.getElementById('adm-novo-cham-bg').classList.add('open');
+}
+
+async function admNcOnClienteChange(){
+  const clienteId=document.getElementById('adm-nc-cliente').value;
+  const sel=document.getElementById('adm-nc-equip');
+  if(!clienteId){sel.innerHTML='<option value="">Selecione o cliente primeiro...</option>';return;}
+  sel.innerHTML='<option value="">Carregando...</option>';
+  const {data}=await admHttp('/rest/v1/equipamentos?cliente_id=eq.'+clienteId+'&order=modelo&select=id,modelo,marca,serial,codigo');
+  sel.innerHTML='<option value="">Nenhum equipamento</option>';
+  (data||[]).forEach(e=>{
+    const o=document.createElement('option');
+    o.value=e.id;
+    const serial=e.serial||e.codigo;
+    o.textContent=(e.marca?e.marca+' ':'')+(e.modelo||'–')+(serial?' ('+serial+')':'');
+    sel.appendChild(o);
+  });
+}
+
+async function admSalvarNovoChamado(){
+  const clienteId=document.getElementById('adm-nc-cliente').value;
+  const desc=document.getElementById('adm-nc-desc').value.trim();
+  const erroEl=document.getElementById('adm-novo-cham-erro');
+  const btn=document.getElementById('adm-nc-btn-salvar');
+  erroEl.style.display='none';
+  if(!clienteId){erroEl.style.display='block';erroEl.textContent='Selecione o cliente.';return;}
+  if(!desc){erroEl.style.display='block';erroEl.textContent='Informe a descrição do chamado.';return;}
+  btn.disabled=true; btn.textContent='Criando...';
+  const payload={
+    tipo_chamado:document.getElementById('adm-nc-tipo').value,
+    cliente_id:clienteId,
+    equipamento_id:document.getElementById('adm-nc-equip').value||null,
+    tecnico_id:document.getElementById('adm-nc-tec').value||null,
+    descricao:desc,
+    prioridade:document.getElementById('adm-nc-prio').value,
+    status:'aberto'
+  };
+  const {ok,data}=await admHttpUser('/rest/v1/chamados',{
+    method:'POST',headers:{'Prefer':'return=minimal'},
+    body:JSON.stringify(payload)
+  });
+  btn.disabled=false; btn.innerHTML='<i class="ti ti-check"></i> Criar Chamado';
+  if(!ok){erroEl.style.display='block';erroEl.textContent=data&&data.message?data.message:'Erro ao criar chamado. Verifique permissões.';return;}
+  admFecharNovoChamado();
+  admCarregarChamados();
+}
+
+function admFecharNovoChamado(){
+  document.getElementById('adm-novo-cham-bg').classList.remove('open');
 }
 
 // ── IMPRIMIR OS (admin) ──

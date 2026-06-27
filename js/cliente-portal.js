@@ -202,14 +202,19 @@ function cpRenderizarBoletos(lista, hoje){
 
   el.innerHTML = '<div class="cp-boletos-grid">' + lista.map(function(b){
     var st = cpStatusBoleto(b, hoje);
-    var tooltip = st === 'vencido' ? ' title="Pode levar até 5 dias úteis para compensação"' : '';
+    var hintVencido = st === 'vencido'
+      ? '<small class="cp-boleto-hint">Pode levar até 5 dias úteis para compensação</small>'
+      : '';
     var downloadBtn = b.arquivo_url
       ? '<a href="' + b.arquivo_url + '" target="_blank" class="cp-boleto-download"><i class="ti ti-download"></i> Baixar</a>'
       : '<span class="cp-boleto-sem-pdf">PDF indisponível</span>';
     return '<div class="cp-boleto-card ' + (cardClasses[st]||'') + '">' +
       '<div class="cp-boleto-header">' +
         '<span class="cp-boleto-num">Boleto ' + (b.numero_boleto || '#'+b.id.slice(0,6)) + '</span>' +
-        '<span class="cp-boleto-badge ' + (stClasses[st]||'') + '"' + tooltip + '>' + (stLabels[st]||st) + '</span>' +
+        '<div class="cp-boleto-badge-wrap">' +
+          '<span class="cp-boleto-badge ' + (stClasses[st]||'') + '">' + (stLabels[st]||st) + '</span>' +
+          hintVencido +
+        '</div>' +
       '</div>' +
       '<div class="cp-boleto-body">' +
         '<div class="cp-boleto-info"><span class="cp-boleto-lbl">NF</span><span class="cp-boleto-val">' + (b.numero_nf||'–') + '</span></div>' +

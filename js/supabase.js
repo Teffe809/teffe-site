@@ -876,7 +876,7 @@ async function tecCarregarChamados(){
   if(!_tecId) return;
   const el=document.getElementById('tec-lista-chamados');
   el.innerHTML='<div class="tec-loading">Carregando chamados...</div>';
-  const {data,ok}=await sfTec('/rest/v1/chamados?tecnico_id=eq.'+_tecId+'&status_tecnico=neq.encerrado&status=neq.encerrado&order=created_at.desc&select=*,clientes(nome,empresa,cidade)');
+  const {data,ok}=await sfTec('/rest/v1/chamados?tecnico_id=eq.'+_tecId+'&status=neq.encerrado&order=created_at.desc&select=*,clientes(nome,empresa,cidade)');
   if(!ok){el.innerHTML='<div class="tec-empty">Erro ao carregar chamados.</div>';return;}
   if(!data||!data.length){el.innerHTML='<div class="tec-empty">Nenhum chamado atribuído a você.</div>';return;}
   _tecChamadosData={};
@@ -931,7 +931,7 @@ async function tecHistCarregarChamados(){
   if(!_tecHistEquip) return;
   const resEl=document.getElementById('tec-hist-resultado');
   resEl.innerHTML='<div class="tec-loading">Carregando histórico...</div>';
-  const {data,ok}=await sfTec('/rest/v1/chamados?cliente_id=eq.'+_tecHistEquip.cliente_id+'&order=created_at.desc&select=*,clientes(nome,empresa,cidade)');
+  const {data,ok}=await sfTec('/rest/v1/chamados?equipamento_id=eq.'+_tecHistEquip.id+'&order=created_at.desc&select=*,clientes(nome,empresa,cidade)');
   if(!ok){resEl.innerHTML='<div class="tec-hist-empty">Erro ao carregar histórico.</div>';return;}
   _tecHistData=data||[];
   _tecHistPage=0;
@@ -942,7 +942,7 @@ function tecHistRenderLista(){
   const resEl=document.getElementById('tec-hist-resultado');
   const pgEl=document.getElementById('tec-hist-paginacao');
   if(!_tecHistData.length){
-    resEl.innerHTML='<div class="tec-hist-empty">Nenhum chamado encontrado para este cliente.</div>';
+    resEl.innerHTML='<div class="tec-hist-empty">Nenhum chamado encontrado para este equipamento.</div>';
     pgEl.style.display='none';return;
   }
   const total=_tecHistData.length;
