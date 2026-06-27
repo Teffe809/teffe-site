@@ -159,11 +159,11 @@ function cpRenderizarBoletos(lista, hoje){
       : '<span class="cp-boleto-sem-pdf">PDF indisponível</span>';
     return '<div class="cp-boleto-card ' + (cardClasses[st]||'') + '">' +
       '<div class="cp-boleto-header">' +
-        '<span class="cp-boleto-num">Boleto ' + (b.numero || '#'+b.id.slice(0,6)) + '</span>' +
+        '<span class="cp-boleto-num">Boleto ' + (b.numero_boleto || '#'+b.id.slice(0,6)) + '</span>' +
         '<span class="cp-boleto-badge ' + (stClasses[st]||'') + '"' + tooltip + '>' + (stLabels[st]||st) + '</span>' +
       '</div>' +
       '<div class="cp-boleto-body">' +
-        '<div class="cp-boleto-info"><span class="cp-boleto-lbl">NF</span><span class="cp-boleto-val">' + (b.nf||'–') + '</span></div>' +
+        '<div class="cp-boleto-info"><span class="cp-boleto-lbl">NF</span><span class="cp-boleto-val">' + (b.numero_nf||'–') + '</span></div>' +
         '<div class="cp-boleto-info"><span class="cp-boleto-lbl">Valor</span><span class="cp-boleto-val cp-boleto-valor">' + fmtVal(b.valor) + '</span></div>' +
         '<div class="cp-boleto-info"><span class="cp-boleto-lbl">Vencimento</span><span class="cp-boleto-val">' + fmtDate(b.vencimento) + '</span></div>' +
       '</div>' +

@@ -199,9 +199,9 @@
   box-shadow: 0 2px 8px rgba(26,63,128,0.05);
 }
 
-.cp-boleto-pago    { border-left-color: #2d8a40; }
-.cp-boleto-avencer { border-left-color: #E07820; }
-.cp-boleto-vencido { border-left-color: #e53e3e; }
+.cp-boleto-pago    { border-left-color: #16A34A; }
+.cp-boleto-avencer { border-left-color: #0A4B8D; }
+.cp-boleto-vencido { border-left-color: #DC2626; }
 
 .cp-boleto-header {
   display: flex;
@@ -224,9 +224,9 @@
   cursor: default;
 }
 
-.cp-st-pago    { background: #E8F7EC; color: #2d8a40; }
-.cp-st-avencer { background: #FFF4E6; color: #C96000; }
-.cp-st-vencido { background: #FFF0F0; color: #c0392b; }
+.cp-st-pago    { background: #DCFCE7; color: #16A34A; }
+.cp-st-avencer { background: #EEF3FB; color: #0A4B8D; }
+.cp-st-vencido { background: #FEE2E2; color: #DC2626; }
 
 .cp-boleto-body {
   display: grid;
