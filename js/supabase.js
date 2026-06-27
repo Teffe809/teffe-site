@@ -161,10 +161,13 @@ async function carregarArea(){
   _cid=c?c.id:null;
   let primeiroNome=c?c.nome.split(' ')[0]:'cliente';
   if(_email){
-    const {data:cu}=await sf('/rest/v1/cliente_usuarios?email=eq.'+encodeURIComponent(_email)+'&limit=1&select=nome');
-    if(cu&&cu[0]&&cu[0].nome) primeiroNome=cu[0].nome.split(' ')[0];
+    const {data:cu}=await sf('/rest/v1/cliente_usuarios?email=eq.'+encodeURIComponent(_email)+'&limit=1&select=nome,cliente_id');
+    if(cu&&cu[0]){
+      if(cu[0].nome) primeiroNome=cu[0].nome.split(' ')[0];
+      if(!_cid&&cu[0].cliente_id) _cid=cu[0].cliente_id;
+    }
   }
-  window.clienteLogado={nome:primeiroNome};
+  window.clienteLogado={nome:primeiroNome,clienteId:_cid};
   document.getElementById('ac-nome').textContent=primeiroNome;
   document.getElementById('ac-empresa').textContent=c?c.empresa:'Minha Área';
   if(typeof miaIniciarSupporte==='function') setTimeout(function(){miaIniciarSupporte(primeiroNome);},1500);

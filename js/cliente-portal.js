@@ -91,7 +91,7 @@ async function cpCarregarFinanceiro(){
   var el = document.getElementById('cp-lista-boletos');
   if(!el) return;
   el.innerHTML = '<div class="ac-empty">Carregando...</div>';
-  if(!_cid){ el.innerHTML = '<div class="ac-empty">Sessão inválida.</div>'; return; }
+  if(!_cid){ el.innerHTML = '<div class="ac-empty">Nenhum boleto encontrado.</div>'; return; }
 
   var hoje = new Date(); hoje.setHours(0,0,0,0);
   var res = await sf('/rest/v1/boletos?cliente_id=eq.' + _cid + '&order=vencimento.desc&select=*');
@@ -177,7 +177,7 @@ async function cpCarregarContratosView(){
   var el = document.getElementById('cp-lista-contratos');
   if(!el) return;
   el.innerHTML = '<div class="ac-empty">Carregando...</div>';
-  if(!_cid){ el.innerHTML = '<div class="ac-empty">Sessão inválida.</div>'; return; }
+  if(!_cid){ el.innerHTML = '<div class="ac-empty">Nenhum contrato encontrado.</div>'; return; }
 
   var res = await sf('/rest/v1/contratos?cliente_id=eq.' + _cid + '&order=data_inicio.desc&select=*');
 
@@ -233,7 +233,7 @@ async function cpCarregarHistorico(){
   var el = document.getElementById('cp-lista-historico');
   if(!el) return;
   el.innerHTML = '<div class="ac-empty">Carregando...</div>';
-  if(!_cid){ el.innerHTML = '<div class="ac-empty">Sessão inválida.</div>'; return; }
+  if(!_cid){ el.innerHTML = '<div class="ac-empty">Nenhum chamado encerrado.</div>'; return; }
 
   var res = await sf(
     '/rest/v1/chamados?cliente_id=eq.' + _cid +
