@@ -1111,7 +1111,7 @@ interface RenderResult { html: string; w: number; h: number; fullDoc?: boolean; 
 function normalizarTipo(t: string): string {
   const m: Record<string,string> = {
     'cartao_visita':'cartao_visita','cartão de visita':'cartao_visita','cartao de visita':'cartao_visita',
-    'adesivo_redondo':'adesivo_redondo','adesivo redondo':'adesivo_redondo',
+    'adesivo':'adesivo_redondo','adesivo_redondo':'adesivo_redondo','adesivo redondo':'adesivo_redondo',
     'adesivo_retangular':'adesivo_retangular','adesivo retangular':'adesivo_retangular',
     'flyer_a5':'flyer_a5','flyer':'flyer_a5','flyer a5':'flyer_a5',
     'banner_vertical':'banner_vertical','banner vertical':'banner_vertical',
@@ -2799,13 +2799,16 @@ Deno.serve(async (req: Request) => {
 
     // ── MODO HIBRIDO — caneca (teste): IA gera base, HTML/SVG aplica textos ──
     if (d.tipo_produto === 'caneca' && d.layout_id === 'hibrida_caneca') {
+      const t0K = Date.now();
+      console.log('[timing/caneca] inicio');
       const logo      = d.logo_url ? await logoParaBase64(d.logo_url) : '';
       const openAiKey = Deno.env.get('OPENAI_API_KEY') ?? '';
       console.log('[hibrida] OPENAI_API_KEY presente:', !!openAiKey);
 
       // Fase 1: gerarBaseIA — IA produz imagem base
+      console.log('[timing/caneca] openai_inicio | elapsed:', Date.now() - t0K, 'ms');
       const base = await gerarBaseIA(d, openAiKey ? { OPENAI_API_KEY: openAiKey } : {});
-      console.log('[hibrida] base provider:', base.provider, '| url prefix:', base.url.slice(0, 40));
+      console.log('[timing/caneca] openai_fim | elapsed:', Date.now() - t0K, 'ms | provider:', base.provider);
 
       // Fase 2: se OpenAI retornou data URL, fazer upload para Supabase Storage
       let baseUrl    = base.url;
@@ -2818,11 +2821,13 @@ Deno.serve(async (req: Request) => {
         const binStr   = atob(b64str);
         const pngBytes = Uint8Array.from({ length: binStr.length }, (_, i) => binStr.charCodeAt(i));
         const file     = `hibrida-ia-${Date.now()}.png`;
+        console.log('[timing/caneca] storage_inicio | elapsed:', Date.now() - t0K, 'ms');
         const up       = await fetch(`${supUrl}/storage/v1/object/artes/${file}`, {
           method: 'POST',
           headers: { apikey: supKey, Authorization: `Bearer ${supKey}`, 'Content-Type': 'image/png', 'x-upsert': 'true' },
           body: pngBytes,
         });
+        console.log('[timing/caneca] storage_fim | elapsed:', Date.now() - t0K, 'ms | ok:', up.ok);
         if (up.ok) {
           baseUrl = `${supUrl}/storage/v1/object/public/artes/${file}`;
           console.log('[hibrida/storage] upload OK:', baseUrl);
@@ -2842,8 +2847,10 @@ Deno.serve(async (req: Request) => {
       console.log('[hibrida] htmlLen:', overlayHtml.length, '| baseUrl type:', baseUrl.startsWith('http') ? 'storage' : 'data');
 
       // Fase 4: renderizar HTML com overlay via HCTI/Browserless
+      console.log('[timing/caneca] hcti_inicio | elapsed:', Date.now() - t0K, 'ms');
       const rendered = await renderizarHCTI(overlayHtml, hibW, hibH, true)
                     ?? await renderizarBrowserless(overlayHtml, hibW, hibH);
+      console.log('[timing/caneca] hcti_fim | elapsed:', Date.now() - t0K, 'ms | rendered:', !!rendered);
 
       // Fase 5 fallback: se renderizador falhar mas temos imagem OpenAI no Storage → mockup direto
       const storageBase = baseUrl.startsWith('http') ? baseUrl : undefined;
@@ -2855,8 +2862,11 @@ Deno.serve(async (req: Request) => {
           { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
         );
       }
+      console.log('[timing/caneca] mockup_inicio | elapsed:', Date.now() - t0K, 'ms');
       const mockup = await aplicarMockupCaneca(imageUrl);
+      console.log('[timing/caneca] mockup_fim | elapsed:', Date.now() - t0K, 'ms | ok:', !!mockup);
       const modo   = rendered ? 'hibrida' : 'hibrida_base_sem_overlay';
+      console.log('[timing/caneca] total:', Date.now() - t0K, 'ms');
       return new Response(
         JSON.stringify({
           url:          mockup ?? imageUrl,
@@ -2868,55 +2878,155 @@ Deno.serve(async (req: Request) => {
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }
-    // ── MODO HÍBRIDO — cartão de visita (hibrida_cartao_dark / light / impacto) ──
+    // ── CARTÃO DE VISITA — IA PURA OBRIGATÓRIA ──────────────────────────────────
+    // TRAVA: cartão NUNCA usa HTML, NUNCA usa HCTI, NUNCA usa overlay de texto.
+    // OpenAI gpt-image-1 gera o card completo. Entrega direta da imagem.
     if (d.tipo_produto === 'cartao_visita' && /^hibrida_cartao/.test(d.layout_id ?? '')) {
-      const logoC      = d.logo_url ? await logoParaBase64(d.logo_url) : '';
+      const t0C = Date.now();
+
+      // Força ia_pura independente do que veio no input
+      d.modo_criacao = 'ia_pura';
+
+      console.log('[CARTAO] fluxo iniciado | empresa:', d.empresa, '| layout_id:', d.layout_id);
+      console.log('[CARTAO] engine: ia_pura_direta');
+      console.log('[CARTAO] modelo: gpt-image-1');
+      console.log('[CARTAO] usando_openai: true');
+      console.log('[CARTAO] usando_html: false');
+      console.log('[CARTAO] usando_hcti: false');
+      console.log('[CARTAO] hcti_chamado: false');
+
+      // Defaults explícitos para campos de instrução do cliente
+      if (!d.faces) d.faces = 'frente';
+      if (!d.background_preference) d.background_preference = 'auto';
+      console.log('[CARTAO] faces:', d.faces);
+      console.log('[CARTAO] background_preference:', d.background_preference);
+      console.log('[CARTAO] segmento:', d.segmento || '(não informado — usando brief genérico)');
+      console.log('[CARTAO] art_director_brief: true');
+      if (d.segmento) {
+        console.log('[CARTAO] prompt_segmentado: true');
+      } else {
+        console.log('[CARTAO] prompt_segmentado: false — Maya deve enviar campo segmento');
+      }
+      const _restricoesAplicadas = d.faces !== 'frente_verso' || d.background_preference !== 'auto';
+      if (_restricoesAplicadas) console.log('[CARTAO] prompt_restricoes_aplicadas: true');
+
       const openAiKeyC = Deno.env.get('OPENAI_API_KEY') ?? '';
       if (!d.estilo) {
         d.estilo = d.layout_id === 'hibrida_cartao_light'   ? 'clean bright corporate'
           : d.layout_id === 'hibrida_cartao_impacto'        ? 'bold high-contrast modern'
           : 'dark executive luxury';
       }
-      console.log('[hibrida/cartao] layout:', d.layout_id, '| estilo:', d.estilo);
+
+      // ia_pura: texto baked-in na imagem → background_url não se reutiliza
+      // (em hibrida, background era só o fundo; em ia_pura é o card inteiro com texto antigo)
+      if (d.background_url) {
+        console.log('[CARTAO] background_url ignorado em ia_pura_direta — sempre regenera');
+        d.background_url = '';
+      }
+
+      console.log('[CARTAO] openai_inicio | elapsed:', Date.now() - t0C, 'ms');
       const baseC = await gerarBaseIA(d, openAiKeyC ? { OPENAI_API_KEY: openAiKeyC } : {});
-      let baseUrlC = baseC.url;
-      if (baseC.provider === 'openai' && baseC.url.startsWith('data:image/')) {
+      const iaProviderC = baseC.provider;
+      console.log('[CARTAO] openai_fim | elapsed:', Date.now() - t0C, 'ms | provider:', iaProviderC, '| mock:', baseC.mock);
+      console.log('[CARTAO] openai_retornou | url_tipo:', baseC.url.startsWith('data:') ? 'data_url' : 'storage_url');
+
+      // Upload para storage se OpenAI retornou data URL inline
+      let urlFinalC: string | null = null;
+      if (baseC.url.startsWith('http')) {
+        urlFinalC = baseC.url;
+      } else if (baseC.provider === 'openai' && baseC.url.startsWith('data:image/')) {
         const supUrlC = Deno.env.get('SUPABASE_URL') ?? '';
         const supKeyC = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
         if (supUrlC && supKeyC) {
-          const b64sC = baseC.url.replace(/^data:image\/png;base64,/, '');
-          const binsC = atob(b64sC);
-          const pngsC = Uint8Array.from({ length: binsC.length }, (_, i) => binsC.charCodeAt(i));
-          const fileC = `cartao-hibrido-${Date.now()}.png`;
-          const upC   = await fetch(`${supUrlC}/storage/v1/object/artes/${fileC}`, {
+          const b64sC  = baseC.url.replace(/^data:image\/png;base64,/, '');
+          const pngsC  = Uint8Array.from(atob(b64sC), c => c.charCodeAt(0));
+          const fileC  = `cartao-ia-${Date.now()}.png`;
+          console.log('[CARTAO] storage_upload_inicio | elapsed:', Date.now() - t0C, 'ms');
+          const upC    = await fetch(`${supUrlC}/storage/v1/object/artes/${fileC}`, {
             method: 'POST',
             headers: { apikey: supKeyC, Authorization: `Bearer ${supKeyC}`, 'Content-Type': 'image/png', 'x-upsert': 'true' },
             body: pngsC,
           });
-          if (upC.ok) baseUrlC = `${supUrlC}/storage/v1/object/public/artes/${fileC}`;
+          console.log('[CARTAO] storage_upload_fim | ok:', upC.ok, '| elapsed:', Date.now() - t0C, 'ms');
+          if (upC.ok) urlFinalC = `${supUrlC}/storage/v1/object/public/artes/${fileC}`;
         }
       }
-      const htmlC     = aplicarOverlayHTML(d, logoC, baseUrlC);
-      const renderedC = await renderizarHCTI(htmlC, 2100, 600, true)
-                     ?? await renderizarBrowserless(htmlC, 2100, 600);
-      const urlFinalC = renderedC ?? (baseUrlC.startsWith('http') ? baseUrlC : null);
+
       if (!urlFinalC) {
+        console.error('[CARTAO] falha — OpenAI não retornou imagem utilizável | provider:', iaProviderC);
+        return new Response(
+          JSON.stringify({ error: 'Geração de cartão falhou. OpenAI não retornou imagem.' }),
+          { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+
+      console.log('[CARTAO] concluido | engine: ia_pura_direta | total:', Date.now() - t0C, 'ms | url:', urlFinalC.substring(0, 80));
+      return new Response(
+        JSON.stringify({ url: urlFinalC, tipo_produto: 'cartao_visita', modo: 'ia_pura', layout_id: d.layout_id, _ia_provider: iaProviderC, _base_url: urlFinalC }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+
+    // ── MODO HÍBRIDO — adesivo redondo (SEMPRE via IA) ──────────────────────────
+    if (d.tipo_produto === 'adesivo_redondo') {
+      const t0Ad = Date.now();
+      console.log('[adesivo] usando pipeline IA | empresa:', d.empresa, '| layout_id:', d.layout_id);
+      const logoAd      = d.logo_url ? await logoParaBase64(d.logo_url) : '';
+      const openAiKeyAd = Deno.env.get('OPENAI_API_KEY') ?? '';
+      if (!d.estilo) d.estilo = 'bold vibrant creative';
+
+      let baseUrlAd: string;
+      if (d.background_url?.startsWith('http')) {
+        console.log('[timing/adesivo] background_reutilizado | edit_type:', d.edit_type);
+        baseUrlAd = d.background_url;
+      } else {
+        console.log('[timing/adesivo] openai_inicio | elapsed:', Date.now() - t0Ad, 'ms');
+        const baseAd = await gerarBaseIA(d, openAiKeyAd ? { OPENAI_API_KEY: openAiKeyAd } : {});
+        console.log('[timing/adesivo] openai_fim | elapsed:', Date.now() - t0Ad, 'ms | provider:', baseAd.provider);
+
+        baseUrlAd = baseAd.url;
+        if (baseAd.provider === 'openai' && baseAd.url.startsWith('data:image/')) {
+          const supUrlAd = Deno.env.get('SUPABASE_URL') ?? '';
+          const supKeyAd = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+          if (supUrlAd && supKeyAd) {
+            const b64Ad  = baseAd.url.replace(/^data:image\/png;base64,/, '');
+            const binAd  = atob(b64Ad);
+            const pngAd  = Uint8Array.from({ length: binAd.length }, (_, i) => binAd.charCodeAt(i));
+            const fileAd = `adesivo-${Date.now()}.png`;
+            console.log('[timing/adesivo] storage_inicio | elapsed:', Date.now() - t0Ad, 'ms');
+            const upAd   = await fetch(`${supUrlAd}/storage/v1/object/artes/${fileAd}`, {
+              method: 'POST',
+              headers: { apikey: supKeyAd, Authorization: `Bearer ${supKeyAd}`, 'Content-Type': 'image/png', 'x-upsert': 'true' },
+              body: pngAd,
+            });
+            console.log('[timing/adesivo] storage_fim | elapsed:', Date.now() - t0Ad, 'ms | ok:', upAd.ok);
+            if (upAd.ok) baseUrlAd = `${supUrlAd}/storage/v1/object/public/artes/${fileAd}`;
+          }
+        }
+      }
+
+      const htmlAd = aplicarOverlayHTML(d, logoAd, baseUrlAd);
+      console.log('[timing/adesivo] hcti_inicio | elapsed:', Date.now() - t0Ad, 'ms');
+      const renderedAd = await renderizarHCTI(htmlAd, 800, 800, true)
+                      ?? await renderizarBrowserless(htmlAd, 800, 800);
+      console.log('[timing/adesivo] hcti_fim | elapsed:', Date.now() - t0Ad, 'ms | rendered:', !!renderedAd);
+
+      const urlFinalAd = renderedAd ?? (baseUrlAd.startsWith('http') ? baseUrlAd : null);
+      if (!urlFinalAd) {
         return new Response(
           JSON.stringify({ error: 'Renderização indisponível.' }),
           { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
         );
       }
+      console.log('[timing/adesivo] total:', Date.now() - t0Ad, 'ms');
       return new Response(
-        JSON.stringify({ url: urlFinalC, tipo_produto: 'cartao_visita', modo: 'hibrida', layout_id: d.layout_id, _ia_provider: baseC.provider, _base_url: baseUrlC.startsWith('http') ? baseUrlC : '[data_url]' }),
+        JSON.stringify({ url: urlFinalAd, tipo_produto: 'adesivo_redondo', modo: 'hibrida', _base_url: baseUrlAd.startsWith('http') ? baseUrlAd : '[data_url]' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }
 
-    // ── Para expandir: adicione outros produtos aqui seguindo o mesmo padrão ──
-    //   if (d.tipo_produto === 'panfleto'     && d.layout_id === 'hibrida_panfleto')     { ... }
-    //   if (d.tipo_produto === 'adesivo_redondo' && d.layout_id === 'hibrida_adesivo')    { ... }
-
     // ── MODO TEXTO (padrão): template HTML puro ──
+    console.log('[gerar-arte] usando template legado | tipo:', d.tipo_produto, '| modo:', modo);
     if (!d.empresa && !d.nome && !d.texto_principal) {
       return new Response(
         JSON.stringify({ error: 'Informe ao menos empresa, nome ou texto_principal.' }),
