@@ -2009,12 +2009,6 @@
         <button class="cp-nav-item cp-nav-active" data-view="dash" onclick="cpNavegar('dash')">
           <i class="ti ti-home"></i> Início
         </button>
-        <button class="cp-nav-item" data-view="assist" onclick="cpNavegar('assist')">
-          <i class="ti ti-tool"></i> Assistência Técnica
-        </button>
-        <button class="cp-nav-item" data-view="suprim" onclick="cpNavegar('suprim')">
-          <i class="ti ti-package"></i> Suprimentos
-        </button>
         <button class="cp-nav-item" data-view="contratos" onclick="cpNavegar('contratos')">
           <i class="ti ti-file-description"></i> Contratos
         </button>
@@ -2180,9 +2174,13 @@
           </div>
 
           <div class="ac-fg">
-            <label class="ac-label">Contador atual *</label>
-            <input type="text" inputmode="numeric" id="sp-contador" class="ac-input" placeholder="Informe a leitura do contador" oninput="validarContador()"/>
+            <label class="ac-label">Contador PB *</label>
+            <input type="text" inputmode="numeric" id="sp-contador-pb" class="ac-input" placeholder="Leitura do contador P&amp;B" oninput="validarContador()"/>
             <div id="sp-contador-erro" class="ac-counter-error" style="display:none;"></div>
+          </div>
+          <div class="ac-fg" id="sp-campo-color" style="display:none;">
+            <label class="ac-label">Contador Colorido *</label>
+            <input type="text" inputmode="numeric" id="sp-contador-color" class="ac-input" placeholder="Leitura do contador colorido"/>
           </div>
 
           <button class="ac-submit-btn" onclick="enviarSuprimento()"><i class="ti ti-send"></i> Abrir Chamado</button>

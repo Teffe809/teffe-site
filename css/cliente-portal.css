@@ -130,7 +130,10 @@
 .cp-acao-btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
+  flex: 1;
+  min-width: 0;
   padding: 13px 22px;
   border-radius: 8px;
   font-size: 14px;

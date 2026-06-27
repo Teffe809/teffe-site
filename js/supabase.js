@@ -1,6 +1,6 @@
 const SURL='https://hlfjcpgrxiktgctozilk.supabase.co';
 const SKEY='sb_publishable_-Iu8PbqhLeZAXSBcczr2mQ_lzlGr4_g';
-let _tok=null,_uid=null,_cid=null,_atEquipId=null,_spEquipId=null,_spUltimoContador=null,_chamadosCache={};
+let _tok=null,_uid=null,_cid=null,_atEquipId=null,_spEquipId=null,_spUltimoContador=null,_spTipoImpressao='monocromatico',_chamadosCache={};
 let _equipsAC=[];
 let _tecHistData=[],_tecHistPage=0,_tecHistEquip=null;
 const TEC_HIST_PG=10;
@@ -261,7 +261,9 @@ async function abrirDetalhesChamado(id){
       ${isAssistencia&&c.tecnico?`<div class="ac-det-item"><span class="ac-det-lbl">Técnico</span><span class="ac-det-val">${c.tecnico}</span></div>`:''}
       ${!isAssistencia&&c.insumos?`<div class="ac-det-item ac-det-full"><span class="ac-det-lbl">Insumo Solicitado</span><span class="ac-det-val">${insumoNome}</span></div>`:''}
       ${!isAssistencia&&c.quantidade!=null?`<div class="ac-det-item"><span class="ac-det-lbl">Quantidade</span><span class="ac-det-val">${c.quantidade}</span></div>`:''}
-      ${!isAssistencia&&c.contador_atual!=null?`<div class="ac-det-item"><span class="ac-det-lbl">Contador Atual (Páginas)</span><span class="ac-det-val">${c.contador_atual}</span></div>`:''}
+      ${!isAssistencia&&c.contador_pb!=null?`<div class="ac-det-item"><span class="ac-det-lbl">Contador PB</span><span class="ac-det-val">${c.contador_pb}</span></div>`:''}
+      ${!isAssistencia&&c.contador_color!=null?`<div class="ac-det-item"><span class="ac-det-lbl">Contador Colorido</span><span class="ac-det-val">${c.contador_color}</span></div>`:''}
+      ${!isAssistencia&&c.contador_pb==null&&c.contador_atual!=null?`<div class="ac-det-item"><span class="ac-det-lbl">Contador (Páginas)</span><span class="ac-det-val">${c.contador_atual}</span></div>`:''}
       ${isAssistencia&&(c.descricao||c.titulo)?`<div class="ac-det-item ac-det-full"><span class="ac-det-lbl">Descrição</span><span class="ac-det-val">${(c.descricao||c.titulo).replace(/\n/g,'<br>')}</span></div>`:''}
       ${isAssistencia&&encerrado&&c.resolucao?`<div class="ac-det-item ac-det-full ac-det-resolucao"><span class="ac-det-lbl">Resolução do Técnico</span><span class="ac-det-val">${c.resolucao.replace(/\n/g,'<br>')}</span></div>`:''}
       ${pecasModalHtml}
@@ -300,7 +302,9 @@ function imprimirOS(c){
     isAssistencia&&c.tecnico&&['Técnico Responsável',c.tecnico],
     !isAssistencia&&(c.insumos||c.insumo_id)&&['Insumo Solicitado',insumoNome],
     !isAssistencia&&c.quantidade!=null&&['Quantidade Solicitada',String(c.quantidade)],
-    !isAssistencia&&c.contador_atual!=null&&['Contador Atual (Páginas)',String(c.contador_atual)],
+    !isAssistencia&&c.contador_pb!=null&&['Contador PB',String(c.contador_pb)],
+    !isAssistencia&&c.contador_color!=null&&['Contador Colorido',String(c.contador_color)],
+    !isAssistencia&&c.contador_pb==null&&c.contador_atual!=null&&['Contador (Páginas)',String(c.contador_atual)],
     c.data_fechamento&&['Data de Fechamento',fmtD(c.data_fechamento)],
   ].filter(Boolean);
 
@@ -446,7 +450,7 @@ async function buscarEquipAC(prefix){
   }
   const eq=data[0];
   if(prefix==='at') _atEquipId=eq.id;
-  else{_spEquipId=eq.id;carregarInsumos(eq.modelo);}
+  else{_spEquipId=eq.id;_spTipoImpressao=eq.tipo_impressao||'monocromatico';carregarInsumos(eq.modelo);spAtualizarContadores();}
   infoEl.style.display='block';
   infoEl.className='ac-equip-info ac-equip-found';
   infoEl.innerHTML=`<div class="ac-equip-found-grid">
@@ -455,6 +459,11 @@ async function buscarEquipAC(prefix){
     <div><span class="ac-equip-lbl">Série</span><span class="ac-equip-val">${eq.serial||'–'}</span></div>
     <div><span class="ac-equip-lbl">TEFFE</span><span class="ac-equip-val">${eq.codigo||'–'}</span></div>
   </div>`;
+}
+
+function spAtualizarContadores(){
+  const colorEl=document.getElementById('sp-campo-color');
+  if(colorEl) colorEl.style.display=_spTipoImpressao==='colorido'?'block':'none';
 }
 
 // ── CARREGAR INSUMOS DO MODELO ──
@@ -475,12 +484,12 @@ async function carregarInsumos(modelo){
 // ── VALIDAR CONTADOR ──
 async function validarContador(){
   if(!_spEquipId) return;
-  const val=parseInt(document.getElementById('sp-contador').value);
+  const val=parseInt(document.getElementById('sp-contador-pb').value);
   const erroEl=document.getElementById('sp-contador-erro');
-  const inputEl=document.getElementById('sp-contador');
+  const inputEl=document.getElementById('sp-contador-pb');
   if(isNaN(val)){erroEl.style.display='none';inputEl.style.borderColor='';return;}
-  const {data}=await sf('/rest/v1/solicitacoes_suprimento?equipamento_id=eq.'+_spEquipId+'&order=created_at.desc&limit=1&select=contador_atual');
-  const ultimo=data&&data[0]&&data[0].contador_atual!=null?data[0].contador_atual:null;
+  const {data}=await sf('/rest/v1/solicitacoes_suprimento?equipamento_id=eq.'+_spEquipId+'&order=created_at.desc&limit=1&select=contador_pb,contador_atual');
+  const ultimo=data&&data[0]?(data[0].contador_pb!=null?data[0].contador_pb:data[0].contador_atual):null;
   _spUltimoContador=ultimo;
   if(ultimo!==null&&val<ultimo){
     erroEl.style.display='block';
@@ -557,30 +566,36 @@ async function enviarSuprimento(){
   const email=document.getElementById('sp-email').value.trim();
   const insumoId=document.getElementById('sp-insumo').value;
   const qtd=parseInt(document.getElementById('sp-qtd').value);
-  const contador=parseInt(document.getElementById('sp-contador').value);
+  const contadorPb=parseInt(document.getElementById('sp-contador-pb').value);
+  const contadorColor=_spTipoImpressao==='colorido'?parseInt(document.getElementById('sp-contador-color').value):null;
   if(!nome){alert('Informe o nome do solicitante.');return;}
   if(!insumoId){alert('Selecione o insumo.');return;}
   if(!qtd||qtd<1){alert('Informe a quantidade.');return;}
-  if(isNaN(contador)){alert('Informe o contador atual.');return;}
-  if(_spUltimoContador!==null&&contador<_spUltimoContador){
-    alert('Contador inválido: o valor informado é menor que o último registrado ('+_spUltimoContador+').');
+  if(isNaN(contadorPb)){alert('Informe o contador PB.');return;}
+  if(_spTipoImpressao==='colorido'&&(contadorColor==null||isNaN(contadorColor))){alert('Informe o contador Colorido.');return;}
+  if(_spUltimoContador!==null&&contadorPb<_spUltimoContador){
+    alert('Contador PB inválido: o valor informado é menor que o último registrado ('+_spUltimoContador+').');
     return;
   }
+
+  const payload={
+    cliente_id:_cid,
+    equipamento_id:_spEquipId,
+    insumo_id:insumoId,
+    quantidade:qtd,
+    contador_atual:contadorPb,
+    contador_pb:contadorPb,
+    solicitante_nome:nome,
+    solicitante_telefone:tel,
+    solicitante_email:email,
+    status:'aberto'
+  };
+  if(contadorColor!=null) payload.contador_color=contadorColor;
 
   const {ok,data:errData}=await sf('/rest/v1/solicitacoes_suprimento',{
     method:'POST',
     headers:{'Prefer':'return=minimal'},
-    body:JSON.stringify({
-      cliente_id:_cid,
-      equipamento_id:_spEquipId,
-      insumo_id:insumoId,
-      quantidade:qtd,
-      contador_atual:contador,
-      solicitante_nome:nome,
-      solicitante_telefone:tel,
-      solicitante_email:email,
-      status:'aberto'
-    })
+    body:JSON.stringify(payload)
   });
   if(!ok){
     const msg=errData&&errData.message?errData.message:JSON.stringify(errData);
@@ -590,12 +605,16 @@ async function enviarSuprimento(){
 
   ['sp-nome','sp-tel','sp-email','sp-serial'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('sp-qtd').value='1';
-  document.getElementById('sp-contador').value='';
-  document.getElementById('sp-contador').style.borderColor='';
+  document.getElementById('sp-contador-pb').value='';
+  document.getElementById('sp-contador-pb').style.borderColor='';
   document.getElementById('sp-contador-erro').style.display='none';
+  const ccEl=document.getElementById('sp-contador-color');
+  if(ccEl) ccEl.value='';
+  const sfEl=document.getElementById('sp-campo-color');
+  if(sfEl) sfEl.style.display='none';
   document.getElementById('sp-equip-info').style.display='none';
   document.getElementById('sp-insumo').innerHTML='<option value="">Busque o equipamento primeiro</option>';
-  _spEquipId=null;_spUltimoContador=null;
+  _spEquipId=null;_spUltimoContador=null;_spTipoImpressao='monocromatico';
   carregarChamados();
   acMostrarView('dash');
   document.getElementById('ac-chamado-ok').classList.add('open');
@@ -712,7 +731,7 @@ function equipAcSelecionar(p,eq){
   const arrow=document.getElementById(p+'-ac-arrow');
   if(arrow) arrow.className='ti ti-chevron-down';
   if(p==='at') _atEquipId=eq.id;
-  else{_spEquipId=eq.id;carregarInsumos(eq.modelo);}
+  else{_spEquipId=eq.id;_spTipoImpressao=eq.tipo_impressao||'monocromatico';carregarInsumos(eq.modelo);spAtualizarContadores();}
   const infoEl=document.getElementById(p+'-equip-info');
   if(infoEl){
     infoEl.style.display='block';
