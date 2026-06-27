@@ -16,6 +16,18 @@ function cpOnAreaLoad(){
   var se = document.getElementById('cp-sidebar-empresa');
   if(sn) sn.textContent = nome;
   if(se) se.textContent = empresa;
+
+  // Injeta botão X de fechar dentro da sidebar (visível só no mobile via CSS)
+  var sidebarInfo = document.querySelector('.cp-sidebar-info');
+  if(sidebarInfo && !sidebarInfo.querySelector('.cp-sidebar-close')){
+    var closeBtn = document.createElement('button');
+    closeBtn.className = 'cp-sidebar-close';
+    closeBtn.setAttribute('aria-label', 'Fechar menu');
+    closeBtn.innerHTML = '<i class="ti ti-x"></i>';
+    closeBtn.onclick = cpFecharSidebar;
+    sidebarInfo.appendChild(closeBtn);
+  }
+
   cpSetNavAtivo('dash');
   cpCarregarBoletosResumo();
 }
