@@ -6,41 +6,70 @@
 .tec-header{background:#1A3F80;padding:0 28px;height:58px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;box-shadow:0 2px 12px rgba(0,0,0,.18);}
 .tec-header-left{display:flex;align-items:center;gap:14px;}
 .tec-portal-tag{background:rgba(255,255,255,.14);color:#fff;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;padding:3px 10px;border-radius:20px;}
-.tec-header-right{display:flex;align-items:center;gap:12px;color:#fff;}
-.tec-sair-btn{background:rgba(255,255,255,.15);color:#fff;border:none;padding:6px 14px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;}
+.tec-header-right{display:flex;align-items:center;gap:10px;color:#fff;}
+.tec-header-nome{font-size:14px;font-weight:600;color:#fff;}
+.tec-sair-btn{background:rgba(255,255,255,.15);color:#fff;border:none;padding:7px 14px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;min-height:36px;}
 .tec-sair-btn:hover{background:rgba(255,255,255,.27);}
 
 /* ── CONTEÚDO ── */
-.tec-content{max-width:1200px;margin:0 auto;padding:28px 24px;}
-.tec-page-title{font-family:'Syne',sans-serif;font-size:19px;font-weight:800;color:#1A3F80;margin-bottom:20px;}
+.tec-content{max-width:900px;margin:0 auto;padding:24px 20px;}
+.tec-page-title{font-family:'Syne',sans-serif;font-size:19px;font-weight:800;color:#1A3F80;margin-bottom:16px;}
 .tec-empty,.tec-loading{text-align:center;padding:52px 24px;color:#9CA3AF;font-size:15px;}
 
-/* ── GRID DE CARDS ── */
-.tec-cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:16px;}
+/* ── LISTA DE CARDS (foi grid) ── */
+.tec-cards-grid{display:flex;flex-direction:column;border:1.5px solid #E2E8F0;border-radius:12px;overflow:hidden;background:#fff;}
 
-/* ── CARD ── */
-.tec-card{border-radius:14px;padding:18px 20px;cursor:pointer;border:2px solid transparent;transition:transform .15s,box-shadow .15s;}
-.tec-card:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(0,0,0,.13);}
+/* ── CARD — novo layout horizontal ── */
+.tec-card{
+  background:#fff;
+  border-radius:0;
+  padding:14px 16px 14px 0;
+  cursor:pointer;
+  border:none;
+  border-left:5px solid #D1D5DB;
+  border-bottom:1px solid #EEF1F7;
+  display:flex;
+  gap:0;
+  align-items:stretch;
+  transition:background .12s;
+}
+.tec-card:last-child{border-bottom:none;}
+.tec-card:hover{background:#F8FAFC;}
+.tec-card-inner{display:flex;flex:1;gap:10px;align-items:flex-start;padding-left:14px;}
 
-/* Cores por status */
-.tec-card-aberto,.tec-card-despachado{background:#EBF4FF;border-color:#BFDBFE;}
-.tec-card-em_deslocamento{background:#FFFBEB;border-color:#FDE68A;}
-.tec-card-em_atendimento,.tec-card-andamento{background:#FFF7ED;border-color:#FED7AA;}
-.tec-card-aguardando_peca{background:#FFF1F2;border-color:#FECDD3;}
-.tec-card-pendente{background:#F3F4F6;border-color:#D1D5DB;}
-.tec-card-encerrado{background:#F0FDF4;border-color:#BBF7D0;}
+/* Card body (esquerda — informações) */
+.tec-card-body{flex:1;min-width:0;}
 
-/* Elementos do card */
-.tec-card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
-.tec-card-num{font-family:'Syne',sans-serif;font-size:17px;font-weight:900;color:#1A3F80;}
-.tec-card-tipo{font-size:11.5px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;}
-.tec-card-cliente{font-size:15px;font-weight:700;color:#1A202C;margin-bottom:2px;}
-.tec-card-local{font-size:12.5px;color:#666;margin-bottom:3px;}
-.tec-card-sla{font-size:12px;font-weight:600;color:#6B7280;margin-top:10px;padding-top:8px;border-top:1px solid rgba(0,0,0,.07);}
-.tec-sla-atrasado{color:#DC2626!important;font-weight:800;}
+/* Card right (SLA + índice) */
+.tec-card-r{flex-shrink:0;text-align:right;display:flex;flex-direction:column;align-items:flex-end;justify-content:flex-start;padding-left:12px;min-width:72px;}
+
+/* Linhas do card */
+.tec-card-l1{font-size:14px;font-weight:700;color:#1A202C;margin-bottom:3px;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;}
+.tec-card-num{font-family:'Syne',sans-serif;font-size:13px;font-weight:900;color:#1A3F80;flex-shrink:0;}
+.tec-card-cliente-nome{font-size:14px;font-weight:700;color:#1A202C;}
+.tec-card-cod{font-size:11px;color:#9CA3AF;font-weight:400;}
+.tec-card-l2{font-size:12px;color:#6B7280;margin-bottom:3px;}
+.tec-card-l3{font-size:11.5px;color:#374151;font-family:monospace;margin-bottom:6px;letter-spacing:.2px;}
+.tec-card-l4{display:flex;gap:5px;align-items:center;flex-wrap:wrap;}
+
+/* SLA display (lado direito) */
+.tec-card-sla-val{font-size:19px;font-weight:800;color:#374151;font-family:'Syne',sans-serif;line-height:1.1;}
+.tec-card-sla-unit{font-size:9.5px;color:#9CA3AF;font-weight:500;text-transform:uppercase;letter-spacing:.3px;}
+.tec-card-idx{font-size:10px;color:#CBD5E1;font-weight:700;margin-top:6px;}
+.tec-sla-atrasado{color:#DC2626!important;}
+
+/* Borda esquerda por TIPO */
+.tec-tipo-brd-corretiva{border-left-color:#DC2626;}
+.tec-tipo-brd-manutencao,.tec-tipo-brd-manutencao_preventiva{border-left-color:#1D4ED8;}
+.tec-tipo-brd-instalacao{border-left-color:#16A34A;}
+.tec-tipo-brd-desinstalacao{border-left-color:#F97316;}
+.tec-tipo-brd-vistoria,.tec-tipo-brd-visita_tecnica{border-left-color:#7C3AED;}
+.tec-tipo-brd-troca_pecas,.tec-tipo-brd-troca_de_pecas{border-left-color:#CA8A04;}
+.tec-tipo-brd-assistencia{border-left-color:#6B7280;}
+.tec-tipo-brd-aguardando_peca{border-left-color:#BE123C;}
 
 /* ── BADGES DE STATUS ── */
-.tec-badge-st{font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:20px;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap;}
+.tec-badge-st{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap;}
 .tec-st-aberto,.tec-st-despachado{background:#DBEAFE;color:#1D4ED8;}
 .tec-st-em_deslocamento{background:#FEF3C7;color:#92400E;}
 .tec-st-em_atendimento,.tec-st-andamento{background:#FFEDD5;color:#C2410C;}
@@ -49,7 +78,7 @@
 .tec-st-encerrado{background:#DCFCE7;color:#166534;}
 
 /* ── BADGES DE TIPO ── */
-.tec-tipo-badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;letter-spacing:.3px;white-space:nowrap;}
+.tec-tipo-badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;letter-spacing:.2px;white-space:nowrap;}
 .tec-tipo-corretiva{background:#FEE2E2;color:#DC2626;}
 .tec-tipo-manutencao,.tec-tipo-manutencao_preventiva{background:#DBEAFE;color:#0A4B8D;}
 .tec-tipo-instalacao{background:#DCFCE7;color:#16A34A;}
@@ -82,16 +111,19 @@
 .tec-det-section{margin-bottom:14px;}
 .tec-det-lbl-standalone{font-size:11px;font-weight:700;color:#1A3F80;text-transform:uppercase;letter-spacing:.3px;margin-bottom:8px;}
 
+/* Obs. interna */
+.tec-obs-interna-box{background:#FFFBEB;border:1.5px solid #FCD34D;border-radius:9px;padding:10px 12px;font-size:13px;color:#374151;margin-top:6px;white-space:pre-wrap;}
+
 /* ── BOTÕES DE AÇÃO ── */
 .tec-acoes{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;padding-top:14px;border-top:1px solid #EEF1F7;}
-.tec-btn{padding:9px 18px;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;transition:opacity .15s;white-space:nowrap;}
+.tec-btn{padding:10px 18px;min-height:48px;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;transition:opacity .15s;white-space:nowrap;display:inline-flex;align-items:center;gap:6px;}
 .tec-btn:hover{opacity:.83;}
 .tec-btn-amarelo{background:#F59E0B;color:#fff;}
 .tec-btn-laranja{background:#F97316;color:#fff;}
 .tec-btn-verde{background:#22C55E;color:#fff;}
 .tec-btn-vermelho{background:#EF4444;color:#fff;}
 .tec-btn-cinza{background:#6B7280;color:#fff;}
-.tec-btn-fechar{background:#EEF1F7;color:#4A5568;padding:8px 20px;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;}
+.tec-btn-fechar{background:#EEF1F7;color:#4A5568;padding:10px 22px;min-height:44px;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;}
 .tec-btn-fechar:hover{background:#E2E8F0;}
 
 /* ── FOTOS ── */
@@ -99,7 +131,7 @@
 .tec-fotos-grid{display:flex;flex-wrap:wrap;gap:8px;min-height:8px;margin-bottom:10px;}
 .tec-foto-thumb{width:68px;height:68px;object-fit:cover;border-radius:8px;border:2px solid #EEF1F7;transition:opacity .15s;}
 .tec-foto-thumb:hover{opacity:.85;}
-.tec-btn-foto{display:inline-block;background:#EBF4FF;color:#1A3F80;border:1.5px solid #BFDBFE;padding:7px 14px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;}
+.tec-btn-foto{display:inline-block;background:#EBF4FF;color:#1A3F80;border:1.5px solid #BFDBFE;padding:8px 14px;min-height:40px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;}
 .tec-btn-foto:hover{background:#DBEAFE;}
 
 /* ── LINHA DE PEÇA (modal encerrar) ── */
@@ -111,7 +143,7 @@
 .tec-btn-azul:hover{opacity:.85;}
 
 /* ── NAV TABS ── */
-.tec-nav-tabs{display:flex;gap:0;margin-bottom:24px;border-bottom:2px solid #DEE3ED;}
+.tec-nav-tabs{display:flex;gap:0;margin-bottom:20px;border-bottom:2px solid #DEE3ED;}
 .tec-nav-tab{background:none;border:none;border-bottom:3px solid transparent;padding:10px 22px;font-size:14px;font-weight:700;color:#6B7A99;cursor:pointer;margin-bottom:-2px;transition:all .2s;font-family:'Syne',sans-serif;}
 .tec-nav-tab:hover{color:#1A3F80;}
 .tec-nav-tab.active{color:#1A3F80;border-bottom-color:#1A3F80;}
@@ -119,26 +151,65 @@
 /* ── HISTÓRICO DE EQUIPAMENTO ── */
 .tec-hist-search{display:flex;gap:10px;margin-bottom:20px;}
 .tec-hist-search .ac-input{flex:1;min-width:0;}
-.tec-hist-equip-info{background:#fff;border:1.5px solid #DEE3ED;border-radius:12px;padding:16px 20px;margin-bottom:20px;}
+.tec-hist-equip-info{background:#fff;border:1.5px solid #DEE3ED;border-radius:12px;padding:16px 20px;margin-bottom:16px;}
 .tec-hist-equip-info .he-title{font-size:11px;font-weight:700;color:#1A3F80;margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px;}
-.tec-hist-equip-info .he-row{display:flex;gap:20px;flex-wrap:wrap;}
-.tec-hist-equip-info .he-field{font-size:13px;color:#4A5568;line-height:1.5;}
-.tec-hist-equip-info .he-field b{color:#1A2E5A;}
+.tec-hist-equip-info .he-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;}
+.tec-hist-equip-info .he-field{font-size:12px;color:#4A5568;line-height:1.5;}
+.tec-hist-equip-info .he-field b{color:#1A2E5A;font-size:10px;text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:2px;}
 .tec-hist-empty{text-align:center;padding:48px 20px;color:#9CA3AF;font-size:14px;}
 .tec-hist-paginacao{display:flex;align-items:center;justify-content:center;gap:16px;padding:20px 0;margin-top:4px;}
 .tec-hist-paginacao span{font-size:13px;color:#6B7A99;font-weight:500;}
-.tec-hist-paginacao button{background:#fff;border:1.5px solid #DEE3ED;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:600;color:#1A3F80;cursor:pointer;transition:all .2s;}
+.tec-hist-paginacao button{background:#fff;border:1.5px solid #DEE3ED;border-radius:8px;padding:10px 18px;min-height:44px;font-size:13px;font-weight:600;color:#1A3F80;cursor:pointer;transition:all .2s;}
 .tec-hist-paginacao button:hover:not(:disabled){background:#EEF1F7;}
 .tec-hist-paginacao button:disabled{opacity:.4;cursor:default;}
 .tec-card-hist{cursor:pointer;}
 
-/* ── RESPONSIVO ── */
-@media(max-width:600px){
-  .tec-cards-grid{grid-template-columns:1fr;}
-  .tec-content{padding:14px;}
-  .tec-header{padding:0 16px;}
-  .tec-acoes{flex-direction:column;}
-  .tec-btn{width:100%;}
-  .tec-hist-search{flex-direction:column;}
+/* ── RESPONSIVO MOBILE ── */
+@media(max-width:640px){
+  /* Layout base */
+  .tec-content{padding:12px;}
+  .tec-header{padding:0 14px;height:52px;}
+  .tec-header-left svg{height:26px;}
+  .tec-portal-tag{display:none;}
+  .tec-header-right{gap:6px;}
+  .tec-header-nome{max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+  /* Tabs */
+  .tec-nav-tabs{overflow-x:auto;white-space:nowrap;}
   .tec-nav-tab{padding:9px 14px;font-size:13px;}
+
+  /* Cards */
+  .tec-card-r{min-width:60px;}
+  .tec-card-sla-val{font-size:16px;}
+
+  /* Botões de ação — grandes e fáceis de tocar */
+  .tec-acoes{flex-direction:column;gap:8px;}
+  .tec-btn{width:100%;justify-content:center;min-height:52px;font-size:14px;}
+  .tec-btn-fechar{width:100%;text-align:center;min-height:50px;}
+
+  /* Modal como bottom sheet no mobile */
+  #tec-chamado-modal.open,
+  #tec-hist-modal.open,
+  #tec-encerrar-modal.open,
+  #tec-pend-modal.open,
+  #tec-peca-modal.open{
+    align-items:flex-end;
+    padding:0;
+  }
+  #tec-chamado-modal .modal,
+  #tec-hist-modal .modal,
+  #tec-encerrar-modal .modal,
+  #tec-pend-modal .modal,
+  #tec-peca-modal .modal{
+    max-width:100%;
+    width:100%;
+    border-radius:20px 20px 0 0;
+    max-height:92vh;
+    margin:0;
+    padding:20px 16px 24px;
+  }
+
+  /* Histórico */
+  .tec-hist-search{flex-direction:column;}
+  .tec-hist-equip-info .he-grid{grid-template-columns:1fr 1fr;}
 }

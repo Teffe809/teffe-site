@@ -902,32 +902,39 @@ async function _tecEnriquecerClientes(chamados){
   try{
     const ids=[...new Set(chamados.map(c=>c.cliente_id).filter(Boolean))];
     if(!ids.length) return;
-    const {data:clis}=await sfTec('/rest/v1/clientes?id=in.('+ids.join(',')+')'+'&select=id,razao_social,fantasia,cidade');
+    const {data:clis}=await sfTec('/rest/v1/clientes?id=in.('+ids.join(',')+')'+'&select=id,razao_social,fantasia,cidade,codigo');
     const map={};
     (clis||[]).forEach(cli=>{
-      // normaliza para o formato que o código de render espera (empresa/nome/cidade)
-      map[cli.id]={empresa:cli.razao_social||cli.fantasia||null,nome:cli.razao_social||null,cidade:cli.cidade||null};
+      map[cli.id]={empresa:cli.razao_social||cli.fantasia||null,nome:cli.razao_social||null,cidade:cli.cidade||null,codigo:cli.codigo||null};
     });
     chamados.forEach(c=>{c.clientes=map[c.cliente_id]||null;});
   }catch(e){console.warn('[_tecEnriquecerClientes]',e);}
 }
 
+async function _tecEnriquecerEquipamentos(chamados){
+  if(!chamados||!chamados.length) return;
+  try{
+    const ids=[...new Set(chamados.map(c=>c.equipamento_id).filter(Boolean))];
+    if(!ids.length) return;
+    const {data:equips}=await sfTec('/rest/v1/equipamentos?id=in.('+ids.join(',')+')'+'&select=id,serial,codigo_teffe,marca,modelo');
+    const map={};
+    (equips||[]).forEach(e=>{map[e.id]=e;});
+    chamados.forEach(c=>{c.equipamento=map[c.equipamento_id]||null;});
+  }catch(e){console.warn('[_tecEnriquecerEquipamentos]',e);}
+}
+
 // ── CHAMADOS ──
 async function tecCarregarChamados(){
   if(!_tecId) return;
-  console.log('[tecCarregarChamados] _tecId:', _tecId);
   const el=document.getElementById('tec-lista-chamados');
   el.innerHTML='<div class="tec-loading">Carregando chamados...</div>';
-  const {data,ok,status:httpSt}=await sfTec('/rest/v1/chamados?tecnico_id=eq.'+_tecId+'&status=neq.encerrado&order=created_at.desc&select=*');
-  console.log('[tecCarregarChamados] ok:', ok, '| HTTP:', httpSt, '| rows:', data&&data.length);
+  const {data,ok,status:httpSt}=await sfTec('/rest/v1/chamados?tecnico_id=eq.'+_tecId+'&status=neq.encerrado&order=created_at.asc&select=*');
   if(!ok){el.innerHTML='<div class="tec-empty">Erro ao carregar chamados ('+httpSt+'). Verifique o console.</div>';return;}
-  await _tecEnriquecerClientes(data||[]);
+  await Promise.all([_tecEnriquecerClientes(data||[]),_tecEnriquecerEquipamentos(data||[])]);
   _tecChamadosData={};
   (data||[]).forEach(c=>{_tecChamadosData[c.id]=c;});
-  const principal=(data||[]).filter(c=>c.status_tecnico!=='aguardando_peca');
-  if(!principal.length){el.innerHTML='<div class="tec-empty">Nenhum chamado atribuído a você.</div>';}
-  else el.innerHTML=principal.map(c=>tecRenderCard(c)).join('');
-  tecCarregarPecas();
+  if(!data||!data.length){el.innerHTML='<div class="tec-empty">Nenhum chamado atribuído a você.</div>';}
+  else el.innerHTML=data.map((c,i)=>tecRenderCard(c,i)).join('');
 }
 
 async function tecCarregarPecas(){
@@ -961,13 +968,12 @@ async function tecCarregarPecas(){
 
 // ── VIEWS DO TÉCNICO ──
 function tecMostrarView(v){
-  ['chamados','historico','pecas'].forEach(n=>{
+  ['chamados','historico'].forEach(n=>{
     const view=document.getElementById('tec-view-'+n);
     const tab=document.getElementById('tec-tab-'+n);
     if(view) view.style.display=v===n?'':'none';
     if(tab) tab.classList.toggle('active',v===n);
   });
-  if(v==='pecas') tecCarregarPecas();
 }
 
 // ── HISTÓRICO DE EQUIPAMENTO ──
@@ -979,26 +985,35 @@ function tecHistLimpar(){
 }
 
 async function tecHistBuscar(){
-  const serial=document.getElementById('tec-hist-serial').value.trim();
-  if(!serial){alert('Digite o serial ou código do equipamento.');return;}
+  const raw=document.getElementById('tec-hist-serial').value.trim();
+  if(!raw){alert('Digite o serial ou código Teffe do equipamento.');return;}
   tecHistLimpar();
   const resEl=document.getElementById('tec-hist-resultado');
   resEl.innerHTML='<div class="tec-loading">Buscando equipamento...</div>';
-  const q=encodeURIComponent(serial);
-  const {data:equips,ok}=await sfTec('/rest/v1/equipamentos?or=(serial.ilike.*'+q+'*,codigo.ilike.*'+q+'*)&select=id,serial,codigo,marca,modelo,localizacao,cliente_id,clientes(nome,empresa,cidade)&limit=1');
+  const q=encodeURIComponent(raw);
+  const {data:equips,ok}=await sfTec('/rest/v1/equipamentos?or=(serial.ilike.*'+q+'*,codigo_teffe.ilike.*'+q+'*)&select=id,serial,codigo_teffe,marca,modelo,localizacao,cliente_id&limit=1');
   if(!ok||!equips||!equips.length){
-    resEl.innerHTML='<div class="tec-hist-empty">Equipamento não encontrado. Verifique o serial ou código digitado.</div>';
+    resEl.innerHTML='<div class="tec-hist-empty">Equipamento não encontrado. Verifique o serial ou código Teffe digitado.</div>';
     return;
   }
   _tecHistEquip=equips[0];
-  const cl=_tecHistEquip.clientes||{};
+  // Busca cliente separado (sem JOIN para evitar erro PostgREST)
+  if(_tecHistEquip.cliente_id){
+    const {data:cliD}=await sfTec('/rest/v1/clientes?id=eq.'+_tecHistEquip.cliente_id+'&select=razao_social,fantasia,cidade,codigo&limit=1');
+    _tecHistEquip._cliente=(cliD&&cliD[0])||null;
+  }
+  const cl=_tecHistEquip._cliente||{};
+  const clienteNome=cl.razao_social||cl.fantasia||'–';
   const infoEl=document.getElementById('tec-hist-equip-info');
   infoEl.innerHTML=`<div class="he-title">Equipamento encontrado</div>
-    <div class="he-row">
-      <div class="he-field"><b>Marca/Modelo:</b> ${_tecHistEquip.marca||'–'} ${_tecHistEquip.modelo||''}</div>
-      <div class="he-field"><b>Serial:</b> ${_tecHistEquip.serial||_tecHistEquip.codigo||'–'}</div>
-      ${_tecHistEquip.localizacao?`<div class="he-field"><b>Localização:</b> ${_tecHistEquip.localizacao}</div>`:''}
-      <div class="he-field"><b>Cliente:</b> ${cl.empresa||cl.nome||'–'}</div>
+    <div class="he-grid">
+      <div class="he-field"><b>Marca</b>${_tecHistEquip.marca||'–'}</div>
+      <div class="he-field"><b>Modelo</b>${_tecHistEquip.modelo||'–'}</div>
+      <div class="he-field"><b>Serial</b>${_tecHistEquip.serial||'–'}</div>
+      <div class="he-field"><b>Código Teffe</b>${_tecHistEquip.codigo_teffe||'–'}</div>
+      <div class="he-field"><b>Cliente atual</b>${clienteNome}${cl.codigo?' ('+cl.codigo+')':''}</div>
+      ${cl.cidade?`<div class="he-field"><b>Cidade</b>${cl.cidade}</div>`:''}
+      ${_tecHistEquip.localizacao?`<div class="he-field"><b>Localização</b>${_tecHistEquip.localizacao}</div>`:''}
     </div>`;
   infoEl.style.display='block';
   resEl.innerHTML='';
@@ -1009,7 +1024,7 @@ async function tecHistCarregarChamados(){
   if(!_tecHistEquip) return;
   const resEl=document.getElementById('tec-hist-resultado');
   resEl.innerHTML='<div class="tec-loading">Carregando histórico...</div>';
-  const {data,ok}=await sfTec('/rest/v1/chamados?equipamento_id=eq.'+_tecHistEquip.id+'&order=created_at.desc&select=*');
+  const {data,ok}=await sfTec('/rest/v1/chamados?equipamento_id=eq.'+_tecHistEquip.id+'&order=created_at.desc&select=*,observacoes_internas');
   if(!ok){resEl.innerHTML='<div class="tec-hist-empty">Erro ao carregar histórico.</div>';return;}
   await _tecEnriquecerClientes(data||[]);
   _tecHistData=data||[];
@@ -1041,18 +1056,29 @@ function tecHistRenderLista(){
 
 function tecHistRenderCard(c,idx){
   const st=c.status_tecnico||c.status||'aberto';
-  const tipoMap={assistencia:'Assistência Técnica',instalacao:'Instalação',desinstalacao:'Desinstalação',vistoria:'Vistoria',visita_tecnica:'Visita Técnica'};
-  const tipo=tipoMap[c.tipo_servico]||tipoMap[c.tipo_chamado]||c.tipo_servico||c.tipo_chamado||'–';
+  const tipoRaw=c.tipo_servico||c.tipo_chamado||'';
+  const tipo=_TEC_TIPO_MAP[tipoRaw]||tipoRaw||'–';
   const cliente=c.clientes?(c.clientes.empresa||c.clientes.nome||'–'):'–';
-  const data=c.created_at?new Date(c.created_at).toLocaleDateString('pt-BR'):'–';
-  return `<div class="tec-card tec-card-${st} tec-card-hist" onclick="tecHistAbrirDetalhe(${idx})">
-    <div class="tec-card-header">
-      <span class="tec-card-num">#${c.numero||c.id.slice(0,6).toUpperCase()}</span>
-      <span class="tec-badge-st tec-st-${st}">${tecStatusLabel(st)}</span>
+  const dt=c.created_at?new Date(c.created_at).toLocaleDateString('pt-BR'):'–';
+  const brd='tec-tipo-brd-'+(tipoRaw||'assistencia');
+  const num=c.numero||c.id.slice(0,6).toUpperCase();
+  return `<div class="tec-card ${brd} tec-card-hist" onclick="tecHistAbrirDetalhe(${idx})">
+    <div class="tec-card-inner">
+      <div class="tec-card-body">
+        <div class="tec-card-l1">
+          <span class="tec-card-num">#${num}</span>
+          <span class="tec-card-cliente-nome">${cliente}</span>
+        </div>
+        <div class="tec-card-l4" style="margin-top:4px">
+          <span class="tec-tipo-badge tec-tipo-${tipoRaw||'assistencia'}">${tipo}</span>
+          <span class="tec-badge-st tec-st-${st}">${tecStatusLabel(st)}</span>
+          <span style="font-size:11px;color:#9CA3AF">${dt}</span>
+        </div>
+      </div>
+      <div class="tec-card-r" style="justify-content:center">
+        <span style="font-size:11px;color:#CBD5E1;font-weight:700">#${idx+1}</span>
+      </div>
     </div>
-    <div class="tec-card-tipo">${tipo}</div>
-    <div class="tec-card-cliente">${cliente}</div>
-    <div class="tec-card-local" style="font-size:11px;color:#8896AB;">${data}</div>
   </div>`;
 }
 
@@ -1094,6 +1120,7 @@ async function tecHistAbrirDetalhe(idx){
       ${c.resolucao?`<div class="tec-det-row tec-det-row-full"><span class="tec-det-lbl">Solução aplicada</span><span class="tec-det-val">${c.resolucao.replace(/\n/g,'<br>')}</span></div>`:''}
     </div>
     ${pecas.length?`<div class="tec-det-section" style="margin-top:16px;"><div class="tec-det-lbl-standalone">Peças utilizadas</div><table class="ac-table" style="margin-top:6px;"><thead><tr><th>Código</th><th>Descrição</th><th>Qtd.</th></tr></thead><tbody>${pecas.map(p=>`<tr><td>${(p.pecas&&p.pecas.codigo)||'–'}</td><td>${(p.pecas&&p.pecas.descricao)||'–'}</td><td>${p.quantidade||0} ${(p.pecas&&p.pecas.unidade)||'un'}</td></tr>`).join('')}</tbody></table></div>`:''}
+    ${c.observacoes_internas?`<div class="tec-fotos-section"><div class="tec-det-lbl-standalone" style="color:#92400E">⚠️ Observações Internas (uso interno)</div><div class="tec-obs-interna-box">${c.observacoes_internas.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\n/g,'<br>')}</div></div>`:''}
   `;
   document.getElementById('tec-hist-modal').classList.add('open');
 }
@@ -1107,22 +1134,52 @@ function tecStatusLabel(s){
 
 const _TEC_TIPO_MAP={assistencia:'Assistência Técnica',corretiva:'Corretiva',manutencao:'Manutenção',manutencao_preventiva:'Manut. Preventiva',instalacao:'Instalação',desinstalacao:'Desinstalação',vistoria:'Vistoria',visita_tecnica:'Visita Técnica',troca_pecas:'Troca de Peças',troca_de_pecas:'Troca de Peças'};
 
-function tecRenderCard(c){
+function _tecSlaDecorrido(c){
+  if(!c.created_at) return{hhmm:'–',atrasado:false};
+  const tipoRaw=c.tipo_servico||c.tipo_chamado||'';
+  const slaMin=TEC_SLA_MAP[tipoRaw]||480;
+  const pausado=c.sla_pausado_minutos||0;
+  const dec=calcularSLAUtil(c.created_at,pausado);
+  const h=Math.floor(dec/60),m=dec%60;
+  return{hhmm:h+':'+String(m).padStart(2,'0'),atrasado:dec>slaMin};
+}
+
+function tecRenderCard(c,idx){
   const st=c.status_tecnico||c.status||'aberto';
   const tipoRaw=c.tipo_servico||c.tipo_chamado||'';
   const tipo=_TEC_TIPO_MAP[tipoRaw]||tipoRaw||'–';
-  const cliente=c.clientes?(c.clientes.empresa||c.clientes.nome||'–'):'–';
-  const cidade=c.clientes?c.clientes.cidade||'':'';
-  const sla=tecFormatarSLA(c);
-  return `<div class="tec-card tec-card-${st}" onclick="tecAbrirDetalhe('${c.id}')">
-    <div class="tec-card-header">
-      <span class="tec-card-num">#${c.numero||c.id.slice(0,6).toUpperCase()}</span>
-      <span class="tec-badge-st tec-st-${st}">${tecStatusLabel(st)}</span>
+  const cli=c.clientes||{};
+  const cliente=cli.empresa||cli.nome||'–';
+  const cidade=cli.cidade||'';
+  const codCli=cli.codigo||'';
+  const eq=c.equipamento||null;
+  const num=c.numero||c.id.slice(0,6).toUpperCase();
+  const sla=_tecSlaDecorrido(c);
+  const brd='tec-tipo-brd-'+(tipoRaw||'assistencia');
+  const l3parts=eq?[eq.codigo_teffe,eq.serial,[eq.marca,eq.modelo].filter(Boolean).join(' ')].filter(Boolean):[];
+  const l3=l3parts.length?`<div class="tec-card-l3">${l3parts.join(' · ')}</div>`:'';
+  return `<div class="tec-card ${brd}" onclick="tecAbrirDetalhe('${c.id}')">
+    <div class="tec-card-inner">
+      <div class="tec-card-body">
+        <div class="tec-card-l1">
+          <span class="tec-card-num">#${num}</span>
+          <span class="tec-card-cliente-nome">${cliente}</span>
+          ${codCli?`<span class="tec-card-cod">(${codCli})</span>`:''}
+        </div>
+        ${cidade?`<div class="tec-card-l2">📍 ${cidade}</div>`:''}
+        ${l3}
+        <div class="tec-card-l4">
+          <span style="font-size:10px;color:#9CA3AF">OS ${num}</span>
+          <span class="tec-tipo-badge tec-tipo-${tipoRaw||'assistencia'}">${tipo}</span>
+          <span class="tec-badge-st tec-st-${st}">${tecStatusLabel(st)}</span>
+        </div>
+      </div>
+      <div class="tec-card-r">
+        <div class="tec-card-sla-val${sla.atrasado?' tec-sla-atrasado':''}">${sla.hhmm}</div>
+        <div class="tec-card-sla-unit">${sla.atrasado?'hrs (atraso)':'hrs decorrido'}</div>
+        <div class="tec-card-idx">#${(idx||0)+1}</div>
+      </div>
     </div>
-    <div class="tec-card-tipo"><span class="tec-tipo-badge tec-tipo-${tipoRaw||'assistencia'}">${tipo}</span></div>
-    <div class="tec-card-cliente">${cliente}</div>
-    ${cidade?`<div class="tec-card-local">${cidade}</div>`:''}
-    <div class="tec-card-sla${sla.atrasado?' tec-sla-atrasado':''}">${sla.texto}</div>
   </div>`;
 }
 
@@ -1148,6 +1205,7 @@ async function tecAbrirDetalhe(id){
     <div id="tec-fotos-grid" class="tec-fotos-grid">${c._fotos.map(f=>`<a href="${f.url}" target="_blank"><img src="${f.url}" class="tec-foto-thumb" loading="lazy"/></a>`).join('')}</div>
     <label class="tec-btn-foto">Anexar Foto <input type="file" accept="image/*" style="display:none;" onchange="tecAnexarFoto(this)"/></label>
   </div>`;
+  const obsEscaped=(c.observacoes_internas||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   document.getElementById('tec-modal-conteudo').innerHTML=`
     <div class="tec-modal-header">
       <h2>Chamado #${c.numero||c.id.slice(0,6).toUpperCase()}</h2>
@@ -1165,12 +1223,29 @@ async function tecAbrirDetalhe(id){
     </div>
     ${c._pecas.length?`<div class="tec-det-section"><div class="tec-det-lbl-standalone">Peças utilizadas</div><table class="ac-table" style="margin-top:6px;"><thead><tr><th>Código</th><th>Descrição</th><th>Qtd.</th></tr></thead><tbody>${c._pecas.map(p=>`<tr><td>${(p.pecas&&p.pecas.codigo)||'–'}</td><td>${(p.pecas&&p.pecas.descricao)||'–'}</td><td>${p.quantidade||0} ${(p.pecas&&p.pecas.unidade)||'un'}</td></tr>`).join('')}</tbody></table></div>`:''}
     ${st==='em_atendimento'?fotosHtml:''}
+    <div class="tec-fotos-section">
+      <div class="tec-det-lbl-standalone" style="color:#92400E">⚠️ Observações Internas (uso interno)</div>
+      <textarea id="tec-obs-interna-ta" class="ac-input" rows="3" style="margin-top:6px" placeholder="Anotações internas sobre este chamado — NÃO visível ao cliente...">${obsEscaped}</textarea>
+      <button class="tec-btn tec-btn-cinza" id="tec-obs-interna-btn" style="margin-top:8px;font-size:12px;min-height:36px" onclick="tecSalvarObsInterna('${c.id}')"><i class="ti ti-device-floppy"></i> Salvar observação</button>
+    </div>
   `;
   tecRenderAcoes(st);
   document.getElementById('tec-chamado-modal').classList.add('open');
 }
 
 function tecFecharDetalhe(){document.getElementById('tec-chamado-modal').classList.remove('open');}
+
+async function tecSalvarObsInterna(id){
+  const ta=document.getElementById('tec-obs-interna-ta');
+  if(!ta) return;
+  const val=ta.value.trim();
+  const btn=document.getElementById('tec-obs-interna-btn');
+  if(btn){btn.disabled=true;btn.innerHTML='<i class="ti ti-loader"></i> Salvando...';}
+  const {ok}=await sfTec('/rest/v1/chamados?id=eq.'+id,{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({observacoes_internas:val||null})});
+  if(!ok){alert('Erro ao salvar observação.');if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-device-floppy"></i> Salvar observação';}return;}
+  if(_tecChamadosData[id]) _tecChamadosData[id].observacoes_internas=val||null;
+  if(btn){btn.innerHTML='<i class="ti ti-check"></i> Salvo';setTimeout(()=>{btn.disabled=false;btn.innerHTML='<i class="ti ti-device-floppy"></i> Salvar observação';},1800);}
+}
 
 function tecRenderAcoes(st){
   const el=document.getElementById('tec-modal-acoes');
