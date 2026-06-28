@@ -980,3 +980,9 @@ body:has(.orca-bg.open),body:has(.modal-bg.open){overflow:hidden;}
   /* Esconde tooltip da Mia (sobrepõe conteúdo em telas pequenas) */
   #mia-tooltip{display:none !important;}
 }
+
+/* ── UPPERCASE EM INPUTS (exceto email, url, senha, número, data) ── */
+input:not([type="email"]):not([type="url"]):not([type="password"]):not([type="number"]):not([type="date"]):not([type="month"]):not([type="time"]):not([type="color"]),
+textarea{text-transform:uppercase;}
+input:not([type="email"]):not([type="url"]):not([type="password"]):not([type="number"]):not([type="date"]):not([type="month"]):not([type="time"]):not([type="color"])::placeholder,
+textarea::placeholder{text-transform:uppercase;}
