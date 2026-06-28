@@ -1024,10 +1024,20 @@ async function tecHistCarregarChamados(){
   if(!_tecHistEquip) return;
   const resEl=document.getElementById('tec-hist-resultado');
   resEl.innerHTML='<div class="tec-loading">Carregando histórico...</div>';
-  const {data,ok}=await sfTec('/rest/v1/chamados?equipamento_id=eq.'+_tecHistEquip.id+'&order=created_at.desc&select=*,observacoes_internas');
+  const eqId=_tecHistEquip.id;
+  const serial=_tecHistEquip.serial||'';
+  console.log('[tecHistCarregarChamados] equipamento_id:', eqId, '| serial:', serial);
+  // Busca por equipamento_id E por menção ao serial na descrição (OR)
+  const orSerial=serial?',descricao.ilike.*'+encodeURIComponent(serial)+'*':'';
+  const {data,ok}=await sfTec('/rest/v1/chamados?or=(equipamento_id.eq.'+eqId+orSerial+')&order=created_at.desc&select=*,observacoes_internas');
+  console.log('[tecHistCarregarChamados] ok:', ok, '| chamados encontrados:', data&&data.length);
   if(!ok){resEl.innerHTML='<div class="tec-hist-empty">Erro ao carregar histórico.</div>';return;}
-  await _tecEnriquecerClientes(data||[]);
-  _tecHistData=data||[];
+  // Deduplica por id (um chamado pode aparecer nas duas condições do OR)
+  const seen=new Set();
+  const dedup=(data||[]).filter(c=>{if(seen.has(c.id))return false;seen.add(c.id);return true;});
+  console.log('[tecHistCarregarChamados] após deduplicação:', dedup.length);
+  await _tecEnriquecerClientes(dedup);
+  _tecHistData=dedup;
   _tecHistPage=0;
   tecHistRenderLista();
 }
