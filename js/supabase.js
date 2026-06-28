@@ -425,18 +425,28 @@ ${isAssistencia?`<div class="os-section">
 async function carregarEquips(){
   const el=document.getElementById('lista-equip');
   if(!_cid){el.innerHTML='<div class="ac-empty">Nenhum equipamento.</div>';document.getElementById('n-equip').textContent='0';_equipsAC=[];return;}
-  const {data:rows}=await sf('/rest/v1/equipamentos?cliente_id=eq.'+_cid+'&select=*');
-  _equipsAC=rows||[];
-  document.getElementById('n-equip').textContent=rows?rows.length:0;
-  if(!rows||!rows.length){el.innerHTML='<div class="ac-empty">Nenhum equipamento.</div>';return;}
-  el.innerHTML='<table class="ac-table"><thead><tr><th>Modelo</th><th>Marca</th><th>Série</th><th>Código</th><th>Local</th><th>Status</th></tr></thead><tbody>'+
+  // Equipamentos agora são vinculados via contrato_equipamentos
+  const {data:contratos}=await sf('/rest/v1/contratos?cliente_id=eq.'+_cid+'&status=eq.ativo&select=id');
+  if(!contratos||!contratos.length){
+    el.innerHTML='<div class="ac-empty">Nenhum contrato ativo.</div>';
+    document.getElementById('n-equip').textContent='0';
+    _equipsAC=[];
+    return;
+  }
+  const contratoIds=contratos.map(function(c){return c.id;}).join(',');
+  const {data:vinculos}=await sf('/rest/v1/contrato_equipamentos?contrato_id=in.('+contratoIds+')&select=*,equipamentos(*)');
+  const rows=(vinculos||[]).map(function(v){return v.equipamentos;}).filter(Boolean);
+  _equipsAC=rows;
+  document.getElementById('n-equip').textContent=rows.length;
+  if(!rows.length){el.innerHTML='<div class="ac-empty">Nenhum equipamento vinculado.</div>';return;}
+  el.innerHTML='<table class="ac-table"><thead><tr><th>Modelo</th><th>Marca</th><th>Série</th><th>Código Teffe</th><th>Local</th><th>Status</th></tr></thead><tbody>'+
     rows.map(r=>`<tr>
       <td><b>${r.modelo||'–'}</b></td>
       <td>${r.marca||'–'}</td>
       <td>${r.serial||'–'}</td>
-      <td>${r.codigo||'–'}</td>
+      <td>${r.codigo_teffe||'–'}</td>
       <td>${r.localizacao||'–'}</td>
-      <td><span class="badge badge-ativo-c">${r.status||'ativo'}</span></td>
+      <td><span class="badge badge-ativo-c">${r.status||'disponivel'}</span></td>
     </tr>`).join('')+
     '</tbody></table>';
 }
@@ -459,26 +469,26 @@ async function carregarContratos(){
     '</tbody></table>';
 }
 
-// ── BUSCAR EQUIPAMENTO POR SERIAL / CÓDIGO ──
+// ── BUSCAR EQUIPAMENTO POR SERIAL / CÓDIGO (fallback quando não encontrado no autocomplete) ──
 async function buscarEquipAC(prefix){
   const raw=document.getElementById(prefix+'-serial').value.trim().toUpperCase();
   const infoEl=document.getElementById(prefix+'-equip-info');
   if(!raw){alert('Informe o serial ou código do equipamento.');return;}
-  if(!_cid){alert('Sessão inválida. Faça login novamente.');return;}
-  // Se o cliente digitar "TEFFE-AWI3", extrai só os 4 chars finais para buscar no campo codigo
-  const codigo=raw.startsWith('TEFFE-')?raw.slice(6):raw;
-  const encSerial=encodeURIComponent(raw);
-  const encCodigo=encodeURIComponent(codigo);
-  const {data}=await sf('/rest/v1/equipamentos?cliente_id=eq.'+_cid+'&or=(serial.eq.'+encSerial+',codigo.eq.'+encCodigo+')&limit=1&select=*');
-  if(!data||!data.length){
+  // Busca primeiro no cache _equipsAC (equipamentos já carregados do contrato)
+  const codigoRaw=raw.startsWith('TEFFE-')?raw.slice(6):raw;
+  let eq=_equipsAC.find(function(e){
+    return (e.serial||'').toUpperCase()===raw||
+           (e.codigo_teffe||'').toUpperCase()===codigoRaw||
+           (e.codigo_teffe||'').toUpperCase()===raw;
+  });
+  if(!eq){
     infoEl.style.display='block';
     infoEl.className='ac-equip-info ac-equip-not-found';
-    infoEl.innerHTML='<i class="ti ti-alert-circle"></i> Equipamento não encontrado. Verifique o serial ou código.';
+    infoEl.innerHTML='<i class="ti ti-alert-circle"></i> Equipamento não encontrado no contrato. Verifique o serial ou código Teffe.';
     if(prefix==='at') _atEquipId=null;
     else{_spEquipId=null;document.getElementById('sp-insumo').innerHTML='<option value="">Equipamento não encontrado</option>';}
     return;
   }
-  const eq=data[0];
   if(prefix==='at') _atEquipId=eq.id;
   else{_spEquipId=eq.id;_spTipoImpressao=eq.tipo_impressao||'monocromatico';carregarInsumos(eq.modelo);spAtualizarContadores();}
   infoEl.style.display='block';
@@ -487,7 +497,7 @@ async function buscarEquipAC(prefix){
     <div><span class="ac-equip-lbl">Modelo</span><span class="ac-equip-val">${eq.modelo||'–'}</span></div>
     <div><span class="ac-equip-lbl">Marca</span><span class="ac-equip-val">${eq.marca||'–'}</span></div>
     <div><span class="ac-equip-lbl">Série</span><span class="ac-equip-val">${eq.serial||'–'}</span></div>
-    <div><span class="ac-equip-lbl">TEFFE</span><span class="ac-equip-val">${eq.codigo||'–'}</span></div>
+    <div><span class="ac-equip-lbl">Teffe</span><span class="ac-equip-val">${eq.codigo_teffe||'–'}</span></div>
   </div>`;
 }
 
@@ -693,7 +703,7 @@ function equipAcRenderList(p,equips){
   }
   list.innerHTML=equips.map(function(e){
     const nome=[e.marca,e.modelo].filter(Boolean).join(' ')||'Equipamento';
-    const sub=[e.codigo&&'Cód: '+e.codigo,e.serial&&'Série: '+e.serial].filter(Boolean).join(' · ');
+    const sub=[e.codigo_teffe&&'Teffe: '+e.codigo_teffe,e.serial&&'Série: '+e.serial].filter(Boolean).join(' · ');
     return '<div class="ac-equip-ac-item" data-id="'+e.id+'" data-p="'+p+'">'+
       '<span class="ac-equip-ac-nome">'+nome+'</span>'+
       (sub?'<span class="ac-equip-ac-sub">'+sub+'</span>':'')+
@@ -713,7 +723,7 @@ function equipAcAbrir(p){
   const q=document.getElementById(p+'-serial').value.trim().toLowerCase();
   const filtrados=q?_equipsAC.filter(function(e){
     return (e.serial&&e.serial.toLowerCase().includes(q))||
-           (e.codigo&&e.codigo.toLowerCase().includes(q))||
+           (e.codigo_teffe&&e.codigo_teffe.toLowerCase().includes(q))||
            (e.modelo&&e.modelo.toLowerCase().includes(q))||
            (e.marca&&e.marca.toLowerCase().includes(q));
   }):_equipsAC;
@@ -770,7 +780,7 @@ function equipAcSelecionar(p,eq){
       '<div><span class="ac-equip-lbl">Modelo</span><span class="ac-equip-val">'+(eq.modelo||'–')+'</span></div>'+
       '<div><span class="ac-equip-lbl">Marca</span><span class="ac-equip-val">'+(eq.marca||'–')+'</span></div>'+
       '<div><span class="ac-equip-lbl">Série</span><span class="ac-equip-val">'+(eq.serial||'–')+'</span></div>'+
-      '<div><span class="ac-equip-lbl">TEFFE</span><span class="ac-equip-val">'+(eq.codigo||'–')+'</span></div>'+
+      '<div><span class="ac-equip-lbl">Teffe</span><span class="ac-equip-val">'+(eq.codigo_teffe||'–')+'</span></div>'+
       '</div>';
   }
 }
