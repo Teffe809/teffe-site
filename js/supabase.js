@@ -881,13 +881,32 @@ function tecFazerLogout(){
   window.location.href='https://teffe.com.br';
 }
 
+// ── HELPER: enriquece array de chamados com dados do cliente ──
+async function _tecEnriquecerClientes(chamados){
+  if(!chamados||!chamados.length) return;
+  try{
+    const ids=[...new Set(chamados.map(c=>c.cliente_id).filter(Boolean))];
+    if(!ids.length) return;
+    const {data:clis}=await sfTec('/rest/v1/clientes?id=in.('+ids.join(',')+')'+'&select=id,razao_social,fantasia,cidade');
+    const map={};
+    (clis||[]).forEach(cli=>{
+      // normaliza para o formato que o código de render espera (empresa/nome/cidade)
+      map[cli.id]={empresa:cli.razao_social||cli.fantasia||null,nome:cli.razao_social||null,cidade:cli.cidade||null};
+    });
+    chamados.forEach(c=>{c.clientes=map[c.cliente_id]||null;});
+  }catch(e){console.warn('[_tecEnriquecerClientes]',e);}
+}
+
 // ── CHAMADOS ──
 async function tecCarregarChamados(){
   if(!_tecId) return;
+  console.log('[tecCarregarChamados] _tecId:', _tecId);
   const el=document.getElementById('tec-lista-chamados');
   el.innerHTML='<div class="tec-loading">Carregando chamados...</div>';
-  const {data,ok}=await sfTec('/rest/v1/chamados?tecnico_id=eq.'+_tecId+'&status=neq.encerrado&order=created_at.desc&select=*,clientes(nome,empresa,cidade)');
-  if(!ok){el.innerHTML='<div class="tec-empty">Erro ao carregar chamados.</div>';return;}
+  const {data,ok,status:httpSt}=await sfTec('/rest/v1/chamados?tecnico_id=eq.'+_tecId+'&status=neq.encerrado&order=created_at.desc&select=*');
+  console.log('[tecCarregarChamados] ok:', ok, '| HTTP:', httpSt, '| rows:', data&&data.length);
+  if(!ok){el.innerHTML='<div class="tec-empty">Erro ao carregar chamados ('+httpSt+'). Verifique o console.</div>';return;}
+  await _tecEnriquecerClientes(data||[]);
   _tecChamadosData={};
   (data||[]).forEach(c=>{_tecChamadosData[c.id]=c;});
   const principal=(data||[]).filter(c=>c.status_tecnico!=='aguardando_peca');
@@ -900,12 +919,13 @@ async function tecCarregarPecas(){
   if(!_tecId) return;
   const el=document.getElementById('tec-lista-pecas');
   if(!el) return;
-  const {data,ok}=await sfTec('/rest/v1/chamados?tecnico_id=eq.'+_tecId+'&status_tecnico=eq.aguardando_peca&order=created_at.desc&select=*,clientes(nome,empresa,cidade)');
+  const {data,ok}=await sfTec('/rest/v1/chamados?tecnico_id=eq.'+_tecId+'&status_tecnico=eq.aguardando_peca&order=created_at.desc&select=*');
   const count=(ok&&data)?data.length:0;
   const tab=document.getElementById('tec-tab-pecas');
   if(tab) tab.textContent='Peças'+(count?' ('+count+')':'');
   if(!ok){el.innerHTML='<div class="tec-empty">Erro ao carregar.</div>';return;}
   if(!count){el.innerHTML='<div class="tec-empty">Nenhum chamado aguardando peças.</div>';return;}
+  await _tecEnriquecerClientes(data);
   data.forEach(c=>{_tecChamadosData[c.id]=c;});
   const pecasLabel={solicitado:'Solicitado',faturado:'Faturado',despachado:'Despachado',entregue:'Itens Entregues'};
   el.innerHTML=data.map(c=>{
@@ -974,8 +994,9 @@ async function tecHistCarregarChamados(){
   if(!_tecHistEquip) return;
   const resEl=document.getElementById('tec-hist-resultado');
   resEl.innerHTML='<div class="tec-loading">Carregando histórico...</div>';
-  const {data,ok}=await sfTec('/rest/v1/chamados?equipamento_id=eq.'+_tecHistEquip.id+'&order=created_at.desc&select=*,clientes(nome,empresa,cidade)');
+  const {data,ok}=await sfTec('/rest/v1/chamados?equipamento_id=eq.'+_tecHistEquip.id+'&order=created_at.desc&select=*');
   if(!ok){resEl.innerHTML='<div class="tec-hist-empty">Erro ao carregar histórico.</div>';return;}
+  await _tecEnriquecerClientes(data||[]);
   _tecHistData=data||[];
   _tecHistPage=0;
   tecHistRenderLista();
