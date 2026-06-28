@@ -147,10 +147,25 @@ function admMostrarView(id){
   document.querySelectorAll('.adm-nav-item').forEach(i=>i.classList.remove('adm-nav-active'));
   const nav=document.querySelector('[data-adm-view="'+id+'"]');
   if(nav) nav.classList.add('adm-nav-active');
-  if(id==='dash') admCarregarDashboard();
+  if(id==='dash'){admCarregarDashboard();admMostrarAvisoDescontinuacao();}
   else if(id==='tecnicos') admCarregarTecnicos();
   else if(id==='clientes') admCarregarClientes();
   else if(id==='chamados'){admAtualizarFiltroTec();admCarregarChamados();}
+}
+
+// ── AVISO DE DESCONTINUAÇÃO ──
+function admMostrarAvisoDescontinuacao(){
+  var aviso=document.getElementById('adm-aviso-descontinuacao');
+  if(aviso) return; // já existe
+  var el=document.createElement('div');
+  el.id='adm-aviso-descontinuacao';
+  el.style.cssText='background:#FEF3C7;border:1.5px solid #F59E0B;border-radius:8px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;gap:10px;font-size:13px;color:#92400E;';
+  el.innerHTML='<i class="ti ti-alert-triangle" style="font-size:18px;flex-shrink:0"></i>' +
+    '<span><strong>Este painel será descontinuado.</strong> ' +
+    'Todas as funcionalidades estão disponíveis no novo ERP: ' +
+    '<a href="https://erp.teffe.com.br" target="_blank" style="color:#1D4ED8;font-weight:700;text-decoration:underline">erp.teffe.com.br</a></span>';
+  var dashView=document.getElementById('adm-view-dash');
+  if(dashView) dashView.insertBefore(el,dashView.firstChild);
 }
 
 // ── DASHBOARD ──
