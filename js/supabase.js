@@ -787,7 +787,7 @@ window.addEventListener('DOMContentLoaded',function(){
 
 let _tecTok=null,_tecUid=null,_tecId=null,_tecNome='';
 let _tecChamadoAtual=null,_tecChamadosData={},_tecPecasCatalogo=null;
-const TEC_SLA_MINUTOS=480;
+const TEC_SLA_MAP={corretiva:480,assistencia:480,instalacao:480,desinstalacao:480,troca_pecas:480,troca_de_pecas:480,manutencao:1440,manutencao_preventiva:1440,vistoria:1440,visita_tecnica:1440};
 
 async function sfTec(path,opts){
   const h={'apikey':SKEY,'Content-Type':'application/json'};
@@ -878,18 +878,51 @@ async function tecCarregarChamados(){
   el.innerHTML='<div class="tec-loading">Carregando chamados...</div>';
   const {data,ok}=await sfTec('/rest/v1/chamados?tecnico_id=eq.'+_tecId+'&status=neq.encerrado&order=created_at.desc&select=*,clientes(nome,empresa,cidade)');
   if(!ok){el.innerHTML='<div class="tec-empty">Erro ao carregar chamados.</div>';return;}
-  if(!data||!data.length){el.innerHTML='<div class="tec-empty">Nenhum chamado atribuído a você.</div>';return;}
   _tecChamadosData={};
+  (data||[]).forEach(c=>{_tecChamadosData[c.id]=c;});
+  const principal=(data||[]).filter(c=>c.status_tecnico!=='aguardando_peca');
+  if(!principal.length){el.innerHTML='<div class="tec-empty">Nenhum chamado atribuído a você.</div>';}
+  else el.innerHTML=principal.map(c=>tecRenderCard(c)).join('');
+  tecCarregarPecas();
+}
+
+async function tecCarregarPecas(){
+  if(!_tecId) return;
+  const el=document.getElementById('tec-lista-pecas');
+  if(!el) return;
+  const {data,ok}=await sfTec('/rest/v1/chamados?tecnico_id=eq.'+_tecId+'&status_tecnico=eq.aguardando_peca&order=created_at.desc&select=*,clientes(nome,empresa,cidade)');
+  const count=(ok&&data)?data.length:0;
+  const tab=document.getElementById('tec-tab-pecas');
+  if(tab) tab.textContent='Peças'+(count?' ('+count+')':'');
+  if(!ok){el.innerHTML='<div class="tec-empty">Erro ao carregar.</div>';return;}
+  if(!count){el.innerHTML='<div class="tec-empty">Nenhum chamado aguardando peças.</div>';return;}
   data.forEach(c=>{_tecChamadosData[c.id]=c;});
-  el.innerHTML=data.map(c=>tecRenderCard(c)).join('');
+  const pecasLabel={solicitado:'Solicitado',faturado:'Faturado',despachado:'Despachado',entregue:'Itens Entregues'};
+  el.innerHTML=data.map(c=>{
+    const ps=c.pecas_status||'solicitado';
+    const cliente=c.clientes?(c.clientes.empresa||c.clientes.nome||'–'):'–';
+    const entregue=ps==='entregue';
+    return `<div class="tec-card tec-card-aguardando_peca">
+      <div class="tec-card-header">
+        <span class="tec-card-num">#${c.numero||c.id.slice(0,6).toUpperCase()}</span>
+        <span class="tec-pecas-badge tec-pecas-${ps}">${entregue?'✅ '+pecasLabel[ps]:pecasLabel[ps]||ps}</span>
+      </div>
+      <div class="tec-card-cliente">${cliente}</div>
+      ${c.pecas_descricao?`<div class="tec-card-local" style="margin-top:4px;font-size:12px;color:#6B7280;">${c.pecas_descricao}</div>`:''}
+      ${entregue?`<button class="tec-btn tec-btn-verde" style="margin-top:10px;width:100%;" onclick="tecReceberPecas('${c.id}')"><i class="ti ti-play"></i> Iniciar Atendimento</button>`:''}
+    </div>`;
+  }).join('');
 }
 
 // ── VIEWS DO TÉCNICO ──
 function tecMostrarView(v){
-  document.getElementById('tec-view-chamados').style.display=v==='chamados'?'':'none';
-  document.getElementById('tec-view-historico').style.display=v==='historico'?'':'none';
-  document.getElementById('tec-tab-chamados').classList.toggle('active',v==='chamados');
-  document.getElementById('tec-tab-historico').classList.toggle('active',v==='historico');
+  ['chamados','historico','pecas'].forEach(n=>{
+    const view=document.getElementById('tec-view-'+n);
+    const tab=document.getElementById('tec-tab-'+n);
+    if(view) view.style.display=v===n?'':'none';
+    if(tab) tab.classList.toggle('active',v===n);
+  });
+  if(v==='pecas') tecCarregarPecas();
 }
 
 // ── HISTÓRICO DE EQUIPAMENTO ──
@@ -1022,14 +1055,16 @@ async function tecHistAbrirDetalhe(idx){
 function tecHistFecharDetalhe(){document.getElementById('tec-hist-modal').classList.remove('open');}
 
 function tecStatusLabel(s){
-  const l={aberto:'Aberto',em_deslocamento:'Em Deslocamento',em_atendimento:'Em Atendimento',aguardando_peca:'Aguardando Peça',pendente:'Pendente',encerrado:'Encerrado',andamento:'Em Andamento'};
+  const l={aberto:'Despachado',despachado:'Despachado',em_deslocamento:'Em Deslocamento',em_atendimento:'Em Atendimento',aguardando_peca:'Aguard. Peça',pendente:'Pendente',encerrado:'Encerrado',andamento:'Em Andamento'};
   return l[s]||s||'–';
 }
 
+const _TEC_TIPO_MAP={assistencia:'Assistência Técnica',corretiva:'Corretiva',manutencao:'Manutenção',manutencao_preventiva:'Manut. Preventiva',instalacao:'Instalação',desinstalacao:'Desinstalação',vistoria:'Vistoria',visita_tecnica:'Visita Técnica',troca_pecas:'Troca de Peças',troca_de_pecas:'Troca de Peças'};
+
 function tecRenderCard(c){
   const st=c.status_tecnico||c.status||'aberto';
-  const tipoMap={assistencia:'Assistência Técnica',instalacao:'Instalação',desinstalacao:'Desinstalação',vistoria:'Vistoria',visita_tecnica:'Visita Técnica'};
-  const tipo=tipoMap[c.tipo_servico]||tipoMap[c.tipo_chamado]||c.tipo_servico||c.tipo_chamado||'–';
+  const tipoRaw=c.tipo_servico||c.tipo_chamado||'';
+  const tipo=_TEC_TIPO_MAP[tipoRaw]||tipoRaw||'–';
   const cliente=c.clientes?(c.clientes.empresa||c.clientes.nome||'–'):'–';
   const cidade=c.clientes?c.clientes.cidade||'':'';
   const sla=tecFormatarSLA(c);
@@ -1038,7 +1073,7 @@ function tecRenderCard(c){
       <span class="tec-card-num">#${c.numero||c.id.slice(0,6).toUpperCase()}</span>
       <span class="tec-badge-st tec-st-${st}">${tecStatusLabel(st)}</span>
     </div>
-    <div class="tec-card-tipo">${tipo}</div>
+    <div class="tec-card-tipo"><span class="tec-tipo-badge tec-tipo-${tipoRaw||'assistencia'}">${tipo}</span></div>
     <div class="tec-card-cliente">${cliente}</div>
     ${cidade?`<div class="tec-card-local">${cidade}</div>`:''}
     <div class="tec-card-sla${sla.atrasado?' tec-sla-atrasado':''}">${sla.texto}</div>
@@ -1093,11 +1128,13 @@ function tecFecharDetalhe(){document.getElementById('tec-chamado-modal').classLi
 
 function tecRenderAcoes(st){
   const el=document.getElementById('tec-modal-acoes');
+  const despachadoBtns=`<button class="tec-btn tec-btn-amarelo" onclick="tecEnDeslocamento()"><i class="ti ti-truck"></i> Iniciar Deslocamento</button><button class="tec-btn tec-btn-cinza" onclick="tecAbrirModalPendente()"><i class="ti ti-pause"></i> Colocar Pendente</button>`;
   const btns={
-    aberto:`<button class="tec-btn tec-btn-amarelo" onclick="tecEnDeslocamento()">Em Deslocamento</button>`,
-    em_deslocamento:`<button class="tec-btn tec-btn-laranja" onclick="tecEnAtendimento()">Em Atendimento</button>`,
-    em_atendimento:`<button class="tec-btn tec-btn-verde" onclick="tecAbrirEncerrar()">Encerrar Chamado</button><button class="tec-btn tec-btn-cinza" onclick="tecPendente()">Pendente</button><button class="tec-btn tec-btn-vermelho" onclick="tecAbrirPecaModal()">Aguardando Peça</button>`,
-    pendente:`<button class="tec-btn tec-btn-laranja" onclick="tecRetomarAtendimento()">Retomar Atendimento</button><button class="tec-btn tec-btn-verde" onclick="tecAbrirEncerrar()">Encerrar Chamado</button>`
+    aberto:despachadoBtns,
+    despachado:despachadoBtns,
+    em_deslocamento:`<button class="tec-btn tec-btn-laranja" onclick="tecEnAtendimento()"><i class="ti ti-tool"></i> Iniciar Atendimento</button>`,
+    em_atendimento:`<button class="tec-btn tec-btn-verde" onclick="tecAbrirEncerrar()"><i class="ti ti-check"></i> Encerrar Chamado</button><button class="tec-btn tec-btn-vermelho" onclick="tecAbrirPecaModal()"><i class="ti ti-package"></i> Solicitar Peças</button><button class="tec-btn tec-btn-cinza" onclick="tecAbrirModalPendente()"><i class="ti ti-pause"></i> Colocar Pendente</button>`,
+    pendente:`<button class="tec-btn tec-btn-laranja" onclick="tecRetomar()"><i class="ti ti-play"></i> Retomar</button>`
   };
   el.innerHTML=btns[st]||'';
 }
@@ -1124,25 +1161,36 @@ async function tecEnAtendimento(){
   tecFecharDetalhe();await tecCarregarChamados();
 }
 
-async function tecPendente(){
+function tecAbrirModalPendente(){
+  document.getElementById('tec-pend-motivo').value='';
+  document.getElementById('tec-pend-erro').style.display='none';
+  document.getElementById('tec-pend-modal').classList.add('open');
+}
+function tecFecharModalPendente(){document.getElementById('tec-pend-modal').classList.remove('open');}
+
+async function tecConfirmarPendente(){
   const c=_tecChamadoAtual;if(!c) return;
+  const motivo=document.getElementById('tec-pend-motivo').value.trim();
+  const erroEl=document.getElementById('tec-pend-erro');
+  if(!motivo){erroEl.style.display='block';erroEl.textContent='Informe o motivo da pendência.';return;}
+  erroEl.style.display='none';
   const {ok}=await sfTec('/rest/v1/chamados?id=eq.'+c.id,{method:'PATCH',
     headers:{'Prefer':'return=minimal'},
-    body:JSON.stringify({status_tecnico:'pendente',sla_pausado:true,sla_pausa_inicio:new Date().toISOString()})});
-  if(!ok){alert('Erro ao atualizar status.');return;}
+    body:JSON.stringify({status_tecnico:'pendente',sla_pausado:true,sla_pausa_inicio:new Date().toISOString(),pendente_motivo:motivo})});
+  if(!ok){erroEl.style.display='block';erroEl.textContent='Erro ao atualizar status.';return;}
   c.status_tecnico='pendente';c.sla_pausado=true;c.sla_pausa_inicio=new Date().toISOString();
-  tecFecharDetalhe();await tecCarregarChamados();
+  tecFecharModalPendente();tecFecharDetalhe();await tecCarregarChamados();
 }
 
-async function tecRetomarAtendimento(){
+async function tecRetomar(){
   const c=_tecChamadoAtual;if(!c) return;
   let totalPausado=c.sla_tempo_pausado||0;
   if(c.sla_pausa_inicio) totalPausado+=Math.floor((new Date()-new Date(c.sla_pausa_inicio))/60000);
   const {ok}=await sfTec('/rest/v1/chamados?id=eq.'+c.id,{method:'PATCH',
     headers:{'Prefer':'return=minimal'},
-    body:JSON.stringify({status_tecnico:'em_atendimento',sla_pausado:false,sla_pausa_inicio:null,sla_tempo_pausado:totalPausado})});
-  if(!ok){alert('Erro ao retomar atendimento.');return;}
-  c.status_tecnico='em_atendimento';c.sla_pausado=false;c.sla_pausa_inicio=null;c.sla_tempo_pausado=totalPausado;
+    body:JSON.stringify({status_tecnico:'despachado',sla_pausado:false,sla_pausa_inicio:null,sla_tempo_pausado:totalPausado})});
+  if(!ok){alert('Erro ao retomar.');return;}
+  c.status_tecnico='despachado';c.sla_pausado=false;c.sla_pausa_inicio=null;c.sla_tempo_pausado=totalPausado;
   tecFecharDetalhe();await tecCarregarChamados();
 }
 
@@ -1193,20 +1241,14 @@ async function tecConfirmarEncerramento(){
   for(const p of pecas){
     await sfTec('/rest/v1/chamado_pecas',{method:'POST',headers:{'Prefer':'return=minimal'},body:JSON.stringify(p)});
   }
-  c.status='encerrado';c.status_tecnico='encerrado';
+  c.status='encerrado';c.status_tecnico='encerrado';c.resolucao=sol;c.descricao_tecnico=desc;
+  tecEnviarEmailEncerramento(c);
   tecFecharEncerrar();tecFecharDetalhe();await tecCarregarChamados();
 }
 
-// ── AGUARDANDO PEÇA ──
-async function tecAbrirPecaModal(){
-  if(!_tecPecasCatalogo){
-    const {data}=await sfTec('/rest/v1/pecas?ativo=eq.true&select=id,codigo,descricao,unidade&order=codigo');
-    _tecPecasCatalogo=data||[];
-  }
-  const sel=document.getElementById('tec-peca-sel');
-  sel.innerHTML='<option value="">Selecione a peça</option>'+
-    (_tecPecasCatalogo||[]).map(p=>`<option value="${p.id}">${p.codigo?'['+p.codigo+'] ':''}${p.descricao}</option>`).join('');
-  document.getElementById('tec-peca-qtd').value='1';
+// ── SOLICITAR PEÇAS ──
+function tecAbrirPecaModal(){
+  document.getElementById('tec-peca-desc').value='';
   document.getElementById('tec-peca-erro').style.display='none';
   document.getElementById('tec-peca-modal').classList.add('open');
 }
@@ -1214,20 +1256,26 @@ function tecFecharPecaModal(){document.getElementById('tec-peca-modal').classLis
 
 async function tecConfirmarPeca(){
   const c=_tecChamadoAtual;if(!c) return;
-  const pId=document.getElementById('tec-peca-sel').value;
-  const qtd=parseInt(document.getElementById('tec-peca-qtd').value)||1;
+  const desc=document.getElementById('tec-peca-desc').value.trim();
   const erroEl=document.getElementById('tec-peca-erro');
-  if(!pId){erroEl.style.display='block';erroEl.textContent='Selecione uma peça.';return;}
+  if(!desc){erroEl.style.display='block';erroEl.textContent='Descreva as peças necessárias.';return;}
   erroEl.style.display='none';
-  await sfTec('/rest/v1/chamado_pecas_solicitadas',{method:'POST',
-    headers:{'Prefer':'return=minimal'},
-    body:JSON.stringify({chamado_id:c.id,peca_id:pId,quantidade:qtd,status:'solicitada'})});
   const {ok}=await sfTec('/rest/v1/chamados?id=eq.'+c.id,{method:'PATCH',
     headers:{'Prefer':'return=minimal'},
-    body:JSON.stringify({status_tecnico:'aguardando_peca',sla_pausado:true,sla_pausa_inicio:new Date().toISOString()})});
+    body:JSON.stringify({status_tecnico:'aguardando_peca',pecas_status:'solicitado',pecas_descricao:desc,sla_pausado:true,sla_pausa_inicio:new Date().toISOString()})});
   if(!ok){erroEl.style.display='block';erroEl.textContent='Erro ao atualizar status.';return;}
-  c.status_tecnico='aguardando_peca';c.sla_pausado=true;c.sla_pausa_inicio=new Date().toISOString();
+  c.status_tecnico='aguardando_peca';c.pecas_status='solicitado';c.pecas_descricao=desc;c.sla_pausado=true;
   tecFecharPecaModal();tecFecharDetalhe();await tecCarregarChamados();
+}
+
+async function tecReceberPecas(id){
+  const c=_tecChamadosData[id];if(!c) return;
+  const totalDecorrido=calcularSLAUtil(c.created_at,0);
+  const {ok}=await sfTec('/rest/v1/chamados?id=eq.'+id,{method:'PATCH',
+    headers:{'Prefer':'return=minimal'},
+    body:JSON.stringify({status_tecnico:'despachado',pecas_status:null,sla_pausado:false,sla_pausa_inicio:null,sla_tempo_pausado:totalDecorrido})});
+  if(!ok){alert('Erro ao confirmar recebimento de peças.');return;}
+  await tecCarregarChamados();tecMostrarView('chamados');
 }
 
 // ── UPLOAD DE FOTOS ──
@@ -1276,40 +1324,97 @@ function calcularSLAUtil(dataAbertura,minutesPausados){
 function tecFormatarSLA(c){
   const st=c.status_tecnico||c.status;
   if(st==='encerrado') return {texto:'Encerrado',atrasado:false};
+  const tipoRaw=c.tipo_servico||c.tipo_chamado||'assistencia';
+  const slaMin=TEC_SLA_MAP[tipoRaw]||480;
   let pausado=c.sla_tempo_pausado||0;
   if(c.sla_pausado&&c.sla_pausa_inicio) pausado+=Math.floor((new Date()-new Date(c.sla_pausa_inicio))/60000);
   const decorrido=calcularSLAUtil(c.created_at,pausado);
-  const restante=TEC_SLA_MINUTOS-decorrido;
+  const restante=slaMin-decorrido;
   if(restante<=0) return {texto:'ATRASADO',atrasado:true};
   const h=Math.floor(restante/60),m=restante%60;
   return {texto:`SLA: ${h}h ${String(m).padStart(2,'0')}m restantes`,atrasado:false};
 }
 
-// ── E-MAIL (deslocamento) via Supabase Edge Function ──
+// ── E-MAILS via Supabase Edge Function ──
 async function tecEnviarEmailDeslocamento(c){
-  console.log('[Email] solicitante_email:', c.solicitante_email);
-  if(!c.solicitante_email){
-    console.warn('[Email] Abortado: solicitante_email vazio ou nulo no chamado.');
-    return;
-  }
+  if(!c.solicitante_email) return;
+  const num=c.numero||c.id.slice(0,6).toUpperCase();
+  const nome=c.solicitante_nome||'Cliente';
+  const cliente=c.clientes?(c.clientes.empresa||c.clientes.nome||''):'';
+  const html=`<!DOCTYPE html><html><body style="margin:0;padding:0;background:#F5F7FA;font-family:Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#F5F7FA;padding:32px 0;">
+<tr><td align="center">
+<table width="560" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.1);">
+<tr><td style="background:#1A3F80;padding:28px 36px;">
+  <p style="margin:0;color:#fff;font-size:22px;font-weight:700;">Teffe Tecnologia</p>
+  <p style="margin:6px 0 0;color:rgba(255,255,255,.7);font-size:13px;">Notificação de Deslocamento de Atendimento</p>
+</td></tr>
+<tr><td style="padding:32px 36px;">
+  <p style="font-size:15px;color:#374151;margin:0 0 16px;">Olá, <strong>${nome}</strong>!</p>
+  <p style="font-size:15px;color:#374151;margin:0 0 24px;">O técnico <strong style="color:#1A3F80;">${_tecNome}</strong> está a caminho do seu local para atender o chamado:</p>
+  <div style="background:#EBF4FF;border-left:4px solid #1A3F80;border-radius:8px;padding:16px 20px;margin-bottom:24px;">
+    <p style="margin:0;font-size:13px;color:#6B7280;">Número do Chamado</p>
+    <p style="margin:4px 0 0;font-size:22px;font-weight:900;color:#1A3F80;">#${num}</p>
+    ${cliente?`<p style="margin:8px 0 0;font-size:13px;color:#374151;"><strong>Cliente:</strong> ${cliente}</p>`:''}
+    ${c.descricao?`<p style="margin:6px 0 0;font-size:13px;color:#374151;"><strong>Descrição:</strong> ${c.descricao}</p>`:''}
+  </div>
+  <p style="font-size:14px;color:#6B7280;margin:0 0 8px;">Em caso de dúvidas, entre em contato:</p>
+  <p style="font-size:14px;font-weight:700;color:#1A3F80;margin:0;"><a href="https://wa.me/5514998289248" style="color:#1A3F80;">(14) 99828-9248</a></p>
+</td></tr>
+<tr><td style="background:#F0F4FA;padding:18px 36px;text-align:center;">
+  <p style="margin:0;font-size:12px;color:#9CA3AF;">Teffe Tecnologia · Este é um e-mail automático, não responda.</p>
+</td></tr>
+</table>
+</td></tr>
+</table>
+</body></html>`;
   try{
-    console.log('[Email] Chamando Edge Function enviar-email...');
-    const r=await fetch(SURL+'/functions/v1/enviar-email',{
-      method:'POST',
+    const r=await fetch(SURL+'/functions/v1/enviar-email',{method:'POST',
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+_tecTok},
-      body:JSON.stringify({
-        to:c.solicitante_email,
-        subject:'Teffe — Técnico a caminho',
-        html:`<p>Olá <strong>${c.solicitante_nome||''}</strong>,</p><p>O técnico <strong>${_tecNome}</strong> está em deslocamento para atender o seu chamado <strong>#${c.numero||c.id.slice(0,6).toUpperCase()}</strong>.</p><p>Em breve chegará ao local.</p><p>Atenciosamente,<br>Teffe Tecnologia</p>`
-      })
-    });
-    const body=await r.json().catch(()=>null);
-    console.log('[Email] HTTP',r.status,body);
-    if(!r.ok) console.error('[Email] Falha ao enviar email:',body);
-    else console.log('[Email] Email enviado com sucesso!');
-  }catch(e){
-    console.error('[Email] Erro na chamada:', e);
-  }
+      body:JSON.stringify({to:c.solicitante_email,subject:`Notificação de Deslocamento de Atendimento — Teffe Tecnologia`,html})});
+    if(!r.ok) console.error('[Email desl.] HTTP',r.status);
+  }catch(e){console.error('[Email desl.]',e);}
+}
+
+async function tecEnviarEmailEncerramento(c){
+  if(!c.solicitante_email) return;
+  const num=c.numero||c.id.slice(0,6).toUpperCase();
+  const nome=c.solicitante_nome||'Cliente';
+  const cliente=c.clientes?(c.clientes.empresa||c.clientes.nome||''):'';
+  const html=`<!DOCTYPE html><html><body style="margin:0;padding:0;background:#F5F7FA;font-family:Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#F5F7FA;padding:32px 0;">
+<tr><td align="center">
+<table width="560" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.1);">
+<tr><td style="background:#16A34A;padding:28px 36px;">
+  <p style="margin:0;color:#fff;font-size:22px;font-weight:700;">Teffe Tecnologia</p>
+  <p style="margin:6px 0 0;color:rgba(255,255,255,.8);font-size:13px;">Chamado Encerrado com Sucesso</p>
+</td></tr>
+<tr><td style="padding:32px 36px;">
+  <p style="font-size:15px;color:#374151;margin:0 0 16px;">Olá, <strong>${nome}</strong>!</p>
+  <p style="font-size:15px;color:#374151;margin:0 0 24px;">O chamado abaixo foi encerrado com sucesso pelo técnico <strong style="color:#1A3F80;">${_tecNome}</strong>:</p>
+  <div style="background:#F0FDF4;border-left:4px solid #16A34A;border-radius:8px;padding:16px 20px;margin-bottom:20px;">
+    <p style="margin:0;font-size:13px;color:#6B7280;">Número do Chamado</p>
+    <p style="margin:4px 0 8px;font-size:22px;font-weight:900;color:#166534;">#${num}</p>
+    ${cliente?`<p style="margin:0 0 6px;font-size:13px;color:#374151;"><strong>Cliente:</strong> ${cliente}</p>`:''}
+    ${c.descricao_tecnico?`<p style="margin:0 0 6px;font-size:13px;color:#374151;"><strong>Defeito encontrado:</strong> ${c.descricao_tecnico}</p>`:''}
+    ${c.resolucao?`<p style="margin:0;font-size:13px;color:#374151;"><strong>Solução aplicada:</strong> ${c.resolucao}</p>`:''}
+  </div>
+  <p style="font-size:14px;color:#6B7280;margin:0 0 8px;">Para avaliações ou dúvidas:</p>
+  <p style="font-size:14px;font-weight:700;color:#1A3F80;margin:0;"><a href="https://wa.me/5514998289248" style="color:#1A3F80;">(14) 99828-9248</a></p>
+</td></tr>
+<tr><td style="background:#F0F4FA;padding:18px 36px;text-align:center;">
+  <p style="margin:0;font-size:12px;color:#9CA3AF;">Teffe Tecnologia · Este é um e-mail automático, não responda.</p>
+</td></tr>
+</table>
+</td></tr>
+</table>
+</body></html>`;
+  try{
+    const r=await fetch(SURL+'/functions/v1/enviar-email',{method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+_tecTok},
+      body:JSON.stringify({to:c.solicitante_email,subject:`Chamado #${num} Encerrado com Sucesso — Teffe Tecnologia`,html})});
+    if(!r.ok) console.error('[Email enc.] HTTP',r.status);
+  }catch(e){console.error('[Email enc.]',e);}
 }
 
 // ── ROTEAMENTO ──

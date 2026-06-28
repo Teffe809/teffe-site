@@ -2492,10 +2492,14 @@
   <div class="tec-content">
     <div class="tec-nav-tabs">
       <button class="tec-nav-tab active" id="tec-tab-chamados" onclick="tecMostrarView('chamados')">Meus Chamados</button>
+      <button class="tec-nav-tab" id="tec-tab-pecas" onclick="tecMostrarView('pecas')">Peças</button>
       <button class="tec-nav-tab" id="tec-tab-historico" onclick="tecMostrarView('historico')">Histórico de Equipamento</button>
     </div>
     <div id="tec-view-chamados">
       <div id="tec-lista-chamados" class="tec-cards-grid"></div>
+    </div>
+    <div id="tec-view-pecas" style="display:none;">
+      <div id="tec-lista-pecas" class="tec-cards-grid"></div>
     </div>
     <div id="tec-view-historico" style="display:none;">
       <div class="tec-hist-search">
@@ -2557,21 +2561,36 @@
   </div>
 </div>
 
-<!-- TEC: MODAL AGUARDANDO PEÇA -->
+<!-- TEC: MODAL PENDENTE (motivo) -->
+<div class="modal-bg" id="tec-pend-modal" style="z-index:5400;" onclick="if(event.target===this)tecFecharModalPendente()">
+  <div class="modal" style="max-width:420px;text-align:left;">
+    <button class="modal-x" onclick="tecFecharModalPendente()">✕</button>
+    <h2 style="margin-bottom:6px;">Colocar em Pendente</h2>
+    <p style="font-size:13px;color:#6B7280;margin-bottom:18px;">O SLA será pausado até o chamado ser retomado.</p>
+    <div class="ac-fg">
+      <label class="ac-label">Motivo da pendência *</label>
+      <textarea id="tec-pend-motivo" class="ac-input" rows="3" placeholder="Ex: Aguardando retorno do cliente, cliente não estava no local..."></textarea>
+    </div>
+    <div id="tec-pend-erro" class="adm-err" style="margin-top:12px;display:none;"></div>
+    <div style="display:flex;gap:10px;margin-top:16px;">
+      <button class="tec-btn tec-btn-cinza" style="flex:1;" onclick="tecFecharModalPendente()">Cancelar</button>
+      <button class="adm-btn" style="flex:1;" onclick="tecConfirmarPendente()">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<!-- TEC: MODAL SOLICITAR PEÇAS -->
 <div class="modal-bg" id="tec-peca-modal" style="z-index:5400;" onclick="if(event.target===this)tecFecharPecaModal()">
   <div class="modal" style="max-width:440px;text-align:left;">
     <button class="modal-x" onclick="tecFecharPecaModal()">✕</button>
-    <h2 style="margin-bottom:20px;">Solicitar Peça</h2>
+    <h2 style="margin-bottom:6px;">Solicitar Peças</h2>
+    <p style="font-size:13px;color:#6B7280;margin-bottom:18px;">O chamado ficará em <strong>Aguardando Peças</strong> e o SLA será pausado.</p>
     <div class="ac-fg">
-      <label class="ac-label">Peça *</label>
-      <select id="tec-peca-sel" class="ac-input"></select>
+      <label class="ac-label">Descreva as peças necessárias *</label>
+      <textarea id="tec-peca-desc" class="ac-input" rows="4" placeholder="Ex: 1x Toner HP 85A, 2x Cabo USB tipo-B..."></textarea>
     </div>
-    <div class="ac-fg" style="margin-top:12px;">
-      <label class="ac-label">Quantidade *</label>
-      <input id="tec-peca-qtd" type="number" min="1" value="1" class="ac-input"/>
-    </div>
-    <div id="tec-peca-erro" class="adm-err" style="margin-top:12px;"></div>
-    <button class="adm-btn" style="margin-top:16px;width:100%;" onclick="tecConfirmarPeca()">Confirmar Solicitação</button>
+    <div id="tec-peca-erro" class="adm-err" style="margin-top:12px;display:none;"></div>
+    <button class="adm-btn" style="margin-top:16px;width:100%;" onclick="tecConfirmarPeca()">Solicitar Peças</button>
   </div>
 </div>
 

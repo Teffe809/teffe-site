@@ -285,21 +285,30 @@ async function admCarregarChamados(){
   const {data}=await admHttp(q);
   const el=document.getElementById('adm-lista-chamados');
   if(!data||!data.length){el.innerHTML='<div class="ac-empty">Nenhum chamado encontrado com os filtros selecionados.</div>';return;}
-  el.innerHTML='<table class="ac-table"><thead><tr><th>#</th><th>Cliente</th><th>Descrição</th><th>Solicitante</th><th>Status</th><th>Técnico</th><th>Data</th></tr></thead><tbody>'+
-    data.map(r=>`<tr style="cursor:pointer;" onclick="admAbrirDetalhe(${JSON.stringify(JSON.stringify(r))})">
-      <td><b>#${r.numero||r.id.slice(0,6)}</b></td>
-      <td>${r.clientes?r.clientes.empresa||r.clientes.nome:'–'}</td>
-      <td class="adm-td-trunc" title="${(r.descricao||'').replace(/"/g,'&quot;')}">${r.descricao||r.titulo||'–'}</td>
-      <td>${r.solicitante_nome||'–'}</td>
-      <td><span class="badge badge-${r.status}">${r.status}</span></td>
-      <td onclick="event.stopPropagation()">
-        <select class="adm-sel-inline" onchange="admRedistribuir('${r.id}',this.value)">
-          <option value="">Sem técnico</option>
-          ${_admTecs.map(t=>`<option value="${t.id}"${t.id===r.tecnico_id?' selected':''}>${t.nome}</option>`).join('')}
-        </select>
-      </td>
-      <td>${new Date(r.created_at).toLocaleDateString('pt-BR')}</td>
-    </tr>`).join('')+'</tbody></table>';
+  const psLabel={solicitado:'⚠️ Solicitado',faturado:'Faturado',despachado:'Despachado',entregue:'✅ Entregue'};
+  el.innerHTML='<table class="ac-table"><thead><tr><th>#</th><th>Cliente</th><th>Descrição</th><th>Solicitante</th><th>Status</th><th>Peças</th><th>Técnico</th><th>Data</th></tr></thead><tbody>'+
+    data.map(r=>{
+      const ps=r.pecas_status;
+      const pecasBadge=ps?`<span class="tec-pecas-badge tec-pecas-${ps}">${psLabel[ps]||ps}</span>`:'–';
+      const pecasBtn=ps==='solicitado'?`<button class="adm-btn adm-btn-sm" style="margin-top:4px;font-size:11px;" onclick="event.stopPropagation();admFaturarPecas('${r.id}')">Faturar</button>`:
+        ps==='faturado'?`<button class="adm-btn adm-btn-sm" style="margin-top:4px;font-size:11px;" onclick="event.stopPropagation();admDespacharPecas('${r.id}')">Despachar</button>`:
+        ps==='despachado'?`<button class="adm-btn adm-btn-sm" style="margin-top:4px;font-size:11px;" onclick="event.stopPropagation();admConfirmarEntregaPecas('${r.id}','${r.tecnico_id||''}','${r.numero||r.id.slice(0,6)}')">Confirmar Entrega</button>`:'';
+      return `<tr style="cursor:pointer;" onclick="admAbrirDetalhe(${JSON.stringify(JSON.stringify(r))})">
+        <td><b>#${r.numero||r.id.slice(0,6)}</b></td>
+        <td>${r.clientes?r.clientes.empresa||r.clientes.nome:'–'}</td>
+        <td class="adm-td-trunc" title="${(r.descricao||'').replace(/"/g,'&quot;')}">${r.descricao||r.titulo||'–'}</td>
+        <td>${r.solicitante_nome||'–'}</td>
+        <td><span class="badge badge-${r.status}">${r.status}</span></td>
+        <td onclick="event.stopPropagation()" style="white-space:nowrap;">${pecasBadge}${pecasBtn?`<br>${pecasBtn}`:''}</td>
+        <td onclick="event.stopPropagation()">
+          <select class="adm-sel-inline" onchange="admRedistribuir('${r.id}',this.value)">
+            <option value="">Sem técnico</option>
+            ${_admTecs.map(t=>`<option value="${t.id}"${t.id===r.tecnico_id?' selected':''}>${t.nome}</option>`).join('')}
+          </select>
+        </td>
+        <td>${new Date(r.created_at).toLocaleDateString('pt-BR')}</td>
+      </tr>`;
+    }).join('')+'</tbody></table>';
 }
 
 async function admRedistribuir(chamadoId,tecnicoId){
@@ -308,6 +317,38 @@ async function admRedistribuir(chamadoId,tecnicoId){
     body:JSON.stringify({tecnico_id:tecnicoId||null})
   });
   if(!ok) alert('Erro ao redistribuir chamado. Verifique permissões no Supabase.');
+}
+
+// ── FLUXO DE PEÇAS ──
+async function admFaturarPecas(id){
+  const {ok}=await admHttpUser('/rest/v1/chamados?id=eq.'+id,{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({pecas_status:'faturado'})});
+  if(!ok){alert('Erro ao atualizar status de peças.');return;}
+  admCarregarChamados();
+}
+
+async function admDespacharPecas(id){
+  const {ok}=await admHttpUser('/rest/v1/chamados?id=eq.'+id,{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({pecas_status:'despachado'})});
+  if(!ok){alert('Erro ao atualizar status de peças.');return;}
+  admCarregarChamados();
+}
+
+async function admConfirmarEntregaPecas(id,tecnicoId,numChamado){
+  const {ok}=await admHttpUser('/rest/v1/chamados?id=eq.'+id,{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({pecas_status:'entregue'})});
+  if(!ok){alert('Erro ao confirmar entrega.');return;}
+  if(tecnicoId){
+    const tec=_admTecs.find(t=>t.id===tecnicoId);
+    if(tec&&tec.email){
+      const {data:{session}}=await _supabase.auth.getSession();
+      if(session){
+        const html=`<p>Olá <strong>${tec.nome||'Técnico'}</strong>,</p><p>As peças solicitadas para o chamado <strong>#${numChamado}</strong> foram entregues e estão disponíveis. Por favor, acesse o portal e inicie o atendimento.</p><p>Atenciosamente,<br><strong>Teffe Tecnologia</strong></p>`;
+        fetch(ADMIN_URL+'/functions/v1/enviar-email',{method:'POST',
+          headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},
+          body:JSON.stringify({to:tec.email,subject:`Peças Disponíveis — Chamado #${numChamado} — Teffe Tecnologia`,html})
+        }).catch(()=>{});
+      }
+    }
+  }
+  admCarregarChamados();
 }
 
 // ── MODAL DETALHE CHAMADO ──

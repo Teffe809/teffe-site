@@ -23,7 +23,7 @@
 .tec-card:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(0,0,0,.13);}
 
 /* Cores por status */
-.tec-card-aberto{background:#EBF4FF;border-color:#BFDBFE;}
+.tec-card-aberto,.tec-card-despachado{background:#EBF4FF;border-color:#BFDBFE;}
 .tec-card-em_deslocamento{background:#FFFBEB;border-color:#FDE68A;}
 .tec-card-em_atendimento,.tec-card-andamento{background:#FFF7ED;border-color:#FED7AA;}
 .tec-card-aguardando_peca{background:#FFF1F2;border-color:#FECDD3;}
@@ -41,12 +41,29 @@
 
 /* ── BADGES DE STATUS ── */
 .tec-badge-st{font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:20px;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap;}
-.tec-st-aberto{background:#DBEAFE;color:#1D4ED8;}
+.tec-st-aberto,.tec-st-despachado{background:#DBEAFE;color:#1D4ED8;}
 .tec-st-em_deslocamento{background:#FEF3C7;color:#92400E;}
 .tec-st-em_atendimento,.tec-st-andamento{background:#FFEDD5;color:#C2410C;}
 .tec-st-aguardando_peca{background:#FFE4E6;color:#BE123C;}
 .tec-st-pendente{background:#E5E7EB;color:#374151;}
 .tec-st-encerrado{background:#DCFCE7;color:#166534;}
+
+/* ── BADGES DE TIPO ── */
+.tec-tipo-badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;letter-spacing:.3px;white-space:nowrap;}
+.tec-tipo-corretiva{background:#FEE2E2;color:#DC2626;}
+.tec-tipo-manutencao,.tec-tipo-manutencao_preventiva{background:#DBEAFE;color:#0A4B8D;}
+.tec-tipo-instalacao{background:#DCFCE7;color:#16A34A;}
+.tec-tipo-desinstalacao{background:#FFEDD5;color:#F97316;}
+.tec-tipo-vistoria,.tec-tipo-visita_tecnica{background:#EDE9FE;color:#7C3AED;}
+.tec-tipo-troca_pecas,.tec-tipo-troca_de_pecas{background:#FEF9C3;color:#CA8A04;}
+.tec-tipo-assistencia{background:#F3F4F6;color:#6B7280;}
+
+/* ── BADGES DE PEÇAS (status) ── */
+.tec-pecas-badge{display:inline-block;font-size:10px;font-weight:700;padding:3px 9px;border-radius:12px;white-space:nowrap;}
+.tec-pecas-solicitado{background:#FEF9C3;color:#CA8A04;}
+.tec-pecas-faturado{background:#DBEAFE;color:#0A4B8D;}
+.tec-pecas-despachado{background:#FFEDD5;color:#F97316;}
+.tec-pecas-entregue{background:#DCFCE7;color:#16A34A;}
 
 /* ── MODAL DO CHAMADO ── */
 .tec-modal-header{display:flex;align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap;}
