@@ -234,13 +234,15 @@ async function admDeletarTecnico(id){
 // ── CLIENTES ──
 async function admCarregarClientes(){
   if(!_admTecs.length) await admCarregarTecnicos();
-  const {data}=await admHttp('/rest/v1/clientes?order=empresa&select=*');
+  const {data,ok}=await admHttp('/rest/v1/clientes?select=*&order=razao_social.asc');
+  console.log('[admCarregarClientes] ok:', ok, '| rows:', data&&data.length);
   const el=document.getElementById('adm-lista-clientes');
-  if(!data||!data.length){el.innerHTML='<div class="ac-empty">Nenhum cliente cadastrado.</div>';return;}
-  el.innerHTML='<table class="ac-table"><thead><tr><th>Empresa</th><th>Contato</th><th>Técnico responsável</th><th></th></tr></thead><tbody>'+
+  if(!ok||!data||!data.length){el.innerHTML='<div class="ac-empty">Nenhum cliente cadastrado.</div>';return;}
+  el.innerHTML='<table class="ac-table"><thead><tr><th>Código</th><th>Empresa</th><th>CNPJ</th><th>Técnico responsável</th><th></th></tr></thead><tbody>'+
     data.map(c=>`<tr>
-      <td><b>${c.empresa||'–'}</b></td>
-      <td>${c.nome||'–'}</td>
+      <td><code>${c.codigo||'–'}</code></td>
+      <td><b>${c.razao_social||c.fantasia||'–'}</b><br><small style="color:#6B7280">${c.fantasia&&c.razao_social?c.fantasia:''}</small></td>
+      <td>${c.cnpj||'–'}</td>
       <td>
         <select id="sel-cli-${c.id}" class="adm-sel-inline">
           <option value="">Sem técnico</option>
@@ -278,16 +280,31 @@ async function admCarregarChamados(){
   if(!_admTecs.length) await admCarregarTecnicos();
   const filtroStatus=document.getElementById('adm-filtro-status').value;
   const filtroTec=document.getElementById('adm-filtro-tec').value;
-  let q='/rest/v1/chamados?order=created_at.desc&select=*,clientes(nome,empresa)';
-  if(filtroStatus) q+='&status=eq.'+filtroStatus;
+  let q='/rest/v1/chamados?select=*&order=created_at.desc';
+  if(filtroStatus&&filtroStatus!=='todos') q+='&status=eq.'+filtroStatus;
   if(filtroTec==='is_null') q+='&tecnico_id=is.null';
-  else if(filtroTec) q+='&tecnico_id=eq.'+filtroTec;
-  const {data}=await admHttp(q);
+  else if(filtroTec&&filtroTec!=='todos') q+='&tecnico_id=eq.'+filtroTec;
+  const {data,ok,status:httpSt}=await admHttp(q);
+  console.log('[admCarregarChamados] ok:', ok, '| status:', httpSt, '| rows:', data&&data.length);
   const el=document.getElementById('adm-lista-chamados');
-  if(!data||!data.length){el.innerHTML='<div class="ac-empty">Nenhum chamado encontrado com os filtros selecionados.</div>';return;}
+  if(!ok||!data){el.innerHTML='<div class="ac-empty">Erro ao carregar chamados (HTTP '+httpSt+'). Verifique o console.</div>';return;}
+  if(!data.length){el.innerHTML='<div class="ac-empty">Nenhum chamado encontrado com os filtros selecionados.</div>';return;}
+
+  // Carrega nomes de clientes em uma única query
+  var clienteMap={};
+  try{
+    var cliIds=[...new Set(data.map(r=>r.cliente_id).filter(Boolean))];
+    if(cliIds.length){
+      var cr=await admHttp('/rest/v1/clientes?id=in.('+cliIds.join(',')+')'+'&select=id,razao_social,fantasia,codigo');
+      (cr.data||[]).forEach(c=>{clienteMap[c.id]=c;});
+    }
+  }catch(e){console.warn('[admCarregarChamados] erro ao carregar clientes:', e);}
+
   const psLabel={solicitado:'⚠️ Solicitado',faturado:'Faturado',despachado:'Despachado',entregue:'✅ Entregue'};
   el.innerHTML='<table class="ac-table"><thead><tr><th>#</th><th>Cliente</th><th>Descrição</th><th>Solicitante</th><th>Status</th><th>Peças</th><th>Técnico</th><th>Data</th></tr></thead><tbody>'+
     data.map(r=>{
+      const cli=clienteMap[r.cliente_id];
+      const cliNome=cli?(cli.razao_social||cli.fantasia||'–'):'–';
       const ps=r.pecas_status;
       const pecasBadge=ps?`<span class="tec-pecas-badge tec-pecas-${ps}">${psLabel[ps]||ps}</span>`:'–';
       const pecasBtn=ps==='solicitado'?`<button class="adm-btn adm-btn-sm" style="margin-top:4px;font-size:11px;" onclick="event.stopPropagation();admFaturarPecas('${r.id}')">Faturar</button>`:
@@ -295,7 +312,7 @@ async function admCarregarChamados(){
         ps==='despachado'?`<button class="adm-btn adm-btn-sm" style="margin-top:4px;font-size:11px;" onclick="event.stopPropagation();admConfirmarEntregaPecas('${r.id}','${r.tecnico_id||''}','${r.numero||r.id.slice(0,6)}')">Confirmar Entrega</button>`:'';
       return `<tr style="cursor:pointer;" onclick="admAbrirDetalhe(${JSON.stringify(JSON.stringify(r))})">
         <td><b>#${r.numero||r.id.slice(0,6)}</b></td>
-        <td>${r.clientes?r.clientes.empresa||r.clientes.nome:'–'}</td>
+        <td>${cliNome}</td>
         <td class="adm-td-trunc" title="${(r.descricao||'').replace(/"/g,'&quot;')}">${r.descricao||r.titulo||'–'}</td>
         <td>${r.solicitante_nome||'–'}</td>
         <td><span class="badge badge-${r.status}">${r.status}</span></td>
@@ -447,16 +464,31 @@ async function admNcOnClienteChange(){
   const clienteId=document.getElementById('adm-nc-cliente').value;
   const sel=document.getElementById('adm-nc-equip');
   if(!clienteId){sel.innerHTML='<option value="">Selecione o cliente primeiro...</option>';return;}
-  sel.innerHTML='<option value="">Carregando...</option>';
-  const {data}=await admHttp('/rest/v1/equipamentos?cliente_id=eq.'+clienteId+'&select=*&order=modelo.asc');
-  sel.innerHTML='<option value="">Nenhum equipamento</option>';
-  (Array.isArray(data)?data:[]).forEach(e=>{
-    const o=document.createElement('option');
-    o.value=e.id;
-    const serial=e.serial||e.codigo_teffe||e.codigo;
-    o.textContent=(e.marca?e.marca+' ':'')+(e.modelo||'–')+(serial?' — '+serial:'');
-    sel.appendChild(o);
-  });
+  sel.innerHTML='<option value="">Carregando equipamentos...</option>';
+  try{
+    // Busca contratos ativos do cliente
+    const {data:contratos}=await admHttp('/rest/v1/contratos?cliente_id=eq.'+clienteId+'&status=eq.ativo&select=id');
+    if(!contratos||!contratos.length){
+      sel.innerHTML='<option value="">Nenhum contrato ativo para este cliente</option>';
+      return;
+    }
+    const contratoIds=contratos.map(c=>c.id).join(',');
+    // Busca equipamentos via vínculo
+    const {data:vinculos}=await admHttp('/rest/v1/contrato_equipamentos?contrato_id=in.('+contratoIds+')&select=*,equipamentos(*)');
+    const equips=(vinculos||[]).map(v=>v.equipamentos).filter(Boolean);
+    sel.innerHTML='<option value="">— Sem equipamento específico —</option>';
+    equips.forEach(e=>{
+      const o=document.createElement('option');
+      o.value=e.id;
+      const serial=e.serial||e.codigo_teffe;
+      o.textContent=(e.marca?e.marca+' ':'')+(e.modelo||'–')+(serial?' — '+serial:'');
+      sel.appendChild(o);
+    });
+    if(!equips.length) sel.innerHTML='<option value="">Nenhum equipamento vinculado ao contrato</option>';
+  }catch(err){
+    console.error('[admNcOnClienteChange]',err);
+    sel.innerHTML='<option value="">Erro ao carregar equipamentos</option>';
+  }
 }
 
 async function admSalvarNovoChamado(){
