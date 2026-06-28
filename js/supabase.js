@@ -490,7 +490,7 @@ async function buscarEquipAC(prefix){
     return;
   }
   if(prefix==='at') _atEquipId=eq.id;
-  else{_spEquipId=eq.id;_spTipoImpressao=eq.tipo_impressao||'monocromatico';carregarInsumos(eq.modelo);spAtualizarContadores();}
+  else{_spEquipId=eq.id;_spTipoImpressao=eq.tipo_impressao||'monocromatico';carregarInsumos(eq.id);spAtualizarContadores();}
   infoEl.style.display='block';
   infoEl.className='ac-equip-info ac-equip-found';
   infoEl.innerHTML=`<div class="ac-equip-found-grid">
@@ -506,19 +506,34 @@ function spAtualizarContadores(){
   if(colorEl) colorEl.style.display=_spTipoImpressao==='colorido'?'block':'none';
 }
 
-// ── CARREGAR INSUMOS DO MODELO ──
-async function carregarInsumos(modelo){
+// ── CARREGAR INSUMOS VINCULADOS AO EQUIPAMENTO ──
+async function carregarInsumos(equipamentoId){
   const sel=document.getElementById('sp-insumo');
   sel.innerHTML='<option value="">Carregando...</option>';
-  const m=(modelo||'').trim();
-  if(!m){sel.innerHTML='<option value="">Modelo não identificado no equipamento</option>';return;}
-  const {data}=await sf('/rest/v1/insumos?modelo_equipamento=ilike.'+encodeURIComponent(m)+'&ativo=eq.true&select=*');
-  if(!data||!data.length){
-    sel.innerHTML='<option value="">Nenhum insumo para o modelo: '+m+'</option>';
+  if(!equipamentoId){sel.innerHTML='<option value="">Selecione o equipamento primeiro</option>';return;}
+
+  const {data:links}=await sf('/rest/v1/equipamento_insumos?equipamento_id=eq.'+equipamentoId+'&select=id,insumo_id,cor');
+  if(!links||!links.length){
+    sel.innerHTML='<option value="">Nenhum insumo cadastrado para este equipamento</option>';
     return;
   }
+
+  const insumoIds=links.map(l=>l.insumo_id).filter(Boolean);
+  const {data:insumos}=await sf('/rest/v1/insumos?id=in.('+insumoIds.join(',')+')'+'&select=id,nome,codigo,tipo');
+  if(!insumos||!insumos.length){
+    sel.innerHTML='<option value="">Nenhum insumo encontrado</option>';
+    return;
+  }
+
+  const insumoMap={};
+  insumos.forEach(i=>{insumoMap[i.id]=i;});
+
   sel.innerHTML='<option value="">Selecione o insumo</option>'+
-    data.map(i=>`<option value="${i.id}">${i.codigo_insumo?'['+i.codigo_insumo+'] ':''}${i.descricao}</option>`).join('');
+    links.map(l=>{
+      const i=insumoMap[l.insumo_id]||{};
+      const label=(i.codigo?'['+i.codigo+'] ':'')+i.nome+(l.cor?' — '+l.cor:'');
+      return`<option value="${l.insumo_id}">${label}</option>`;
+    }).join('');
 }
 
 // ── VALIDAR CONTADOR ──
@@ -771,7 +786,7 @@ function equipAcSelecionar(p,eq){
   const arrow=document.getElementById(p+'-ac-arrow');
   if(arrow) arrow.className='ti ti-chevron-down';
   if(p==='at') _atEquipId=eq.id;
-  else{_spEquipId=eq.id;_spTipoImpressao=eq.tipo_impressao||'monocromatico';carregarInsumos(eq.modelo);spAtualizarContadores();}
+  else{_spEquipId=eq.id;_spTipoImpressao=eq.tipo_impressao||'monocromatico';carregarInsumos(eq.id);spAtualizarContadores();}
   const infoEl=document.getElementById(p+'-equip-info');
   if(infoEl){
     infoEl.style.display='block';
