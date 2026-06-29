@@ -289,6 +289,24 @@
 
 .cp-boleto-sem-pdf { color: #8896AB; font-size: 13px; }
 
+.cp-boleto-extrato {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #1D4ED8;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 6px;
+  border: 1.5px solid #1D4ED8;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.14s;
+}
+.cp-boleto-extrato:hover { background: #1D4ED8; color: #fff; }
+
+.cp-boleto-footer { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
 .cp-boleto-badge-wrap { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
 .cp-boleto-hint { font-size: 11px; color: #8896AB; font-style: italic; text-align: right; line-height: 1.3; }
 

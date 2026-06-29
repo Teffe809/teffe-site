@@ -7,6 +7,7 @@
 window.acMostrarView = function(id){ cpNavegar(id); };
 
 var _cpBoletosData = [];
+var _cpBoletosList = [];
 
 // ── INICIALIZAÇÃO (chamado ao fim de carregarArea) ──
 function cpOnAreaLoad(){
@@ -188,6 +189,7 @@ function cpRenderizarBoletos(lista, hoje){
   var el = document.getElementById('cp-boletos-tabela');
   if(!el) return;
   if(!lista.length){ el.innerHTML = '<div class="ac-empty">Nenhum boleto nesta categoria.</div>'; return; }
+  _cpBoletosList = lista;
 
   var fmtVal = function(v){ return v != null ? 'R$ ' + Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2}) : '–'; };
   var fmtDate = function(v){
@@ -200,7 +202,7 @@ function cpRenderizarBoletos(lista, hoje){
   var stClasses = {pago:'cp-st-pago', avencer:'cp-st-avencer', vencido:'cp-st-vencido'};
   var cardClasses = {pago:'cp-boleto-pago', avencer:'cp-boleto-avencer', vencido:'cp-boleto-vencido'};
 
-  el.innerHTML = '<div class="cp-boletos-grid">' + lista.map(function(b){
+  el.innerHTML = '<div class="cp-boletos-grid">' + lista.map(function(b, idx){
     var st = cpStatusBoleto(b, hoje);
     var hintVencido = st === 'vencido'
       ? '<small class="cp-boleto-hint">Pode levar até 5 dias úteis para compensação</small>'
@@ -208,6 +210,9 @@ function cpRenderizarBoletos(lista, hoje){
     var downloadBtn = b.arquivo_url
       ? '<a href="' + b.arquivo_url + '" target="_blank" class="cp-boleto-download"><i class="ti ti-download"></i> Baixar</a>'
       : '<span class="cp-boleto-sem-pdf">PDF indisponível</span>';
+    var extratoBtn = b.contrato_id
+      ? '<button class="cp-boleto-extrato" onclick="cpVerExtratoFechamento(' + idx + ')"><i class="ti ti-file-text"></i> Ver Extrato</button>'
+      : '';
     return '<div class="cp-boleto-card ' + (cardClasses[st]||'') + '">' +
       '<div class="cp-boleto-header">' +
         '<span class="cp-boleto-num">Boleto ' + (b.numero_boleto || '#'+b.id.slice(0,6)) + '</span>' +
@@ -221,9 +226,182 @@ function cpRenderizarBoletos(lista, hoje){
         '<div class="cp-boleto-info"><span class="cp-boleto-lbl">Valor</span><span class="cp-boleto-val cp-boleto-valor">' + fmtVal(b.valor) + '</span></div>' +
         '<div class="cp-boleto-info"><span class="cp-boleto-lbl">Vencimento</span><span class="cp-boleto-val">' + fmtDate(b.vencimento) + '</span></div>' +
       '</div>' +
-      '<div class="cp-boleto-footer">' + downloadBtn + '</div>' +
+      '<div class="cp-boleto-footer">' + downloadBtn + extratoBtn + '</div>' +
     '</div>';
   }).join('') + '</div>';
+}
+
+async function cpVerExtratoFechamento(idx) {
+  var b = _cpBoletosList[idx];
+  if (!b || !b.contrato_id) return;
+
+  // Derivar mes_referencia: vencimento do boleto é no mês seguinte ao fechamento
+  var vencDate = new Date(b.vencimento + 'T12:00:00');
+  var mesAnt = new Date(vencDate.getFullYear(), vencDate.getMonth() - 1, 1);
+  var mesRefStr = mesAnt.getFullYear() + '-' + String(mesAnt.getMonth() + 1).padStart(2, '0') + '-01';
+
+  var fechamento = null, contrato = null, equips = [];
+
+  try {
+    var fr = await sf('/rest/v1/fechamentos_mensais?contrato_id=eq.' + b.contrato_id + '&mes_referencia=eq.' + mesRefStr + '&select=*&limit=1');
+    fechamento = fr.data && fr.data[0] ? fr.data[0] : null;
+    if (!fechamento) {
+      // fallback: pega o fechamento mais recente do contrato
+      var fr2 = await sf('/rest/v1/fechamentos_mensais?contrato_id=eq.' + b.contrato_id + '&select=*&order=mes_referencia.desc&limit=1');
+      fechamento = fr2.data && fr2.data[0] ? fr2.data[0] : null;
+    }
+  } catch(e) {}
+
+  if (!fechamento) { alert('Extrato não encontrado para este boleto.'); return; }
+
+  try {
+    var cr = await sf('/rest/v1/contratos?id=eq.' + b.contrato_id + '&select=*&limit=1');
+    contrato = cr.data && cr.data[0] ? cr.data[0] : null;
+  } catch(e) {}
+
+  if (!contrato) { alert('Dados do contrato não encontrados.'); return; }
+
+  try {
+    var er = await sf('/rest/v1/contrato_equipamentos?contrato_id=eq.' + b.contrato_id + '&select=equipamento_id');
+    var eqIds = (er.data || []).map(function(v){ return v.equipamento_id; }).filter(Boolean);
+    if (eqIds.length) {
+      var eqRes = await sf('/rest/v1/equipamentos?id=in.(' + eqIds.join(',') + ')&select=id,marca,modelo,serial,codigo_teffe');
+      equips = Array.isArray(eqRes.data) ? eqRes.data : [];
+    }
+  } catch(e) {}
+
+  var clienteNome = (document.getElementById('ac-empresa') || {}).textContent || (document.getElementById('ac-nome') || {}).textContent || '—';
+  _cpAbrirExtratoFechamento(fechamento, contrato, clienteNome, equips);
+}
+
+function _cpAbrirExtratoFechamento(f, c, clienteNome, equips) {
+  var esc = function(v) { return (v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
+  var fmt = function(v) { return Number(v || 0).toFixed(2).replace('.', ','); };
+
+  var mesDate = f.mes_referencia ? new Date(f.mes_referencia + 'T12:00:00') : new Date();
+  var mesLabel = mesDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+  var mesUpper = mesLabel.charAt(0).toUpperCase() + mesLabel.slice(1);
+
+  var diaVenc = c.dia_vencimento || 10;
+  var mp = (f.mes_referencia || '').split('-');
+  var vencDate = new Date(parseInt(mp[0]), parseInt(mp[1] || 1), diaVenc);
+  var vencFmt = vencDate.toLocaleDateString('pt-BR');
+
+  var tipoLabel = { manutencao:'MANUTENÇÃO', locacao:'LOCAÇÃO', avulso:'AVULSO' }[c.tipo_contrato] || (c.tipo_contrato||'').toUpperCase();
+  var isManutencao = c.tipo_contrato === 'manutencao';
+
+  var pagPb = (f.contador_pb_atual || 0) - (f.contador_pb_anterior || 0);
+  var pagColor = (f.contador_color_atual || 0) - (f.contador_color_anterior || 0);
+  var valUnitPb = Number(c.valor_pagina_pb || 0);
+  var valUnitColor = Number(c.valor_pagina_color || 0);
+  var totalPb = pagPb * valUnitPb;
+  var totalColor = pagColor * valUnitColor;
+  var valorFixo = Number(f.valor_fixo || 0);
+  var valorExcedente = Number(f.valor_excedente || 0);
+  var total = Number(f.valor_total || 0);
+
+  var equipHtml = '';
+  if (equips.length === 0) {
+    equipHtml = '<div style="padding:20px;color:#666;font-size:13px">Nenhum equipamento vinculado.</div>';
+  } else {
+    equips.forEach(function(eq, i) {
+      equipHtml += '<div style="padding:20px;border-bottom:1px solid #eee;">' +
+        '<h3 style="color:#0A4B8D;border-bottom:1px solid #F87A13;padding-bottom:5px;margin:0 0 6px;font-size:14px;">EQUIPAMENTO: ' + esc((eq.marca||'') + ' ' + (eq.modelo||'')) + '</h3>' +
+        '<p style="color:#666;font-size:12px;margin:0 0 10px">Serial: ' + esc(eq.serial||'—') + ' | Código Teffe: ' + esc(eq.codigo_teffe||'—') + '</p>';
+      if (i === 0) {
+        equipHtml +=
+          '<table style="width:100%;border-collapse:collapse;margin-top:10px;font-size:13px;">' +
+          '<thead><tr style="background:#0A4B8D;color:white;">' +
+            '<th style="padding:8px;text-align:left;">DESCRIÇÃO</th>' +
+            '<th style="padding:8px;text-align:right;">ANTERIOR</th>' +
+            '<th style="padding:8px;text-align:right;">ATUAL</th>' +
+            '<th style="padding:8px;text-align:right;">PÁGINAS</th>' +
+            '<th style="padding:8px;text-align:right;">VALOR UNIT.</th>' +
+            '<th style="padding:8px;text-align:right;">TOTAL</th>' +
+          '</tr></thead><tbody>' +
+          '<tr style="background:#f9f9f9;">' +
+            '<td style="padding:8px;border:1px solid #ddd;">Impressão PB</td>' +
+            '<td style="padding:8px;text-align:right;border:1px solid #ddd;">' + (f.contador_pb_anterior||0) + '</td>' +
+            '<td style="padding:8px;text-align:right;border:1px solid #ddd;">' + (f.contador_pb_atual||0) + '</td>' +
+            '<td style="padding:8px;text-align:right;border:1px solid #ddd;">' + pagPb + '</td>' +
+            '<td style="padding:8px;text-align:right;border:1px solid #ddd;">R$ ' + fmt(valUnitPb) + '</td>' +
+            '<td style="padding:8px;text-align:right;border:1px solid #ddd;">R$ ' + fmt(totalPb) + '</td>' +
+          '</tr><tr>' +
+            '<td style="padding:8px;border:1px solid #ddd;">Impressão Colorida</td>' +
+            '<td style="padding:8px;text-align:right;border:1px solid #ddd;">' + (f.contador_color_anterior||0) + '</td>' +
+            '<td style="padding:8px;text-align:right;border:1px solid #ddd;">' + (f.contador_color_atual||0) + '</td>' +
+            '<td style="padding:8px;text-align:right;border:1px solid #ddd;">' + pagColor + '</td>' +
+            '<td style="padding:8px;text-align:right;border:1px solid #ddd;">R$ ' + fmt(valUnitColor) + '</td>' +
+            '<td style="padding:8px;text-align:right;border:1px solid #ddd;">R$ ' + fmt(totalColor) + '</td>' +
+          '</tr></tbody></table>';
+      } else {
+        equipHtml += '<p style="font-size:12px;color:#888;">Contadores consolidados no equipamento principal.</p>';
+      }
+      equipHtml += '</div>';
+    });
+  }
+
+  var finHtml = '<div style="padding:20px;">' +
+    '<table style="width:100%;border-collapse:collapse;font-size:13px;">' +
+    '<tr><td style="padding:8px;border:1px solid #eee;"><strong>Valor Fixo Mensal</strong></td>' +
+      '<td style="padding:8px;text-align:right;border:1px solid #eee;">R$ ' + fmt(valorFixo) + '</td></tr>';
+
+  if (isManutencao) {
+    finHtml += '<tr style="background:#f9f9f9;"><td style="padding:8px;border:1px solid #eee;"><strong>Valor Produção PB (' + pagPb + ' págs × R$ ' + fmt(valUnitPb) + ')</strong></td>' +
+      '<td style="padding:8px;text-align:right;border:1px solid #eee;">R$ ' + fmt(totalPb) + '</td></tr>' +
+      '<tr><td style="padding:8px;border:1px solid #eee;"><strong>Valor Produção Colorida (' + pagColor + ' págs × R$ ' + fmt(valUnitColor) + ')</strong></td>' +
+      '<td style="padding:8px;text-align:right;border:1px solid #eee;">R$ ' + fmt(totalColor) + '</td></tr>';
+  } else {
+    if (f.rollover_credito_usado > 0) {
+      finHtml += '<tr style="background:#EDE9FE;"><td style="padding:8px;border:1px solid #eee;"><strong>Rollover abatido</strong></td>' +
+        '<td style="padding:8px;text-align:right;border:1px solid #eee;color:#7C3AED;">−' + f.rollover_credito_usado + ' págs</td></tr>';
+    }
+    if (valorExcedente > 0) {
+      finHtml += '<tr style="background:#FEF2F2;"><td style="padding:8px;border:1px solid #eee;"><strong>Excedente</strong></td>' +
+        '<td style="padding:8px;text-align:right;border:1px solid #eee;color:#DC2626;">R$ ' + fmt(valorExcedente) + '</td></tr>';
+    }
+  }
+
+  finHtml +=
+    '<tr style="background:#0A4B8D;color:white;">' +
+      '<td style="padding:12px;border:1px solid #0A4B8D;"><strong>TOTAL A PAGAR</strong></td>' +
+      '<td style="padding:12px;text-align:right;font-size:18px;border:1px solid #0A4B8D;"><strong>R$ ' + fmt(total) + '</strong></td>' +
+    '</tr></table>' +
+    '<div style="margin-top:20px;padding:15px;background:#E8F0FB;border-left:4px solid #F87A13;border-radius:4px;">' +
+      '<p style="margin:0;color:#0A4B8D;"><strong>⚠️ Este extrato é meramente informativo.</strong></p>' +
+      '<p style="margin:5px 0 0;color:#666;font-size:12px;">O boleto bancário é enviado separadamente com vencimento em <strong>' + vencFmt + '</strong>.</p>' +
+    '</div></div>';
+
+  var html = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"/>' +
+    '<title>Extrato ' + esc(mesUpper) + ' — ' + esc(c.numero||'') + '</title>' +
+    '<style>*{box-sizing:border-box;}body{font-family:Arial,sans-serif;font-size:13px;color:#1a1a1a;background:#fff;margin:0;padding:0;}' +
+    '@media print{.np{display:none!important;}@page{size:A4;margin:10mm;}}</style></head><body>' +
+    '<div class="np" style="display:flex;gap:10px;justify-content:flex-end;padding:12px 20px;background:#F8FAFC;border-bottom:1px solid #E2E8F0;">' +
+      '<button onclick="window.close()" style="padding:8px 18px;border:1px solid #D1D5DB;border-radius:6px;background:#fff;cursor:pointer;font-size:13px;">Fechar</button>' +
+      '<button onclick="window.print()" style="padding:8px 22px;border:none;border-radius:6px;background:#0A4B8D;color:#fff;font-weight:700;cursor:pointer;font-size:13px;">⎙ Imprimir / Salvar PDF</button>' +
+    '</div>' +
+    '<div style="background:#0A4B8D;padding:30px;display:flex;justify-content:space-between;align-items:center;">' +
+      '<div><h1 style="color:white;margin:0;font-size:24px;font-weight:900;">TEFFE TECNOLOGIA</h1>' +
+      '<p style="color:#F87A13;margin:4px 0 0;font-size:12px;text-transform:uppercase;letter-spacing:1px;">EXTRATO DE FECHAMENTO MENSAL</p></div>' +
+      '<div style="color:white;text-align:right;font-size:12px;line-height:1.9;"><p style="margin:0">contato@teffe.com.br</p><p style="margin:0">(14) 99828-9248</p><p style="margin:0">teffe.com.br</p></div>' +
+    '</div>' +
+    '<div style="padding:20px;border-bottom:2px solid #0A4B8D;">' +
+      '<h2 style="color:#0A4B8D;margin:0 0 12px;font-size:18px;">EXTRATO — ' + esc(mesUpper.toUpperCase()) + '</h2>' +
+      '<table style="width:100%;border-collapse:collapse;font-size:13px;">' +
+        '<tr><td style="padding:5px 10px 5px 0;width:130px;color:#666;font-weight:700;">CLIENTE:</td><td style="padding:5px 0;">' + esc(clienteNome) + '</td></tr>' +
+        '<tr><td style="padding:5px 10px 5px 0;color:#666;font-weight:700;">CONTRATO:</td><td style="padding:5px 0;"><strong>' + esc(c.numero||'—') + '</strong> | ' + tipoLabel + '</td></tr>' +
+        '<tr><td style="padding:5px 10px 5px 0;color:#666;font-weight:700;">PERÍODO:</td><td style="padding:5px 0;">' + esc(mesUpper) + '</td></tr>' +
+        '<tr><td style="padding:5px 10px 5px 0;color:#666;font-weight:700;">VENCIMENTO:</td><td style="padding:5px 0;"><strong>' + vencFmt + '</strong></td></tr>' +
+      '</table>' +
+    '</div>' +
+    equipHtml + finHtml +
+    '<div style="background:#0A4B8D;padding:15px;text-align:center;margin-top:30px;">' +
+      '<p style="color:white;margin:0;font-size:11px;">Teffe Tecnologia © 2026 | contato@teffe.com.br | (14) 99828-9248 | teffe.com.br</p>' +
+    '</div>' +
+    '<script>window.onload=function(){window.print();}<\/script></body></html>';
+
+  var w = window.open('', '_blank', 'width=960,height=860');
+  if (w) { w.document.open(); w.document.write(html); w.document.close(); }
 }
 
 // ── VIEW CONTRATOS ──
