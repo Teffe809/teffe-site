@@ -1,5 +1,10 @@
 const SURL='https://hlfjcpgrxiktgctozilk.supabase.co';
 const SKEY='sb_publishable_-Iu8PbqhLeZAXSBcczr2mQ_lzlGr4_g';
+function capitalizarNome(nome) {
+  if (!nome) return '';
+  return nome.toLowerCase().split(' ').map(function(p) { return p.charAt(0).toUpperCase() + p.slice(1); }).join(' ');
+}
+
 let _tok=null,_uid=null,_cid=null,_email=null,_atEquipId=null,_spEquipId=null,_spUltimoContador=null,_spTipoImpressao='monocromatico',_chamadosCache={};
 let _equipsAC=[];
 let _tecHistData=[],_tecHistPage=0,_tecHistEquip=null;
@@ -181,11 +186,11 @@ async function carregarArea(){
   const {data:cl}=await sf('/rest/v1/clientes?user_id=eq.'+_uid+'&limit=1&select=*');
   const c=cl&&cl[0];
   _cid=c?c.id:null;
-  let primeiroNome=c?c.nome.split(' ')[0]:'cliente';
+  let primeiroNome=c?capitalizarNome(c.nome).split(' ')[0]:'cliente';
   if(_email){
     const {data:cu}=await sf('/rest/v1/cliente_usuarios?email=eq.'+encodeURIComponent(_email)+'&limit=1&select=nome,cliente_id');
     if(cu&&cu[0]){
-      if(cu[0].nome) primeiroNome=cu[0].nome.split(' ')[0];
+      if(cu[0].nome) primeiroNome=capitalizarNome(cu[0].nome).split(' ')[0];
       if(!_cid&&cu[0].cliente_id) _cid=cu[0].cliente_id;
     }
   }

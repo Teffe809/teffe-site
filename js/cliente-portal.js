@@ -145,9 +145,11 @@ async function cpCarregarFinanceiro(){
   if(!_cid){ el.innerHTML = '<div class="ac-empty">Nenhum boleto encontrado.</div>'; return; }
 
   var hoje = new Date(); hoje.setHours(0,0,0,0);
+  console.log('[cpCarregarFinanceiro] _cid:', _cid, '| clienteLogado:', window.clienteLogado);
   var res = await sf('/rest/v1/boletos?cliente_id=eq.' + _cid + '&order=vencimento.desc&select=*');
+  console.log('[cpCarregarFinanceiro] boletos res.ok:', res.ok, '| res.status:', res.status, '| registros:', Array.isArray(res.data) ? res.data.length : JSON.stringify(res.data));
 
-  if(!res.ok || !res.data || !res.data.length){
+  if(!res.ok || !Array.isArray(res.data) || !res.data.length){
     el.innerHTML = '<div class="ac-empty">Nenhum boleto encontrado.</div>';
     return;
   }
@@ -160,7 +162,9 @@ async function cpCarregarFinanceiro(){
   res.data.forEach(function(b) { if (b.contrato_id && contratoIds.indexOf(b.contrato_id) === -1) contratoIds.push(b.contrato_id); });
   if (contratoIds.length) {
     var fr = await sf('/rest/v1/fechamentos_mensais?contrato_id=in.(' + contratoIds.join(',') + ')&select=contrato_id&order=created_at.desc');
-    (fr.data || []).forEach(function(f) { _cpContratosComFechamento.add(f.contrato_id); });
+    if (Array.isArray(fr.data)) {
+      fr.data.forEach(function(f) { _cpContratosComFechamento.add(f.contrato_id); });
+    }
   }
 
   var total = res.data.length;
