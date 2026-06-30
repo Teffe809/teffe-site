@@ -222,12 +222,14 @@ function cpRenderizarBoletos(lista, hoje){
     var hintVencido = st === 'vencido'
       ? '<small class="cp-boleto-hint">Pode levar até 5 dias úteis para compensação</small>'
       : '';
-    var downloadBtn = b.arquivo_url
-      ? '<a href="' + b.arquivo_url + '" target="_blank" class="cp-boleto-download"><i class="ti ti-download"></i> Baixar</a>'
-      : '<span class="cp-boleto-sem-pdf">PDF indisponível</span>';
-    var extratoBtn = (b.contrato_id && _cpContratosComFechamento.has(b.contrato_id))
-      ? '<button class="cp-boleto-extrato" onclick="cpVerExtratoFechamento(' + idx + ')"><i class="ti ti-file-text"></i> Ver Extrato</button>'
+    var boletoBtn = b.arquivo_url
+      ? '<a href="' + b.arquivo_url + '" target="_blank" class="cp-boleto-download"><i class="ti ti-receipt-2"></i> Ver Boleto</a>'
       : '';
+    var extratoBtn = b.arquivo_extrato_url
+      ? '<a href="' + b.arquivo_extrato_url + '" target="_blank" class="cp-boleto-extrato"><i class="ti ti-file-text"></i> Ver Extrato</a>'
+      : (b.contrato_id && _cpContratosComFechamento.has(b.contrato_id))
+        ? '<button class="cp-boleto-extrato" onclick="cpVerExtratoFechamento(' + idx + ')"><i class="ti ti-file-text"></i> Ver Extrato</button>'
+        : '';
     return '<div class="cp-boleto-card ' + (cardClasses[st]||'') + '">' +
       '<div class="cp-boleto-header">' +
         '<span class="cp-boleto-num">Boleto ' + (b.numero_boleto || '#'+b.id.slice(0,6)) + '</span>' +
@@ -241,7 +243,7 @@ function cpRenderizarBoletos(lista, hoje){
         '<div class="cp-boleto-info"><span class="cp-boleto-lbl">Valor</span><span class="cp-boleto-val cp-boleto-valor">' + fmtVal(b.valor) + '</span></div>' +
         '<div class="cp-boleto-info"><span class="cp-boleto-lbl">Vencimento</span><span class="cp-boleto-val">' + fmtDate(b.vencimento) + '</span></div>' +
       '</div>' +
-      '<div class="cp-boleto-footer">' + downloadBtn + extratoBtn + '</div>' +
+      '<div class="cp-boleto-footer">' + boletoBtn + extratoBtn + '</div>' +
     '</div>';
   }).join('') + '</div>';
 }
@@ -275,7 +277,11 @@ async function cpVerExtratoFechamento(idx) {
     }
   } catch(e) {}
 
-  var clienteNome = (document.getElementById('ac-empresa') || {}).textContent || (document.getElementById('ac-nome') || {}).textContent || '—';
+  var clienteNome = '—';
+  try {
+    var cliRes = await sf('/rest/v1/clientes?id=eq.' + _cid + '&select=razao_social&limit=1');
+    if (Array.isArray(cliRes.data) && cliRes.data[0]) clienteNome = cliRes.data[0].razao_social || '—';
+  } catch(e) {}
   _cpAbrirExtratoFechamento(fechamento, contrato, clienteNome, equips);
 }
 
@@ -407,7 +413,7 @@ function _cpAbrirExtratoFechamento(f, c, clienteNome, equips) {
     '<div style="background:#0A4B8D;padding:15px;text-align:center;margin-top:30px;">' +
       '<p style="color:white;margin:0;font-size:11px;">Teffe Tecnologia © 2026 | contato@teffe.com.br | (14) 99828-9248 | teffe.com.br</p>' +
     '</div>' +
-    '<script>window.onload=function(){window.print();}<\/script></body></html>';
+    '</body></html>';
 
   var w = window.open('', '_blank', 'width=960,height=860');
   if (w) { w.document.open(); w.document.write(html); w.document.close(); }
