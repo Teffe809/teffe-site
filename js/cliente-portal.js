@@ -8,6 +8,7 @@ window.acMostrarView = function(id){ cpNavegar(id); };
 
 var _cpBoletosData = [];
 var _cpBoletosList = [];
+var _cpContratosComFechamento = new Set();
 
 // ── INICIALIZAÇÃO (chamado ao fim de carregarArea) ──
 function cpOnAreaLoad(){
@@ -152,6 +153,16 @@ async function cpCarregarFinanceiro(){
   }
 
   _cpBoletosData = res.data;
+
+  // Pre-fetch quais contratos têm fechamento (para exibir botão extrato só quando existe)
+  _cpContratosComFechamento = new Set();
+  var contratoIds = [];
+  res.data.forEach(function(b) { if (b.contrato_id && contratoIds.indexOf(b.contrato_id) === -1) contratoIds.push(b.contrato_id); });
+  if (contratoIds.length) {
+    var fr = await sf('/rest/v1/fechamentos_mensais?contrato_id=in.(' + contratoIds.join(',') + ')&select=contrato_id&order=created_at.desc');
+    (fr.data || []).forEach(function(f) { _cpContratosComFechamento.add(f.contrato_id); });
+  }
+
   var total = res.data.length;
   var aVencer = res.data.filter(function(b){ return cpStatusBoleto(b, hoje) === 'avencer'; }).length;
   var vencidos = res.data.filter(function(b){ return cpStatusBoleto(b, hoje) === 'vencido'; }).length;
@@ -210,7 +221,7 @@ function cpRenderizarBoletos(lista, hoje){
     var downloadBtn = b.arquivo_url
       ? '<a href="' + b.arquivo_url + '" target="_blank" class="cp-boleto-download"><i class="ti ti-download"></i> Baixar</a>'
       : '<span class="cp-boleto-sem-pdf">PDF indisponível</span>';
-    var extratoBtn = b.contrato_id
+    var extratoBtn = (b.contrato_id && _cpContratosComFechamento.has(b.contrato_id))
       ? '<button class="cp-boleto-extrato" onclick="cpVerExtratoFechamento(' + idx + ')"><i class="ti ti-file-text"></i> Ver Extrato</button>'
       : '';
     return '<div class="cp-boleto-card ' + (cardClasses[st]||'') + '">' +
@@ -235,24 +246,14 @@ async function cpVerExtratoFechamento(idx) {
   var b = _cpBoletosList[idx];
   if (!b || !b.contrato_id) return;
 
-  // Derivar mes_referencia: vencimento do boleto é no mês seguinte ao fechamento
-  var vencDate = new Date(b.vencimento + 'T12:00:00');
-  var mesAnt = new Date(vencDate.getFullYear(), vencDate.getMonth() - 1, 1);
-  var mesRefStr = mesAnt.getFullYear() + '-' + String(mesAnt.getMonth() + 1).padStart(2, '0') + '-01';
-
   var fechamento = null, contrato = null, equips = [];
 
   try {
-    var fr = await sf('/rest/v1/fechamentos_mensais?contrato_id=eq.' + b.contrato_id + '&mes_referencia=eq.' + mesRefStr + '&select=*&limit=1');
+    var fr = await sf('/rest/v1/fechamentos_mensais?contrato_id=eq.' + b.contrato_id + '&select=*&order=created_at.desc&limit=1');
     fechamento = fr.data && fr.data[0] ? fr.data[0] : null;
-    if (!fechamento) {
-      // fallback: pega o fechamento mais recente do contrato
-      var fr2 = await sf('/rest/v1/fechamentos_mensais?contrato_id=eq.' + b.contrato_id + '&select=*&order=mes_referencia.desc&limit=1');
-      fechamento = fr2.data && fr2.data[0] ? fr2.data[0] : null;
-    }
   } catch(e) {}
 
-  if (!fechamento) { alert('Extrato não encontrado para este boleto.'); return; }
+  if (!fechamento) { alert('Nenhum fechamento encontrado para este contrato.'); return; }
 
   try {
     var cr = await sf('/rest/v1/contratos?id=eq.' + b.contrato_id + '&select=*&limit=1');
@@ -273,6 +274,8 @@ async function cpVerExtratoFechamento(idx) {
   var clienteNome = (document.getElementById('ac-empresa') || {}).textContent || (document.getElementById('ac-nome') || {}).textContent || '—';
   _cpAbrirExtratoFechamento(fechamento, contrato, clienteNome, equips);
 }
+
+var _CP_TEFFE_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 580 175" style="height:60px;width:auto;display:block;"><rect width="580" height="175" fill="#ffffff"/><polygon points="95,31 140,57 140,109 95,135 50,109 50,57" fill="none" stroke="#E07820" stroke-width="5" stroke-linejoin="round"/><polygon points="95,37 135,60 135,106 95,129 55,106 55,60" fill="#ffffff"/><polygon points="95,43 130,63 130,103 95,123 60,103 60,63" fill="#1A2E5A"/><rect x="78" y="62" width="34" height="6" rx="2.5" fill="#E07820"/><rect x="91" y="62" width="7" height="30" rx="2.5" fill="#E07820"/><line x1="140" y1="57" x2="163" y2="44" stroke="#E07820" stroke-width="1.8"/><circle cx="166" cy="42" r="3.8" fill="#E07820"/><line x1="140" y1="109" x2="163" y2="122" stroke="#E07820" stroke-width="1.8"/><circle cx="166" cy="124" r="3.8" fill="#E07820"/><line x1="95" y1="135" x2="95" y2="158" stroke="#E07820" stroke-width="1.8"/><circle cx="95" cy="161" r="3.8" fill="#E07820"/><line x1="50" y1="109" x2="27" y2="122" stroke="#E07820" stroke-width="1.8"/><circle cx="24" cy="124" r="3.8" fill="#E07820"/><line x1="50" y1="57" x2="27" y2="44" stroke="#E07820" stroke-width="1.8"/><circle cx="24" cy="42" r="3.8" fill="#E07820"/><text font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="76" x="200" y="103"><tspan fill="#1A2E5A">TE</tspan><tspan fill="#E07820">FFE</tspan></text><rect x="200" y="111" width="310" height="3" rx="1.5" fill="#E07820"/><text x="202" y="139" font-family="Arial,sans-serif" font-weight="700" font-size="15" fill="#E07820" letter-spacing="6">TECNOLOGIA</text></svg>';
 
 function _cpAbrirExtratoFechamento(f, c, clienteNome, equips) {
   var esc = function(v) { return (v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
@@ -380,9 +383,11 @@ function _cpAbrirExtratoFechamento(f, c, clienteNome, equips) {
       '<button onclick="window.close()" style="padding:8px 18px;border:1px solid #D1D5DB;border-radius:6px;background:#fff;cursor:pointer;font-size:13px;">Fechar</button>' +
       '<button onclick="window.print()" style="padding:8px 22px;border:none;border-radius:6px;background:#0A4B8D;color:#fff;font-weight:700;cursor:pointer;font-size:13px;">⎙ Imprimir / Salvar PDF</button>' +
     '</div>' +
-    '<div style="background:#0A4B8D;padding:30px;display:flex;justify-content:space-between;align-items:center;">' +
-      '<div><h1 style="color:white;margin:0;font-size:24px;font-weight:900;">TEFFE TECNOLOGIA</h1>' +
-      '<p style="color:#F87A13;margin:4px 0 0;font-size:12px;text-transform:uppercase;letter-spacing:1px;">EXTRATO DE FECHAMENTO MENSAL</p></div>' +
+    '<div style="background:#0A4B8D;padding:24px 30px;display:flex;justify-content:space-between;align-items:center;">' +
+      '<div>' +
+        '<div style="background:#fff;border-radius:8px;padding:6px 14px;display:inline-block;margin-bottom:6px;">' + _CP_TEFFE_SVG + '</div>' +
+        '<p style="color:#F87A13;margin:2px 0 0;font-size:12px;text-transform:uppercase;letter-spacing:1px;font-weight:700;">EXTRATO DE FECHAMENTO MENSAL</p>' +
+      '</div>' +
       '<div style="color:white;text-align:right;font-size:12px;line-height:1.9;"><p style="margin:0">contato@teffe.com.br</p><p style="margin:0">(14) 99828-9248</p><p style="margin:0">teffe.com.br</p></div>' +
     '</div>' +
     '<div style="padding:20px;border-bottom:2px solid #0A4B8D;">' +
