@@ -986,3 +986,6 @@ input:not([type="email"]):not([type="url"]):not([type="password"]):not([type="nu
 textarea{text-transform:uppercase;}
 input:not([type="email"]):not([type="url"]):not([type="password"]):not([type="number"]):not([type="date"]):not([type="month"]):not([type="time"]):not([type="color"]):not([name*="senha"]):not([id*="senha"])::placeholder,
 textarea::placeholder{text-transform:uppercase;}
+/* Campos de senha: nunca uppercase, mesmo após toggle do ícone de olho (type muda p/ "text") */
+input[type="password"] { text-transform: none !important; }
+#rs-nova, #rs-conf { text-transform: none !important; }
