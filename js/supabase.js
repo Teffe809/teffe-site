@@ -965,7 +965,7 @@ async function tecCarregarPecas(){
         <span class="tec-pecas-badge tec-pecas-${ps}">${entregue?'✅ '+pecasLabel[ps]:pecasLabel[ps]||ps}</span>
       </div>
       <div class="tec-card-cliente">${cliente}</div>
-      ${c.pecas_descricao?`<div class="tec-card-local" style="margin-top:4px;font-size:12px;color:#6B7280;">${c.pecas_descricao}</div>`:''}
+      ${c.pecas_solicitadas?`<div class="tec-card-local" style="margin-top:4px;font-size:12px;color:#6B7280;">${c.pecas_solicitadas}</div>`:''}
       ${entregue?`<button class="tec-btn tec-btn-verde" style="margin-top:10px;width:100%;" onclick="tecReceberPecas('${c.id}')"><i class="ti ti-play"></i> Iniciar Atendimento</button>`:''}
     </div>`;
   }).join('');
@@ -1153,7 +1153,8 @@ function _tecSlaDecorrido(c){
   if(!c.created_at) return{hhmm:'–',atrasado:false};
   const tipoRaw=c.tipo_servico||c.tipo_chamado||'';
   const slaMin=TEC_SLA_MAP[tipoRaw]||480;
-  const pausado=c.sla_pausado_minutos||0;
+  let pausado=c.sla_tempo_pausado||0;
+  if(c.sla_pausado&&c.sla_pausa_inicio) pausado+=Math.floor((new Date()-new Date(c.sla_pausa_inicio))/60000);
   const dec=calcularSLAUtil(c.created_at,pausado);
   const h=Math.floor(dec/60),m=dec%60;
   return{hhmm:h+':'+String(m).padStart(2,'0'),atrasado:dec>slaMin};
@@ -1312,7 +1313,7 @@ async function tecConfirmarPendente(){
   erroEl.style.display='none';
   const {ok}=await sfTec('/rest/v1/chamados?id=eq.'+c.id,{method:'PATCH',
     headers:{'Prefer':'return=minimal'},
-    body:JSON.stringify({status_tecnico:'pendente',sla_pausado:true,sla_pausa_inicio:new Date().toISOString(),pendente_motivo:motivo})});
+    body:JSON.stringify({status_tecnico:'pendente',sla_pausado:true,sla_pausa_inicio:new Date().toISOString(),motivo_pendente:motivo})});
   if(!ok){erroEl.style.display='block';erroEl.textContent='Erro ao atualizar status.';return;}
   c.status_tecnico='pendente';c.sla_pausado=true;c.sla_pausa_inicio=new Date().toISOString();
   tecFecharModalPendente();tecFecharDetalhe();await tecCarregarChamados();
@@ -1398,9 +1399,9 @@ async function tecConfirmarPeca(){
   erroEl.style.display='none';
   const {ok}=await sfTec('/rest/v1/chamados?id=eq.'+c.id,{method:'PATCH',
     headers:{'Prefer':'return=minimal'},
-    body:JSON.stringify({status_tecnico:'aguardando_peca',pecas_status:'solicitado',pecas_descricao:desc,sla_pausado:true,sla_pausa_inicio:new Date().toISOString()})});
+    body:JSON.stringify({status_tecnico:'aguardando_peca',pecas_status:'solicitado',pecas_solicitadas:desc,sla_pausado:true,sla_pausa_inicio:new Date().toISOString()})});
   if(!ok){erroEl.style.display='block';erroEl.textContent='Erro ao atualizar status.';return;}
-  c.status_tecnico='aguardando_peca';c.pecas_status='solicitado';c.pecas_descricao=desc;c.sla_pausado=true;
+  c.status_tecnico='aguardando_peca';c.pecas_status='solicitado';c.pecas_solicitadas=desc;c.sla_pausado=true;
   tecFecharPecaModal();tecFecharDetalhe();await tecCarregarChamados();
 }
 
