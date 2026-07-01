@@ -1249,8 +1249,13 @@ async function tecHistAbrirDetalhe(idx){
   const equipamentoInfo=eq?[eq.marca,eq.modelo].filter(Boolean).join(' '):null;
   const prioMap={baixa:'Baixa',normal:'Normal',alta:'Alta',urgente:'Urgente'};
   const fmtDt=s=>s?new Date(s).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}):'–';
-  const {data:pRows}=await sfTec('/rest/v1/chamado_pecas?chamado_id=eq.'+c.id+'&select=*,pecas(codigo,descricao,unidade)');
+  const [{data:pRows},{data:fotos}]=await Promise.all([
+    sfTec('/rest/v1/chamado_pecas?chamado_id=eq.'+c.id+'&select=*,pecas(codigo,descricao,unidade)'),
+    sfTec('/rest/v1/chamado_fotos?chamado_id=eq.'+c.id+'&order=created_at&select=id,url')
+  ]);
   const pecas=pRows||[];
+  const anexosImgs=[...(c.imagem_url?[{url:c.imagem_url,cliente:true}]:[]),...(fotos||[]).map(f=>({url:f.url,cliente:false}))];
+  const anexosHtml=anexosImgs.length?`<div class="tec-fotos-section"><div class="tec-det-lbl-standalone">Anexos</div><div class="tec-fotos-grid">${anexosImgs.map(f=>`<a href="${f.url}" target="_blank" title="${f.cliente?'Foto enviada pelo cliente':'Foto do técnico'}"><img src="${f.url}" class="tec-foto-thumb" loading="lazy"/></a>`).join('')}</div></div>`:'';
   document.getElementById('tec-hist-modal-conteudo').innerHTML=`
     <div class="tec-modal-header">
       <h2>Chamado #${c.numero||c.id.slice(0,6).toUpperCase()}</h2>
@@ -1275,6 +1280,7 @@ async function tecHistAbrirDetalhe(idx){
       ${c.resolucao?`<div class="tec-det-row tec-det-row-full"><span class="tec-det-lbl">Solução aplicada</span><span class="tec-det-val">${c.resolucao.replace(/\n/g,'<br>')}</span></div>`:''}
     </div>
     ${pecas.length?`<div class="tec-det-section" style="margin-top:16px;"><div class="tec-det-lbl-standalone">Peças utilizadas</div><table class="ac-table" style="margin-top:6px;"><thead><tr><th>Código</th><th>Descrição</th><th>Qtd.</th></tr></thead><tbody>${pecas.map(p=>`<tr><td>${(p.pecas&&p.pecas.codigo)||'–'}</td><td>${(p.pecas&&p.pecas.descricao)||'–'}</td><td>${p.quantidade||0} ${(p.pecas&&p.pecas.unidade)||'un'}</td></tr>`).join('')}</tbody></table></div>`:''}
+    ${anexosHtml}
     ${c.observacoes_internas?`<div class="tec-fotos-section"><div class="tec-det-lbl-standalone" style="color:#92400E">⚠️ Observações Internas (uso interno)</div><div class="tec-obs-interna-box">${c.observacoes_internas.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\n/g,'<br>')}</div></div>`:''}
   `;
   document.getElementById('tec-hist-modal').classList.add('open');
@@ -1359,9 +1365,15 @@ async function tecAbrirDetalhe(id){
     sfTec('/rest/v1/chamado_pecas?chamado_id=eq.'+id+'&select=*,pecas(codigo,descricao,unidade)')
   ]);
   c._fotos=fotos||[];c._pecas=pRows||[];
+  // Anexos: foto que o cliente já anexa ao abrir o chamado (chamados.imagem_url,
+  // gravada há tempos mas nunca exibida em lugar nenhum) + fotos que o técnico
+  // anexa durante o atendimento (tabela chamado_fotos). Sempre visível, não só
+  // durante em_atendimento — o técnico pode precisar ver a foto do cliente antes
+  // mesmo de chegar ao local.
+  const anexosImgs=[...(c.imagem_url?[{url:c.imagem_url,cliente:true}]:[]),...c._fotos.map(f=>({url:f.url,cliente:false}))];
   const fotosHtml=`<div class="tec-fotos-section">
-    <div class="tec-det-lbl-standalone">Fotos do chamado</div>
-    <div id="tec-fotos-grid" class="tec-fotos-grid">${c._fotos.map(f=>`<a href="${f.url}" target="_blank"><img src="${f.url}" class="tec-foto-thumb" loading="lazy"/></a>`).join('')}</div>
+    <div class="tec-det-lbl-standalone">Anexos</div>
+    ${anexosImgs.length?`<div id="tec-fotos-grid" class="tec-fotos-grid">${anexosImgs.map(f=>`<a href="${f.url}" target="_blank" title="${f.cliente?'Foto enviada pelo cliente':'Foto do técnico'}"><img src="${f.url}" class="tec-foto-thumb" loading="lazy"/></a>`).join('')}</div>`:'<div style="font-size:13px;color:#9CA3AF;margin:6px 0;">Nenhum anexo ainda.</div>'}
     <label class="tec-btn-foto">Anexar Foto <input type="file" accept="image/*" style="display:none;" onchange="tecAnexarFoto(this)"/></label>
   </div>`;
   const obsEscaped=(c.observacoes_internas||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -1386,7 +1398,7 @@ async function tecAbrirDetalhe(id){
       ${c.observacoes_cliente?`<div class="tec-det-row tec-det-row-full"><span class="tec-det-lbl">Observações do Cliente</span><span class="tec-det-val">${c.observacoes_cliente.replace(/\n/g,'<br>')}</span></div>`:''}
     </div>
     ${c._pecas.length?`<div class="tec-det-section"><div class="tec-det-lbl-standalone">Peças utilizadas</div><table class="ac-table" style="margin-top:6px;"><thead><tr><th>Código</th><th>Descrição</th><th>Qtd.</th></tr></thead><tbody>${c._pecas.map(p=>`<tr><td>${(p.pecas&&p.pecas.codigo)||'–'}</td><td>${(p.pecas&&p.pecas.descricao)||'–'}</td><td>${p.quantidade||0} ${(p.pecas&&p.pecas.unidade)||'un'}</td></tr>`).join('')}</tbody></table></div>`:''}
-    ${st==='em_atendimento'?fotosHtml:''}
+    ${fotosHtml}
     <div class="tec-fotos-section">
       <div class="tec-det-lbl-standalone" style="color:#92400E">⚠️ Observações Internas (uso interno)</div>
       <textarea id="tec-obs-interna-ta" class="ac-input" rows="3" style="margin-top:6px" placeholder="Anotações internas sobre este chamado — NÃO visível ao cliente...">${obsEscaped}</textarea>

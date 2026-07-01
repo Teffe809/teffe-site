@@ -8,6 +8,7 @@ window.acMostrarView = function(id){ cpNavegar(id); };
 
 var _cpBoletosData = [];
 var _cpBoletosList = [];
+var _cpHistoricoData = [];
 var _cpContratosComFechamento = new Set();
 
 // ── INICIALIZAÇÃO (chamado ao fim de carregarArea) ──
@@ -494,6 +495,8 @@ async function cpCarregarHistorico(){
     return;
   }
 
+  _cpHistoricoData = res.data;
+
   var statusLabels = {encerrado:'Encerrado', concluido:'Concluído', resolvido:'Resolvido'};
   var fmtDate = function(v){ return v ? new Date(v).toLocaleDateString('pt-BR') : '–'; };
 
@@ -501,7 +504,7 @@ async function cpCarregarHistorico(){
     '<table class="ac-table"><thead><tr>' +
     '<th>#</th><th>Descrição</th><th>Técnico</th><th>Status</th><th>Fechamento</th><th></th>' +
     '</tr></thead><tbody>' +
-    res.data.map(function(r){
+    res.data.map(function(r, idx){
       var desc = (r.descricao || r.titulo || '–').slice(0, 80);
       return '<tr>' +
         '<td><b>#' + (r.numero||r.id.slice(0,6)) + '</b></td>' +
@@ -509,14 +512,20 @@ async function cpCarregarHistorico(){
         '<td>' + (r.tecnico||'–') + '</td>' +
         '<td><span class="badge badge-' + r.status + '">' + (statusLabels[r.status]||r.status) + '</span></td>' +
         '<td>' + fmtDate(r.data_fechamento) + '</td>' +
-        '<td><button class="adm-btn adm-btn-sm" onclick="cpVerHistorico(' + JSON.stringify(JSON.stringify(r)) + ')">Ver</button></td>' +
+        '<td><button class="adm-btn adm-btn-sm" onclick="cpVerHistorico(' + idx + ')">Ver</button></td>' +
       '</tr>';
     }).join('') +
     '</tbody></table>';
 }
 
-function cpVerHistorico(jsonStr){
-  var c = typeof jsonStr === 'string' ? JSON.parse(jsonStr) : jsonStr;
+// Recebe o ÍNDICE (não o objeto inteiro) — passar o registro completo via
+// JSON.stringify dentro de um onclick="..." quebrava sempre que a descrição
+// tinha aspas: o JSON escapado (com \") colide com o delimitador do próprio
+// atributo HTML (aspas duplas) e trunca a chamada, fazendo o botão "Ver"
+// não fazer nada. Mesmo padrão seguro já usado em tecHistAbrirDetalhe(idx).
+function cpVerHistorico(idx){
+  var c = _cpHistoricoData[idx];
+  if(!c) return;
   _chamadosCache[c.id] = Object.assign({}, c, {_tipo:'assistencia'});
   abrirDetalhesChamado(c.id);
 }

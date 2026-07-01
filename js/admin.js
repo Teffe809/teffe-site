@@ -291,6 +291,8 @@ async function admAtribuirTecnico(clienteId){
 }
 
 // ── CHAMADOS ──
+var _admChamData=[]; // cache da última listagem carregada, pra abrir detalhe por id
+
 async function admCarregarChamados(){
   if(!_admTecs.length) await admCarregarTecnicos();
   const filtroStatus=document.getElementById('adm-filtro-status').value;
@@ -303,7 +305,8 @@ async function admCarregarChamados(){
   console.log('[admCarregarChamados] ok:', ok, '| status:', httpSt, '| rows:', data&&data.length);
   const el=document.getElementById('adm-lista-chamados');
   if(!ok||!data){el.innerHTML='<div class="ac-empty">Erro ao carregar chamados (HTTP '+httpSt+'). Verifique o console.</div>';return;}
-  if(!data.length){el.innerHTML='<div class="ac-empty">Nenhum chamado encontrado com os filtros selecionados.</div>';return;}
+  if(!data.length){_admChamData=[];el.innerHTML='<div class="ac-empty">Nenhum chamado encontrado com os filtros selecionados.</div>';return;}
+  _admChamData=data;
 
   // Carrega nomes de clientes em uma única query
   var clienteMap={};
@@ -325,7 +328,7 @@ async function admCarregarChamados(){
       const pecasBtn=ps==='solicitado'?`<button class="adm-btn adm-btn-sm" style="margin-top:4px;font-size:11px;" onclick="event.stopPropagation();admFaturarPecas('${r.id}')">Faturar</button>`:
         ps==='faturado'?`<button class="adm-btn adm-btn-sm" style="margin-top:4px;font-size:11px;" onclick="event.stopPropagation();admDespacharPecas('${r.id}')">Despachar</button>`:
         ps==='despachado'?`<button class="adm-btn adm-btn-sm" style="margin-top:4px;font-size:11px;" onclick="event.stopPropagation();admConfirmarEntregaPecas('${r.id}','${r.tecnico_id||''}','${r.numero||r.id.slice(0,6)}')">Confirmar Entrega</button>`:'';
-      return `<tr style="cursor:pointer;" onclick="admAbrirDetalhe(${JSON.stringify(JSON.stringify(r))})">
+      return `<tr style="cursor:pointer;" onclick="admAbrirDetalhe('${r.id}')">
         <td><b>#${r.numero||r.id.slice(0,6)}</b></td>
         <td>${cliNome}</td>
         <td class="adm-td-trunc" title="${(r.descricao||'').replace(/"/g,'&quot;')}">${r.descricao||r.titulo||'–'}</td>
@@ -384,8 +387,13 @@ async function admConfirmarEntregaPecas(id,tecnicoId,numChamado){
 }
 
 // ── MODAL DETALHE CHAMADO ──
-async function admAbrirDetalhe(jsonStr){
-  const c=typeof jsonStr==='string'?JSON.parse(jsonStr):jsonStr;
+// Recebe o ID (não o objeto inteiro) e busca no cache _admChamData — passar
+// o registro completo via JSON.stringify(JSON.stringify(...)) dentro de um
+// onclick="..." quebrava sempre que descricao/solicitante_nome tinha aspas
+// (o JSON escapado colide com o delimitador do próprio atributo HTML).
+async function admAbrirDetalhe(id){
+  const c=_admChamData.find(r=>r.id===id);
+  if(!c) return;
   const fmt=v=>v?new Date(v).toLocaleString('pt-BR'):'–';
   const fmtD=v=>v?new Date(v).toLocaleDateString('pt-BR'):'–';
   const statusLabels={aberto:'Aberto',andamento:'Em andamento',encerrado:'Encerrado',concluido:'Concluído',resolvido:'Resolvido'};
