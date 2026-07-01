@@ -118,7 +118,7 @@ async function cpCarregarBoletosResumo(){
   if(!_cid) return;
   var hoje = new Date(); hoje.setHours(0,0,0,0);
   var res = await sf('/rest/v1/boletos?cliente_id=eq.' + _cid + '&order=vencimento.asc&select=*');
-  _cpBoletosData = res.data || [];
+  _cpBoletosData = _arrOuVazio(res);
 
   var aVencer = _cpBoletosData.filter(function(b){
     return b.status !== 'pago' && new Date(b.vencimento) >= hoje;
@@ -271,7 +271,7 @@ async function cpVerExtratoFechamento(idx) {
 
   try {
     var er = await sf('/rest/v1/contrato_equipamentos?contrato_id=eq.' + b.contrato_id + '&select=equipamento_id');
-    var eqIds = (er.data || []).map(function(v){ return v.equipamento_id; }).filter(Boolean);
+    var eqIds = _arrOuVazio(er).map(function(v){ return v.equipamento_id; }).filter(Boolean);
     if (eqIds.length) {
       var eqRes = await sf('/rest/v1/equipamentos?id=in.(' + eqIds.join(',') + ')&select=id,marca,modelo,serial,codigo_teffe');
       equips = Array.isArray(eqRes.data) ? eqRes.data : [];

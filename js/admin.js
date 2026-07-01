@@ -311,7 +311,7 @@ async function admCarregarChamados(){
     var cliIds=[...new Set(data.map(r=>r.cliente_id).filter(Boolean))];
     if(cliIds.length){
       var cr=await admHttp('/rest/v1/clientes?id=in.('+cliIds.join(',')+')'+'&select=id,razao_social,fantasia,codigo');
-      (cr.data||[]).forEach(c=>{clienteMap[c.id]=c;});
+      _arrOuVazio(cr).forEach(c=>{clienteMap[c.id]=c;});
     }
   }catch(e){console.warn('[admCarregarChamados] erro ao carregar clientes:', e);}
 

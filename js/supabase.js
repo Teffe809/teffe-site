@@ -40,6 +40,14 @@ async function sf(path,opts){
   return {data:await r.json().catch(()=>null),ok:r.ok,status:r.status};
 }
 
+// Extrai o array de uma resposta de sf()/sfTec(); se a query falhar (coluna/
+// tabela inexistente, RLS etc.) o PostgREST devolve um objeto de erro (truthy)
+// em vez de array — "res.data || []" não protege contra isso, e um
+// .map()/.forEach()/.filter() nesse objeto quebra silenciosamente.
+function _arrOuVazio(res){
+  return (res && res.ok && Array.isArray(res.data)) ? res.data : [];
+}
+
 // ── LOGIN / LOGOUT ──
 async function fazerLogin(){
   const email=document.getElementById('login-email').value.trim();
@@ -230,11 +238,11 @@ async function carregarChamados(){
     // buscados à parte logo abaixo.
     sf('/rest/v1/solicitacoes_suprimento?cliente_id=eq.'+_cid+'&order=created_at.desc&select=*')
   ]);
-  const chamados=(rCh.data||[]).map(r=>({...r,_tipo:'assistencia'}));
+  const chamados=_arrOuVazio(rCh).map(r=>({...r,_tipo:'assistencia'}));
 
   // Agrupa as linhas de suprimento pelo mesmo "numero" — um pedido com vários
   // insumos vira várias linhas com o mesmo número (ver enviarSuprimento()).
-  const suprimentosRaw=rSp.data||[];
+  const suprimentosRaw=_arrOuVazio(rSp);
   const gruposMap=new Map();
   suprimentosRaw.forEach(r=>{
     const chave=r.numero!=null?('n'+r.numero):('r'+r.id);
@@ -245,9 +253,9 @@ async function carregarChamados(){
 
   const insumoIds=[...new Set(suprimentos.flatMap(s=>s._itens.map(it=>it.insumo_id)).filter(Boolean))];
   if(insumoIds.length){
-    const {data:insumosData}=await sf('/rest/v1/insumos?id=in.('+insumoIds.join(',')+')&select=id,nome,codigo');
+    const insumosRes=await sf('/rest/v1/insumos?id=in.('+insumoIds.join(',')+')&select=id,nome,codigo');
     const insumoMap={};
-    (insumosData||[]).forEach(i=>{insumoMap[i.id]=i;});
+    _arrOuVazio(insumosRes).forEach(i=>{insumoMap[i.id]=i;});
     suprimentos.forEach(s=>{ s._itens.forEach(it=>{ it._insumo=insumoMap[it.insumo_id]||null; }); });
   }
 
@@ -655,6 +663,7 @@ async function enviarAssistencia(){
   const tel=document.getElementById('at-tel').value.trim();
   const email=document.getElementById('at-email').value.trim();
   const desc=document.getElementById('at-desc').value.trim();
+  const obsCliente=document.getElementById('at-obs-cliente').value.trim();
   if(!nome){alert('Informe o nome do solicitante.');return;}
   if(!desc){alert('Descreva o defeito.');return;}
 
@@ -676,8 +685,10 @@ async function enviarAssistencia(){
     headers:{'Prefer':'return=minimal'},
     body:JSON.stringify({
       cliente_id:_cid,
+      equipamento_id:_atEquipId,
       titulo:'Assistência – '+desc.slice(0,60),
       descricao:desc,
+      observacoes_cliente:obsCliente||null,
       tipo_chamado:'assistencia',
       solicitante_nome:nome,
       solicitante_telefone:tel,
@@ -693,7 +704,7 @@ async function enviarAssistencia(){
     return;
   }
 
-  ['at-nome','at-tel','at-email','at-desc','at-serial'].forEach(id=>document.getElementById(id).value='');
+  ['at-nome','at-tel','at-email','at-desc','at-obs-cliente','at-serial'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('at-img').value='';
   document.getElementById('at-file-text').textContent='Clique para selecionar uma imagem';
   document.getElementById('at-equip-info').style.display='none';
@@ -1010,13 +1021,30 @@ async function _tecEnriquecerClientes(chamados){
   try{
     const ids=[...new Set(chamados.map(c=>c.cliente_id).filter(Boolean))];
     if(!ids.length) return;
-    const {data:clis}=await sfTec('/rest/v1/clientes?id=in.('+ids.join(',')+')'+'&select=id,razao_social,fantasia,cidade,codigo');
+    const {data:clis,ok}=await sfTec('/rest/v1/clientes?id=in.('+ids.join(',')+')'+'&select=id,razao_social,fantasia,cidade,endereco,numero,complemento,bairro,estado,cep,codigo');
+    if(!ok||!Array.isArray(clis)) return;
     const map={};
-    (clis||[]).forEach(cli=>{
-      map[cli.id]={empresa:cli.razao_social||cli.fantasia||null,nome:cli.razao_social||null,cidade:cli.cidade||null,codigo:cli.codigo||null};
+    clis.forEach(cli=>{
+      map[cli.id]={
+        empresa:cli.razao_social||cli.fantasia||null,nome:cli.razao_social||null,cidade:cli.cidade||null,codigo:cli.codigo||null,
+        endereco:cli.endereco||null,numero:cli.numero||null,complemento:cli.complemento||null,bairro:cli.bairro||null,estado:cli.estado||null,cep:cli.cep||null
+      };
     });
     chamados.forEach(c=>{c.clientes=map[c.cliente_id]||null;});
   }catch(e){console.warn('[_tecEnriquecerClientes]',e);}
+}
+
+// Monta o endereço completo do cliente numa única linha (usada nos modais de
+// detalhe do chamado, portal do técnico).
+function _tecEnderecoCompleto(cli){
+  if(!cli) return null;
+  const partes=[];
+  if(cli.endereco) partes.push(cli.endereco+(cli.numero?', '+cli.numero:''));
+  if(cli.complemento) partes.push(cli.complemento);
+  if(cli.bairro) partes.push(cli.bairro);
+  if(cli.cidade) partes.push(cli.cidade+(cli.estado?'/'+cli.estado:''));
+  if(cli.cep) partes.push('CEP '+cli.cep);
+  return partes.length?partes.join(' — '):null;
 }
 
 async function _tecEnriquecerEquipamentos(chamados){
@@ -1107,8 +1135,8 @@ async function tecHistBuscar(){
   _tecHistEquip=equips[0];
   // Busca cliente separado (sem JOIN para evitar erro PostgREST)
   if(_tecHistEquip.cliente_id){
-    const {data:cliD}=await sfTec('/rest/v1/clientes?id=eq.'+_tecHistEquip.cliente_id+'&select=razao_social,fantasia,cidade,codigo&limit=1');
-    _tecHistEquip._cliente=(cliD&&cliD[0])||null;
+    const {data:cliD,ok:cliOk}=await sfTec('/rest/v1/clientes?id=eq.'+_tecHistEquip.cliente_id+'&select=razao_social,fantasia,cidade,endereco,numero,complemento,bairro,estado,cep,codigo&limit=1');
+    _tecHistEquip._cliente=(cliOk&&cliD&&cliD[0])||null;
   }
   const cl=_tecHistEquip._cliente||{};
   const clienteNome=cl.razao_social||cl.fantasia||'–';
@@ -1121,6 +1149,7 @@ async function tecHistBuscar(){
       <div class="he-field"><b>Código Teffe</b>${_tecHistEquip.codigo_teffe||'–'}</div>
       <div class="he-field"><b>Cliente atual</b>${clienteNome}${cl.codigo?' ('+cl.codigo+')':''}</div>
       ${cl.cidade?`<div class="he-field"><b>Cidade</b>${cl.cidade}</div>`:''}
+      ${_tecEnderecoCompleto(cl)?`<div class="he-field"><b>Endereço</b>${_tecEnderecoCompleto(cl)}</div>`:''}
       ${_tecHistEquip.localizacao?`<div class="he-field"><b>Localização</b>${_tecHistEquip.localizacao}</div>`:''}
     </div>`;
   infoEl.style.display='block';
@@ -1215,6 +1244,9 @@ async function tecHistAbrirDetalhe(idx){
   const tipo=tipoMap[c.tipo_servico]||tipoMap[c.tipo_chamado]||c.tipo_servico||c.tipo_chamado||'–';
   const cliente=c.clientes?(c.clientes.empresa||c.clientes.nome||'–'):'–';
   const cidade=c.clientes?c.clientes.cidade||'–':'–';
+  const enderecoCompleto=_tecEnderecoCompleto(c.clientes);
+  const eq=_tecHistEquip; // todos os chamados desta lista são do mesmo equipamento pesquisado
+  const equipamentoInfo=eq?[eq.marca,eq.modelo].filter(Boolean).join(' '):null;
   const prioMap={baixa:'Baixa',normal:'Normal',alta:'Alta',urgente:'Urgente'};
   const fmtDt=s=>s?new Date(s).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}):'–';
   const {data:pRows}=await sfTec('/rest/v1/chamado_pecas?chamado_id=eq.'+c.id+'&select=*,pecas(codigo,descricao,unidade)');
@@ -1228,12 +1260,17 @@ async function tecHistAbrirDetalhe(idx){
       <div class="tec-det-row"><span class="tec-det-lbl">Tipo</span><span class="tec-det-val">${tipo}</span></div>
       <div class="tec-det-row"><span class="tec-det-lbl">Cliente</span><span class="tec-det-val">${cliente}</span></div>
       <div class="tec-det-row"><span class="tec-det-lbl">Cidade</span><span class="tec-det-val">${cidade}</span></div>
+      ${enderecoCompleto?`<div class="tec-det-row tec-det-row-full"><span class="tec-det-lbl">Endereço</span><span class="tec-det-val">${enderecoCompleto}</span></div>`:''}
+      ${equipamentoInfo?`<div class="tec-det-row"><span class="tec-det-lbl">Equipamento</span><span class="tec-det-val">${equipamentoInfo}</span></div>`:''}
+      ${eq&&eq.codigo_teffe?`<div class="tec-det-row"><span class="tec-det-lbl">Código Teffe</span><span class="tec-det-val">${eq.codigo_teffe}</span></div>`:''}
+      ${eq&&eq.serial?`<div class="tec-det-row"><span class="tec-det-lbl">Número de Série</span><span class="tec-det-val">${eq.serial}</span></div>`:''}
       ${c.tecnico?`<div class="tec-det-row"><span class="tec-det-lbl">Técnico</span><span class="tec-det-val">${c.tecnico}</span></div>`:''}
       ${c.prioridade?`<div class="tec-det-row"><span class="tec-det-lbl">Prioridade</span><span class="tec-det-val">${prioMap[c.prioridade]||c.prioridade}</span></div>`:''}
       ${c.solicitante_nome?`<div class="tec-det-row"><span class="tec-det-lbl">Solicitante</span><span class="tec-det-val">${c.solicitante_nome}</span></div>`:''}
       ${c.created_at?`<div class="tec-det-row"><span class="tec-det-lbl">Aberto em</span><span class="tec-det-val">${fmtDt(c.created_at)}</span></div>`:''}
       ${c.data_encerramento?`<div class="tec-det-row"><span class="tec-det-lbl">Encerrado em</span><span class="tec-det-val">${fmtDt(c.data_encerramento)}</span></div>`:''}
       ${c.descricao?`<div class="tec-det-row tec-det-row-full"><span class="tec-det-lbl">Descrição</span><span class="tec-det-val">${c.descricao.replace(/\n/g,'<br>')}</span></div>`:''}
+      ${c.observacoes_cliente?`<div class="tec-det-row tec-det-row-full"><span class="tec-det-lbl">Observações do Cliente</span><span class="tec-det-val">${c.observacoes_cliente.replace(/\n/g,'<br>')}</span></div>`:''}
       ${c.descricao_tecnico?`<div class="tec-det-row tec-det-row-full"><span class="tec-det-lbl">Defeito encontrado</span><span class="tec-det-val">${c.descricao_tecnico.replace(/\n/g,'<br>')}</span></div>`:''}
       ${c.resolucao?`<div class="tec-det-row tec-det-row-full"><span class="tec-det-lbl">Solução aplicada</span><span class="tec-det-val">${c.resolucao.replace(/\n/g,'<br>')}</span></div>`:''}
     </div>
@@ -1312,6 +1349,9 @@ async function tecAbrirDetalhe(id){
   const tipo=tipoMap[c.tipo_servico]||tipoMap[c.tipo_chamado]||c.tipo_servico||c.tipo_chamado||'–';
   const cliente=c.clientes?(c.clientes.empresa||c.clientes.nome||'–'):'–';
   const cidade=c.clientes?c.clientes.cidade||'–':'–';
+  const enderecoCompleto=_tecEnderecoCompleto(c.clientes);
+  const eq=c.equipamento||null;
+  const equipamentoInfo=eq?[eq.marca,eq.modelo].filter(Boolean).join(' '):null;
   const sla=tecFormatarSLA(c);
   const prioMap={baixa:'Baixa',normal:'Normal',alta:'Alta',urgente:'Urgente'};
   const [{data:fotos},{data:pRows}]=await Promise.all([
@@ -1335,10 +1375,15 @@ async function tecAbrirDetalhe(id){
       <div class="tec-det-row"><span class="tec-det-lbl">Tipo</span><span class="tec-det-val">${tipo}</span></div>
       <div class="tec-det-row"><span class="tec-det-lbl">Cliente</span><span class="tec-det-val">${cliente}</span></div>
       <div class="tec-det-row"><span class="tec-det-lbl">Cidade</span><span class="tec-det-val">${cidade}</span></div>
+      ${enderecoCompleto?`<div class="tec-det-row tec-det-row-full"><span class="tec-det-lbl">Endereço</span><span class="tec-det-val">${enderecoCompleto}</span></div>`:''}
+      ${equipamentoInfo?`<div class="tec-det-row"><span class="tec-det-lbl">Equipamento</span><span class="tec-det-val">${equipamentoInfo}</span></div>`:''}
+      ${eq&&eq.codigo_teffe?`<div class="tec-det-row"><span class="tec-det-lbl">Código Teffe</span><span class="tec-det-val">${eq.codigo_teffe}</span></div>`:''}
+      ${eq&&eq.serial?`<div class="tec-det-row"><span class="tec-det-lbl">Número de Série</span><span class="tec-det-val">${eq.serial}</span></div>`:''}
       ${c.solicitante_nome?`<div class="tec-det-row"><span class="tec-det-lbl">Solicitante</span><span class="tec-det-val">${c.solicitante_nome}</span></div>`:''}
       ${c.solicitante_telefone?`<div class="tec-det-row"><span class="tec-det-lbl">Telefone</span><span class="tec-det-val">${c.solicitante_telefone}</span></div>`:''}
       ${c.prioridade?`<div class="tec-det-row"><span class="tec-det-lbl">Prioridade</span><span class="tec-det-val">${prioMap[c.prioridade]||c.prioridade}</span></div>`:''}
       ${c.descricao?`<div class="tec-det-row tec-det-row-full"><span class="tec-det-lbl">Descrição</span><span class="tec-det-val">${c.descricao.replace(/\n/g,'<br>')}</span></div>`:''}
+      ${c.observacoes_cliente?`<div class="tec-det-row tec-det-row-full"><span class="tec-det-lbl">Observações do Cliente</span><span class="tec-det-val">${c.observacoes_cliente.replace(/\n/g,'<br>')}</span></div>`:''}
     </div>
     ${c._pecas.length?`<div class="tec-det-section"><div class="tec-det-lbl-standalone">Peças utilizadas</div><table class="ac-table" style="margin-top:6px;"><thead><tr><th>Código</th><th>Descrição</th><th>Qtd.</th></tr></thead><tbody>${c._pecas.map(p=>`<tr><td>${(p.pecas&&p.pecas.codigo)||'–'}</td><td>${(p.pecas&&p.pecas.descricao)||'–'}</td><td>${p.quantidade||0} ${(p.pecas&&p.pecas.unidade)||'un'}</td></tr>`).join('')}</tbody></table></div>`:''}
     ${st==='em_atendimento'?fotosHtml:''}
