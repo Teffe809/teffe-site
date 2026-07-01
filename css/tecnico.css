@@ -138,6 +138,12 @@
 .tec-peca-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
 .tec-peca-row .ac-input{margin:0;}
 
+/* ── LISTA DE PEÇAS DISPONÍVEIS (modal solicitar peças) ── */
+.tec-peca-disponivel-wrap{max-height:160px;overflow-y:auto;border:1.5px solid #EEF1F7;border-radius:10px;padding:6px 10px;margin-bottom:14px;}
+.tec-peca-check{display:flex;align-items:center;gap:8px;padding:6px 2px;font-size:13px;color:#374151;border-bottom:1px solid #F3F4F6;cursor:pointer;}
+.tec-peca-check:last-child{border-bottom:none;}
+.tec-peca-check input{width:16px;height:16px;flex-shrink:0;cursor:pointer;}
+
 /* ── BOTÃO AZUL ── */
 .tec-btn-azul{background:#1A3F80;color:#fff;display:flex;align-items:center;gap:6px;white-space:nowrap;}
 .tec-btn-azul:hover{opacity:.85;}

@@ -495,7 +495,7 @@ async function buscarEquipAC(prefix){
     return;
   }
   if(prefix==='at') _atEquipId=eq.id;
-  else{_spEquipId=eq.id;_spTipoImpressao=eq.tipo_impressao||'monocromatico';carregarInsumos(eq.id);spAtualizarContadores();}
+  else{_spEquipId=eq.id;_spTipoImpressao=eq.tipo_impressao||'monocromatico';carregarInsumos(eq.modelo);spAtualizarContadores();}
   infoEl.style.display='block';
   infoEl.className='ac-equip-info ac-equip-found';
   infoEl.innerHTML=`<div class="ac-equip-found-grid">
@@ -511,22 +511,24 @@ function spAtualizarContadores(){
   if(colorEl) colorEl.style.display=_spTipoImpressao==='colorido'?'block':'none';
 }
 
-// ── CARREGAR INSUMOS VINCULADOS AO EQUIPAMENTO ──
-async function carregarInsumos(equipamentoId){
+// ── CARREGAR INSUMOS VINCULADOS AO MODELO DO EQUIPAMENTO ──
+// Vínculo é por MODELO (texto), não por equipamento_id individual, para que
+// uma única associação cubra todas as unidades do mesmo modelo.
+async function carregarInsumos(modelo){
   const sel=document.getElementById('sp-insumo');
   sel.innerHTML='<option value="">Carregando...</option>';
-  if(!equipamentoId){sel.innerHTML='<option value="">Selecione o equipamento primeiro</option>';return;}
+  if(!modelo){sel.innerHTML='<option value="">Selecione o equipamento primeiro</option>';return;}
 
-  const {data:links}=await sf('/rest/v1/equipamento_insumos?equipamento_id=eq.'+equipamentoId+'&select=id,insumo_id,cor');
+  const {data:links}=await sf('/rest/v1/equipamento_insumos?modelo=eq.'+encodeURIComponent(modelo)+'&select=id,insumo_id,cor');
   if(!links||!links.length){
-    sel.innerHTML='<option value="">Nenhum insumo cadastrado para este equipamento</option>';
+    sel.innerHTML='<option value="">Nenhum insumo cadastrado para este modelo — contate o suporte</option>';
     return;
   }
 
   const insumoIds=links.map(l=>l.insumo_id).filter(Boolean);
   const {data:insumos}=await sf('/rest/v1/insumos?id=in.('+insumoIds.join(',')+')'+'&select=id,nome,codigo,tipo');
   if(!insumos||!insumos.length){
-    sel.innerHTML='<option value="">Nenhum insumo encontrado</option>';
+    sel.innerHTML='<option value="">Nenhum insumo cadastrado para este modelo — contate o suporte</option>';
     return;
   }
 
@@ -791,7 +793,7 @@ function equipAcSelecionar(p,eq){
   const arrow=document.getElementById(p+'-ac-arrow');
   if(arrow) arrow.className='ti ti-chevron-down';
   if(p==='at') _atEquipId=eq.id;
-  else{_spEquipId=eq.id;_spTipoImpressao=eq.tipo_impressao||'monocromatico';carregarInsumos(eq.id);spAtualizarContadores();}
+  else{_spEquipId=eq.id;_spTipoImpressao=eq.tipo_impressao||'monocromatico';carregarInsumos(eq.modelo);spAtualizarContadores();}
   const infoEl=document.getElementById(p+'-equip-info');
   if(infoEl){
     infoEl.style.display='block';
@@ -1388,8 +1390,61 @@ function tecAbrirPecaModal(){
   document.getElementById('tec-peca-desc').value='';
   document.getElementById('tec-peca-erro').style.display='none';
   document.getElementById('tec-peca-modal').classList.add('open');
+  tecCarregarPecasDisponiveis();
 }
 function tecFecharPecaModal(){document.getElementById('tec-peca-modal').classList.remove('open');}
+
+// Lista as peças cadastradas (equipamento_pecas) para o modelo do equipamento
+// do chamado atual — o técnico nunca vê insumos aqui, só peças.
+async function tecCarregarPecasDisponiveis(){
+  const wrap=document.getElementById('tec-peca-lista-disponivel');
+  if(!wrap) return;
+  wrap.innerHTML='<div class="tec-loading">Carregando peças...</div>';
+  const c=_tecChamadoAtual;
+  if(!c){wrap.innerHTML='<div class="tec-empty">Chamado não encontrado.</div>';return;}
+
+  let modelo=c.equipamento?c.equipamento.modelo:null;
+  if(!modelo&&c.equipamento_id){
+    const {data}=await sfTec('/rest/v1/equipamentos?id=eq.'+c.equipamento_id+'&select=modelo&limit=1');
+    modelo=data&&data[0]?data[0].modelo:null;
+  }
+  if(!modelo){wrap.innerHTML='<div class="tec-empty">Chamado sem equipamento/modelo vinculado.</div>';return;}
+
+  const {data:links}=await sfTec('/rest/v1/equipamento_pecas?modelo=eq.'+encodeURIComponent(modelo)+'&select=peca_id');
+  if(!links||!links.length){
+    wrap.innerHTML='<div class="tec-empty">Nenhuma peça cadastrada para este modelo — contate o suporte</div>';
+    return;
+  }
+
+  const pecaIds=[...new Set(links.map(l=>l.peca_id).filter(Boolean))];
+  const {data:pecas}=await sfTec('/rest/v1/pecas?id=in.('+pecaIds.join(',')+')&select=id,codigo,descricao&order=descricao.asc');
+  if(!pecas||!pecas.length){
+    wrap.innerHTML='<div class="tec-empty">Nenhuma peça cadastrada para este modelo — contate o suporte</div>';
+    return;
+  }
+
+  wrap.innerHTML=pecas.map(p=>{
+    const label=(p.codigo?'['+p.codigo+'] ':'')+p.descricao;
+    const labelAttr=label.replace(/"/g,'&quot;');
+    return `<label class="tec-peca-check"><input type="checkbox" data-label="${labelAttr}" onchange="tecTogglePecaDisponivel(this)"/> ${label}</label>`;
+  }).join('');
+}
+
+// Ao marcar/desmarcar uma peça da lista, adiciona/remove a linha correspondente
+// no textarea de descrição (mantém o fluxo de gravação em pecas_solicitadas).
+function tecTogglePecaDisponivel(checkbox){
+  const ta=document.getElementById('tec-peca-desc');
+  if(!ta) return;
+  const label=checkbox.getAttribute('data-label');
+  const linhas=ta.value.split('\n').filter(l=>l.trim()!=='');
+  if(checkbox.checked){
+    if(linhas.indexOf(label)===-1) linhas.push(label);
+  }else{
+    const idx=linhas.indexOf(label);
+    if(idx!==-1) linhas.splice(idx,1);
+  }
+  ta.value=linhas.join('\n');
+}
 
 async function tecConfirmarPeca(){
   const c=_tecChamadoAtual;if(!c) return;
