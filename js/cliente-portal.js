@@ -88,6 +88,7 @@ function cpNavegar(id){
   if(id === 'financeiro') cpCarregarFinanceiro();
   else if(id === 'contratos') cpCarregarContratosView();
   else if(id === 'historico') cpCarregarHistorico();
+  else if(id === 'suprim' && typeof spRenderItens === 'function'){ _spItens = []; spRenderItens(); }
 }
 
 function cpSetNavAtivo(id){

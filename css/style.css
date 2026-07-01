@@ -872,6 +872,17 @@ body:has(.orca-bg.open),body:has(.modal-bg.open){overflow:hidden;}
 /* Submit */
 .ac-submit-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:10px 20px;background:#1A3F80;color:#fff;border:none;border-radius:9px;font-family:'Syne',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;margin-top:8px;}
 .ac-submit-btn:hover{background:#2563C4;transform:translateY(-1px);box-shadow:0 6px 18px rgba(26,63,128,.2);}
+.ac-submit-btn:disabled{background:#CBD5E1;cursor:not-allowed;transform:none;box-shadow:none;}
+
+/* Carrinho de itens — solicitação de suprimento com múltiplos insumos */
+.ac-add-item-btn{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:9px 16px;background:#EBF4FF;color:#1A3F80;border:1.5px solid #BFDBFE;border-radius:9px;font-family:'Syne',sans-serif;font-size:13.5px;font-weight:600;cursor:pointer;transition:all .2s;margin-bottom:18px;}
+.ac-add-item-btn:hover{background:#DBEAFE;}
+.sp-itens-wrap{margin-bottom:18px;}
+.sp-itens-lista{list-style:none;margin:8px 0 0;padding:0;border:1.5px solid #EEF1F7;border-radius:10px;overflow:hidden;}
+.sp-item-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px;font-size:13.5px;color:#374151;border-bottom:1px solid #F3F4F6;}
+.sp-item-row:last-child{border-bottom:none;}
+.sp-item-remove{background:#FEE2E2;color:#DC2626;border:none;border-radius:6px;width:24px;height:24px;flex-shrink:0;cursor:pointer;font-weight:700;font-size:13px;line-height:1;}
+.sp-item-remove:hover{background:#FECACA;}
 
 /* Modal sucesso */
 .ac-modal-bg{display:none;position:fixed;inset:0;z-index:6000;background:rgba(14,34,72,.88);backdrop-filter:blur(6px);align-items:center;justify-content:center;}

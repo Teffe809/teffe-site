@@ -2167,10 +2167,16 @@
 
           <div class="ac-form-2col">
             <div class="ac-fg">
-              <label class="ac-label">Insumo *</label>
+              <label class="ac-label">Insumo</label>
               <select id="sp-insumo" class="ac-input"><option value="">Busque o equipamento primeiro</option></select>
             </div>
-            <div class="ac-fg"><label class="ac-label">Quantidade *</label><input type="number" id="sp-qtd" class="ac-input" min="1" value="1"/></div>
+            <div class="ac-fg"><label class="ac-label">Quantidade</label><input type="number" id="sp-qtd" class="ac-input" min="1" value="1"/></div>
+          </div>
+          <button type="button" class="ac-add-item-btn" onclick="spAdicionarItem()"><i class="ti ti-plus"></i> Adicionar à lista</button>
+
+          <div id="sp-itens-wrap" class="sp-itens-wrap" style="display:none;">
+            <label class="ac-label">Itens do pedido</label>
+            <ul id="sp-itens-lista" class="sp-itens-lista"></ul>
           </div>
 
           <div class="ac-fg">
@@ -2183,7 +2189,7 @@
             <input type="text" inputmode="numeric" id="sp-contador-color" class="ac-input" placeholder="Leitura do contador colorido"/>
           </div>
 
-          <button class="ac-submit-btn" onclick="enviarSuprimento()"><i class="ti ti-send"></i> Abrir Chamado</button>
+          <button class="ac-submit-btn" id="sp-btn-enviar" onclick="enviarSuprimento()" disabled><i class="ti ti-send"></i> Enviar Solicitação</button>
         </div>
       </div>
 

@@ -6,6 +6,7 @@ function capitalizarNome(nome) {
 }
 
 let _tok=null,_uid=null,_cid=null,_email=null,_atEquipId=null,_spEquipId=null,_spUltimoContador=null,_spTipoImpressao='monocromatico',_chamadosCache={};
+let _spItens=[]; // carrinho da solicitação de suprimento: [{insumo_id, label, quantidade}]
 let _equipsAC=[];
 let _tecHistData=[],_tecHistPage=0,_tecHistEquip=null;
 const TEC_HIST_PG=10;
@@ -224,10 +225,32 @@ async function carregarChamados(){
   }
   const [rCh,rSp]=await Promise.all([
     sf('/rest/v1/chamados?cliente_id=eq.'+_cid+'&order=created_at.desc&select=*'),
-    sf('/rest/v1/solicitacoes_suprimento?cliente_id=eq.'+_cid+'&order=created_at.desc&select=*,insumos(codigo_insumo,descricao)')
+    // Sem embed de insumos aqui: não existe FK entre solicitacoes_suprimento e
+    // insumos no schema (PostgREST não consegue montar o join) — os nomes são
+    // buscados à parte logo abaixo.
+    sf('/rest/v1/solicitacoes_suprimento?cliente_id=eq.'+_cid+'&order=created_at.desc&select=*')
   ]);
   const chamados=(rCh.data||[]).map(r=>({...r,_tipo:'assistencia'}));
-  const suprimentos=(rSp.data||[]).map(r=>({...r,titulo:'Suprimento #'+r.numero,_tipo:'suprimento'}));
+
+  // Agrupa as linhas de suprimento pelo mesmo "numero" — um pedido com vários
+  // insumos vira várias linhas com o mesmo número (ver enviarSuprimento()).
+  const suprimentosRaw=rSp.data||[];
+  const gruposMap=new Map();
+  suprimentosRaw.forEach(r=>{
+    const chave=r.numero!=null?('n'+r.numero):('r'+r.id);
+    if(!gruposMap.has(chave)) gruposMap.set(chave,{...r,_tipo:'suprimento',id:'sup-'+chave,_itens:[]});
+    gruposMap.get(chave)._itens.push({insumo_id:r.insumo_id,quantidade:r.quantidade});
+  });
+  const suprimentos=Array.from(gruposMap.values());
+
+  const insumoIds=[...new Set(suprimentos.flatMap(s=>s._itens.map(it=>it.insumo_id)).filter(Boolean))];
+  if(insumoIds.length){
+    const {data:insumosData}=await sf('/rest/v1/insumos?id=in.('+insumoIds.join(',')+')&select=id,nome,codigo');
+    const insumoMap={};
+    (insumosData||[]).forEach(i=>{insumoMap[i.id]=i;});
+    suprimentos.forEach(s=>{ s._itens.forEach(it=>{ it._insumo=insumoMap[it.insumo_id]||null; }); });
+  }
+
   const todos=[...chamados,...suprimentos].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
   _chamadosCache={};
   todos.forEach(r=>{_chamadosCache[r.id]=r;});
@@ -235,13 +258,18 @@ async function carregarChamados(){
   document.getElementById('n-encerrado').textContent=todos.filter(r=>r.status==='encerrado').length;
   if(!todos.length){el.innerHTML='<div class="ac-empty">Nenhum chamado ainda.</div>';return;}
   el.innerHTML='<table class="ac-table"><thead><tr><th>#</th><th>Tipo</th><th>Descrição</th><th>Status</th><th>Data</th></tr></thead><tbody>'+
-    todos.map(r=>`<tr class="ac-row-click" onclick="abrirDetalhesChamado('${r.id}')">
+    todos.map(r=>{
+      const descricaoCol=r._tipo==='suprimento'
+        ?('Solicitação de Suprimentos'+(r._itens.length>1?' — '+r._itens.length+' itens':''))
+        :(r.descricao||r.titulo||'–');
+      return `<tr class="ac-row-click" onclick="abrirDetalhesChamado('${r.id}')">
       <td><b>#${r.numero||r.id.slice(0,6)}</b></td>
       <td><span class="badge ${r._tipo==='suprimento'?'badge-suprim':'badge-assist'}">${r._tipo==='suprimento'?'Suprimentos':'Assistência'}</span></td>
-      <td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r._tipo==='suprimento'?'Solicitação de Suprimentos':(r.descricao||r.titulo||'–')}</td>
+      <td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${descricaoCol}</td>
       <td><span class="badge badge-${r.status}">${r.status}</span></td>
       <td>${new Date(r.created_at).toLocaleDateString('pt-BR')}</td>
-    </tr>`).join('')+
+    </tr>`;
+    }).join('')+
     '</tbody></table>';
 }
 
@@ -257,9 +285,19 @@ async function abrirDetalhesChamado(id){
   const data=new Date(c.created_at).toLocaleString('pt-BR');
   const encerrado=['encerrado','concluido','resolvido'].includes(c.status);
   const fmtD=v=>v?new Date(v).toLocaleDateString('pt-BR'):'';
-  const insumoNome=c.insumos
-    ?(c.insumos.codigo_insumo?'['+c.insumos.codigo_insumo+'] '+c.insumos.descricao:c.insumos.descricao)
-    :'–';
+
+  // Itens da solicitação de suprimento (pode ser mais de um insumo por pedido)
+  const itensSuprimentoHtml=(!isAssistencia&&c._itens&&c._itens.length)?`
+    <div class="ac-det-item ac-det-full">
+      <span class="ac-det-lbl">Itens Solicitados</span>
+      <table class="ac-table" style="margin-top:6px;">
+        <thead><tr><th>Insumo</th><th>Qtd.</th></tr></thead>
+        <tbody>${c._itens.map(it=>{
+          const nome=it._insumo?(it._insumo.codigo?'['+it._insumo.codigo+'] '+it._insumo.nome:it._insumo.nome):'–';
+          return `<tr><td>${nome}</td><td>${it.quantidade}</td></tr>`;
+        }).join('')}</tbody>
+      </table>
+    </div>`:'';
 
   // Peças utilizadas (apenas assistência técnica)
   c._pecas=[];
@@ -294,11 +332,9 @@ async function abrirDetalhesChamado(id){
       ${c.solicitante_email?`<div class="ac-det-item"><span class="ac-det-lbl">E-mail</span><span class="ac-det-val">${c.solicitante_email}</span></div>`:''}
       ${isAssistencia&&c.prioridade?`<div class="ac-det-item"><span class="ac-det-lbl">Prioridade</span><span class="ac-det-val">${prioLabels[c.prioridade]||c.prioridade}</span></div>`:''}
       ${isAssistencia&&c.tecnico?`<div class="ac-det-item"><span class="ac-det-lbl">Técnico</span><span class="ac-det-val">${c.tecnico}</span></div>`:''}
-      ${!isAssistencia&&c.insumos?`<div class="ac-det-item ac-det-full"><span class="ac-det-lbl">Insumo Solicitado</span><span class="ac-det-val">${insumoNome}</span></div>`:''}
-      ${!isAssistencia&&c.quantidade!=null?`<div class="ac-det-item"><span class="ac-det-lbl">Quantidade</span><span class="ac-det-val">${c.quantidade}</span></div>`:''}
-      ${!isAssistencia&&c.contador_pb!=null?`<div class="ac-det-item"><span class="ac-det-lbl">Contador PB</span><span class="ac-det-val">${c.contador_pb}</span></div>`:''}
-      ${!isAssistencia&&c.contador_color!=null?`<div class="ac-det-item"><span class="ac-det-lbl">Contador Colorido</span><span class="ac-det-val">${c.contador_color}</span></div>`:''}
-      ${!isAssistencia&&c.contador_pb==null&&c.contador_atual!=null?`<div class="ac-det-item"><span class="ac-det-lbl">Contador (Páginas)</span><span class="ac-det-val">${c.contador_atual}</span></div>`:''}
+      ${itensSuprimentoHtml}
+      ${!isAssistencia&&c.contador_atual!=null?`<div class="ac-det-item"><span class="ac-det-lbl">Contador PB</span><span class="ac-det-val">${c.contador_atual}</span></div>`:''}
+      ${!isAssistencia&&c.contador_color_atual!=null?`<div class="ac-det-item"><span class="ac-det-lbl">Contador Colorido</span><span class="ac-det-val">${c.contador_color_atual}</span></div>`:''}
       ${isAssistencia&&(c.descricao||c.titulo)?`<div class="ac-det-item ac-det-full"><span class="ac-det-lbl">Descrição</span><span class="ac-det-val">${(c.descricao||c.titulo).replace(/\n/g,'<br>')}</span></div>`:''}
       ${isAssistencia&&encerrado&&c.resolucao?`<div class="ac-det-item ac-det-full ac-det-resolucao"><span class="ac-det-lbl">Resolução do Técnico</span><span class="ac-det-val">${c.resolucao.replace(/\n/g,'<br>')}</span></div>`:''}
       ${pecasModalHtml}
@@ -321,9 +357,6 @@ function imprimirOS(c){
   const tipoLabel=isAssistencia?'Assistência Técnica':'Suprimentos';
   const encerrado=['encerrado','concluido','resolvido'].includes(c.status);
   const num=c.numero||c.id.slice(0,6);
-  const insumoNome=c.insumos
-    ?(c.insumos.codigo_insumo?'['+c.insumos.codigo_insumo+'] '+c.insumos.descricao:c.insumos.descricao)
-    :'–';
 
   const rows=[
     ['Número',`#${num}`],
@@ -335,11 +368,8 @@ function imprimirOS(c){
     c.solicitante_email&&['E-mail do Solicitante',c.solicitante_email],
     isAssistencia&&c.prioridade&&['Prioridade',prioLabels[c.prioridade]||c.prioridade],
     isAssistencia&&c.tecnico&&['Técnico Responsável',c.tecnico],
-    !isAssistencia&&(c.insumos||c.insumo_id)&&['Insumo Solicitado',insumoNome],
-    !isAssistencia&&c.quantidade!=null&&['Quantidade Solicitada',String(c.quantidade)],
-    !isAssistencia&&c.contador_pb!=null&&['Contador PB',String(c.contador_pb)],
-    !isAssistencia&&c.contador_color!=null&&['Contador Colorido',String(c.contador_color)],
-    !isAssistencia&&c.contador_pb==null&&c.contador_atual!=null&&['Contador (Páginas)',String(c.contador_atual)],
+    !isAssistencia&&c.contador_atual!=null&&['Contador PB',String(c.contador_atual)],
+    !isAssistencia&&c.contador_color_atual!=null&&['Contador Colorido',String(c.contador_color_atual)],
     c.data_fechamento&&['Data de Fechamento',fmtD(c.data_fechamento)],
   ].filter(Boolean);
 
@@ -407,6 +437,16 @@ ${isAssistencia&&c._pecas&&c._pecas.length?`<div class="os-section">
   <table class="os-table os-table-pecas">
     <thead><tr><th style="width:120px">Código</th><th>Descrição</th><th style="width:70px;text-align:center">Qtd.</th></tr></thead>
     <tbody>${c._pecas.map(p=>`<tr><td>${(p.pecas&&p.pecas.codigo)||'–'}</td><td>${(p.pecas&&p.pecas.descricao)||'–'}</td><td style="text-align:center">${p.quantidade||0} ${(p.pecas&&p.pecas.unidade)||'un'}</td></tr>`).join('')}</tbody>
+  </table>
+</div>`:''}
+${!isAssistencia&&c._itens&&c._itens.length?`<div class="os-section">
+  <div class="os-section-title">Itens Solicitados</div>
+  <table class="os-table os-table-pecas">
+    <thead><tr><th>Insumo</th><th style="width:70px;text-align:center">Qtd.</th></tr></thead>
+    <tbody>${c._itens.map(it=>{
+      const nome=it._insumo?(it._insumo.codigo?'['+it._insumo.codigo+'] '+it._insumo.nome:it._insumo.nome):'–';
+      return `<tr><td>${nome}</td><td style="text-align:center">${it.quantidade}</td></tr>`;
+    }).join('')}</tbody>
   </table>
 </div>`:''}
 ${isAssistencia?`<div class="os-section">
@@ -491,11 +531,11 @@ async function buscarEquipAC(prefix){
     infoEl.className='ac-equip-info ac-equip-not-found';
     infoEl.innerHTML='<i class="ti ti-alert-circle"></i> Equipamento não encontrado no contrato. Verifique o serial ou código Teffe.';
     if(prefix==='at') _atEquipId=null;
-    else{_spEquipId=null;document.getElementById('sp-insumo').innerHTML='<option value="">Equipamento não encontrado</option>';}
+    else{_spEquipId=null;document.getElementById('sp-insumo').innerHTML='<option value="">Equipamento não encontrado</option>';_spItens=[];spRenderItens();}
     return;
   }
   if(prefix==='at') _atEquipId=eq.id;
-  else{_spEquipId=eq.id;_spTipoImpressao=eq.tipo_impressao||'monocromatico';carregarInsumos(eq.modelo);spAtualizarContadores();}
+  else{_spEquipId=eq.id;_spTipoImpressao=eq.tipo_impressao||'monocromatico';carregarInsumos(eq.modelo);spAtualizarContadores();_spItens=[];spRenderItens();}
   infoEl.style.display='block';
   infoEl.className='ac-equip-info ac-equip-found';
   infoEl.innerHTML=`<div class="ac-equip-found-grid">
@@ -543,6 +583,50 @@ async function carregarInsumos(modelo){
     }).join('');
 }
 
+// ── CARRINHO DE ITENS DA SOLICITAÇÃO DE SUPRIMENTO ──
+// Suporta pedir vários insumos (ex.: toner black+magenta+cyan+yellow) numa
+// única solicitação. Cada item vira uma linha em solicitacoes_suprimento,
+// todas com o mesmo "numero" — ver enviarSuprimento().
+function spAdicionarItem(){
+  const selEl=document.getElementById('sp-insumo');
+  const insumoId=selEl.value;
+  const qtd=parseInt(document.getElementById('sp-qtd').value);
+  if(!insumoId){alert('Selecione o insumo.');return;}
+  if(!qtd||qtd<1){alert('Informe a quantidade.');return;}
+
+  const opt=selEl.options[selEl.selectedIndex];
+  const label=opt?opt.textContent:insumoId;
+
+  const existente=_spItens.find(it=>it.insumo_id===insumoId);
+  if(existente) existente.quantidade+=qtd;
+  else _spItens.push({insumo_id:insumoId,label:label,quantidade:qtd});
+
+  document.getElementById('sp-qtd').value='1';
+  spRenderItens();
+}
+
+function spRemoverItem(insumoId){
+  _spItens=_spItens.filter(it=>it.insumo_id!==insumoId);
+  spRenderItens();
+}
+
+function spRenderItens(){
+  const wrap=document.getElementById('sp-itens-wrap');
+  const lista=document.getElementById('sp-itens-lista');
+  const btnEnviar=document.getElementById('sp-btn-enviar');
+  if(!_spItens.length){
+    wrap.style.display='none';
+    lista.innerHTML='';
+    if(btnEnviar) btnEnviar.disabled=true;
+    return;
+  }
+  wrap.style.display='block';
+  if(btnEnviar) btnEnviar.disabled=false;
+  lista.innerHTML=_spItens.map(it=>
+    `<li class="sp-item-row"><span>${it.label} — Qtd: ${it.quantidade}</span><button type="button" class="sp-item-remove" onclick="spRemoverItem('${it.insumo_id}')">✕</button></li>`
+  ).join('');
+}
+
 // ── VALIDAR CONTADOR ──
 async function validarContador(){
   if(!_spEquipId) return;
@@ -550,8 +634,8 @@ async function validarContador(){
   const erroEl=document.getElementById('sp-contador-erro');
   const inputEl=document.getElementById('sp-contador-pb');
   if(isNaN(val)){erroEl.style.display='none';inputEl.style.borderColor='';return;}
-  const {data}=await sf('/rest/v1/solicitacoes_suprimento?equipamento_id=eq.'+_spEquipId+'&order=created_at.desc&limit=1&select=contador_pb,contador_atual');
-  const ultimo=data&&data[0]?(data[0].contador_pb!=null?data[0].contador_pb:data[0].contador_atual):null;
+  const {data}=await sf('/rest/v1/solicitacoes_suprimento?equipamento_id=eq.'+_spEquipId+'&order=created_at.desc&limit=1&select=contador_atual');
+  const ultimo=data&&data[0]?data[0].contador_atual:null;
   _spUltimoContador=ultimo;
   if(ultimo!==null&&val<ultimo){
     erroEl.style.display='block';
@@ -623,16 +707,13 @@ async function enviarAssistencia(){
 async function enviarSuprimento(){
   if(!_cid){alert('Sessão inválida.');return;}
   if(!_spEquipId){alert('Busque e selecione um equipamento antes de abrir o chamado.');return;}
+  if(!_spItens.length){alert('Adicione ao menos um insumo à lista.');return;}
   const nome=document.getElementById('sp-nome').value.trim();
   const tel=document.getElementById('sp-tel').value.trim();
   const email=document.getElementById('sp-email').value.trim();
-  const insumoId=document.getElementById('sp-insumo').value;
-  const qtd=parseInt(document.getElementById('sp-qtd').value);
   const contadorPb=parseInt(document.getElementById('sp-contador-pb').value);
   const contadorColor=_spTipoImpressao==='colorido'?parseInt(document.getElementById('sp-contador-color').value):null;
   if(!nome){alert('Informe o nome do solicitante.');return;}
-  if(!insumoId){alert('Selecione o insumo.');return;}
-  if(!qtd||qtd<1){alert('Informe a quantidade.');return;}
   if(isNaN(contadorPb)){alert('Informe o contador PB.');return;}
   if(_spTipoImpressao==='colorido'&&(contadorColor==null||isNaN(contadorColor))){alert('Informe o contador Colorido.');return;}
   if(_spUltimoContador!==null&&contadorPb<_spUltimoContador){
@@ -640,28 +721,47 @@ async function enviarSuprimento(){
     return;
   }
 
-  const payload={
+  const btn=document.getElementById('sp-btn-enviar');
+  if(btn){btn.disabled=true;btn.textContent='Enviando...';}
+
+  const base={
     cliente_id:_cid,
     equipamento_id:_spEquipId,
-    insumo_id:insumoId,
-    quantidade:qtd,
     contador_atual:contadorPb,
-    contador_pb:contadorPb,
     solicitante_nome:nome,
     solicitante_telefone:tel,
     solicitante_email:email,
     status:'aberto'
   };
-  if(contadorColor!=null) payload.contador_color=contadorColor;
+  if(contadorColor!=null) base.contador_color_atual=contadorColor;
 
-  const {ok,data:errData}=await sf('/rest/v1/solicitacoes_suprimento',{
-    method:'POST',
-    headers:{'Prefer':'return=minimal'},
-    body:JSON.stringify(payload)
-  });
-  if(!ok){
-    const msg=errData&&errData.message?errData.message:JSON.stringify(errData);
-    alert('Erro ao abrir solicitação:\n'+msg);
+  // Cada item do carrinho vira uma linha própria em solicitacoes_suprimento,
+  // todas com o mesmo "numero" — o número é gerado pelo banco na primeira
+  // linha e reaproveitado explicitamente nas demais (por isso os inserts são
+  // sequenciais, não em paralelo: a 2ª linha em diante precisa saber o
+  // número que a 1ª recebeu).
+  let numeroCompartilhado=null;
+  let erroMsg=null;
+  for(const item of _spItens){
+    const payload=Object.assign({},base,{insumo_id:item.insumo_id,quantidade:item.quantidade});
+    if(numeroCompartilhado!=null) payload.numero=numeroCompartilhado;
+
+    const r=await sf('/rest/v1/solicitacoes_suprimento',{
+      method:'POST',
+      headers:{'Prefer':'return=representation'},
+      body:JSON.stringify(payload)
+    });
+    if(!r.ok){
+      erroMsg=(r.data&&r.data.message)?r.data.message:JSON.stringify(r.data);
+      break;
+    }
+    if(numeroCompartilhado==null && Array.isArray(r.data) && r.data[0]) numeroCompartilhado=r.data[0].numero;
+  }
+
+  if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-send"></i> Enviar Solicitação';}
+
+  if(erroMsg){
+    alert('Erro ao abrir solicitação:\n'+erroMsg);
     return;
   }
 
@@ -677,6 +777,7 @@ async function enviarSuprimento(){
   document.getElementById('sp-equip-info').style.display='none';
   document.getElementById('sp-insumo').innerHTML='<option value="">Busque o equipamento primeiro</option>';
   _spEquipId=null;_spUltimoContador=null;_spTipoImpressao='monocromatico';
+  _spItens=[];spRenderItens();
   carregarChamados();
   acMostrarView('dash');
   document.getElementById('ac-chamado-ok').classList.add('open');
@@ -793,7 +894,7 @@ function equipAcSelecionar(p,eq){
   const arrow=document.getElementById(p+'-ac-arrow');
   if(arrow) arrow.className='ti ti-chevron-down';
   if(p==='at') _atEquipId=eq.id;
-  else{_spEquipId=eq.id;_spTipoImpressao=eq.tipo_impressao||'monocromatico';carregarInsumos(eq.modelo);spAtualizarContadores();}
+  else{_spEquipId=eq.id;_spTipoImpressao=eq.tipo_impressao||'monocromatico';carregarInsumos(eq.modelo);spAtualizarContadores();_spItens=[];spRenderItens();}
   const infoEl=document.getElementById(p+'-equip-info');
   if(infoEl){
     infoEl.style.display='block';
