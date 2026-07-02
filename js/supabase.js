@@ -48,6 +48,39 @@ function _arrOuVazio(res){
   return (res && res.ok && Array.isArray(res.data)) ? res.data : [];
 }
 
+// Histórico auditável de mudança de status (chamado_status_historico) —
+// fire-and-forget: nunca bloqueia nem trava a ação principal se a gravação
+// do histórico falhar. Use exatamente um de chamadoId/solicitacaoId.
+// httpFn é sf (cliente) ou sfTec (técnico), conforme quem chama.
+function registrarHistoricoStatus(opts){
+  var httpFn=opts.httpFn||sf;
+  var body={
+    status_anterior:opts.statusAnterior||null,
+    status_novo:opts.statusNovo,
+    usuario:opts.usuario||null,
+    chamado_id:opts.chamadoId||null,
+    solicitacao_id:opts.solicitacaoId||null
+  };
+  httpFn('/rest/v1/chamado_status_historico',{method:'POST',headers:{'Prefer':'return=minimal'},body:JSON.stringify(body)}).catch(function(){});
+}
+
+// Busca e formata o histórico de um chamado/solicitação como lista de
+// linhas prontas pra exibir (mais antigo primeiro).
+async function _buscarHistoricoStatus(chamadoId,solicitacaoId,httpFn){
+  httpFn=httpFn||sf;
+  var statusLabels={aberto:'Aberto',andamento:'Em andamento',encerrado:'Encerrado',concluido:'Concluído',resolvido:'Resolvido',
+    despachado:'Despachado',em_deslocamento:'Em deslocamento',em_atendimento:'Em atendimento',aguardando_peca:'Aguardando peça',pendente:'Pendente',
+    faturado:'Faturado',enviado:'Enviado',cancelado:'Cancelado'};
+  var filtro=chamadoId?('chamado_id=eq.'+chamadoId):('solicitacao_id=eq.'+solicitacaoId);
+  var r=await httpFn('/rest/v1/chamado_status_historico?'+filtro+'&order=criado_em.asc&select=*');
+  var linhas=_arrOuVazio(r);
+  return linhas.map(function(h){
+    var label=statusLabels[h.status_novo]||h.status_novo;
+    var dt=h.criado_em?new Date(h.criado_em).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
+    return label+' em '+dt+(h.usuario?' por '+h.usuario:'');
+  });
+}
+
 // ── LOGIN / LOGOUT ──
 async function fazerLogin(){
   const email=document.getElementById('login-email').value.trim();
@@ -293,6 +326,7 @@ async function abrirDetalhesChamado(id){
   const data=new Date(c.created_at).toLocaleString('pt-BR');
   const encerrado=['encerrado','concluido','resolvido'].includes(c.status);
   const fmtD=v=>v?new Date(v).toLocaleDateString('pt-BR'):'';
+  const fmt=v=>v?new Date(v).toLocaleString('pt-BR'):'';
 
   // Itens da solicitação de suprimento (pode ser mais de um insumo por pedido)
   const itensSuprimentoHtml=(!isAssistencia&&c._itens&&c._itens.length)?`
@@ -328,6 +362,12 @@ async function abrirDetalhesChamado(id){
     }
   }
 
+  const historico=await _buscarHistoricoStatus(isAssistencia?c.id:null,isAssistencia?null:c.id);
+  const historicoHtml=historico.length?`<div class="ac-det-item ac-det-full" style="margin-top:4px;">
+    <span class="ac-det-lbl">Histórico</span>
+    <div style="margin-top:6px;font-size:13px;color:#374151;line-height:1.8;">${historico.map(l=>'• '+l).join('<br>')}</div>
+  </div>`:'';
+
   document.getElementById('ac-detalhe-conteudo').innerHTML=`
     <div class="ac-det-title">Chamado O.S. ${c.numero||c.id.slice(0,6)}</div>
     <div class="ac-det-grid">
@@ -346,7 +386,8 @@ async function abrirDetalhesChamado(id){
       ${isAssistencia&&(c.descricao||c.titulo)?`<div class="ac-det-item ac-det-full"><span class="ac-det-lbl">Descrição</span><span class="ac-det-val">${(c.descricao||c.titulo).replace(/\n/g,'<br>')}</span></div>`:''}
       ${isAssistencia&&encerrado&&c.resolucao?`<div class="ac-det-item ac-det-full ac-det-resolucao"><span class="ac-det-lbl">Resolução do Técnico</span><span class="ac-det-val">${c.resolucao.replace(/\n/g,'<br>')}</span></div>`:''}
       ${pecasModalHtml}
-      ${c.data_fechamento?`<div class="ac-det-item"><span class="ac-det-lbl">Data de fechamento</span><span class="ac-det-val">${fmtD(c.data_fechamento)}</span></div>`:''}
+      ${c.data_encerramento?`<div class="ac-det-item"><span class="ac-det-lbl">Data de encerramento</span><span class="ac-det-val">${fmt(c.data_encerramento)}</span></div>`:''}
+      ${historicoHtml}
     </div>`;
   document.getElementById('ac-detalhe-btn-os').onclick=()=>imprimirOS(c);
   document.getElementById('ac-detalhe-modal').classList.add('open');
@@ -378,7 +419,7 @@ function imprimirOS(c){
     isAssistencia&&c.tecnico&&['Técnico Responsável',c.tecnico],
     !isAssistencia&&c.contador_atual!=null&&['Contador PB',String(c.contador_atual)],
     !isAssistencia&&c.contador_color_atual!=null&&['Contador Colorido',String(c.contador_color_atual)],
-    c.data_fechamento&&['Data de Fechamento',fmtD(c.data_fechamento)],
+    c.data_encerramento&&['Data/Hora de Encerramento',fmt(c.data_encerramento)],
   ].filter(Boolean);
 
   const rowsHTML=rows.map(([l,v])=>`<tr><th>${l}</th><td>${v}</td></tr>`).join('');
@@ -680,9 +721,9 @@ async function enviarAssistencia(){
     if(upRes&&upRes.ok) imgUrl=SURL+'/storage/v1/object/public/chamados/'+fname;
   }
 
-  const {ok,data:errData}=await sf('/rest/v1/chamados',{
+  const {ok,data:novoChamados}=await sf('/rest/v1/chamados',{
     method:'POST',
-    headers:{'Prefer':'return=minimal'},
+    headers:{'Prefer':'return=representation'},
     body:JSON.stringify({
       cliente_id:_cid,
       equipamento_id:_atEquipId,
@@ -699,10 +740,12 @@ async function enviarAssistencia(){
     })
   });
   if(!ok){
-    const msg=errData&&errData.message?errData.message:JSON.stringify(errData);
+    const msg=novoChamados&&novoChamados.message?novoChamados.message:JSON.stringify(novoChamados);
     alert('Erro ao abrir chamado:\n'+msg);
     return;
   }
+  const novoChamado=Array.isArray(novoChamados)&&novoChamados[0]?novoChamados[0]:null;
+  if(novoChamado) registrarHistoricoStatus({chamadoId:novoChamado.id,statusNovo:'aberto',usuario:'cliente'});
 
   ['at-nome','at-tel','at-email','at-desc','at-obs-cliente','at-serial'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('at-img').value='';
@@ -766,7 +809,10 @@ async function enviarSuprimento(){
       erroMsg=(r.data&&r.data.message)?r.data.message:JSON.stringify(r.data);
       break;
     }
-    if(numeroCompartilhado==null && Array.isArray(r.data) && r.data[0]) numeroCompartilhado=r.data[0].numero;
+    if(Array.isArray(r.data) && r.data[0]){
+      if(numeroCompartilhado==null) numeroCompartilhado=r.data[0].numero;
+      registrarHistoricoStatus({solicitacaoId:r.data[0].id,statusNovo:'aberto',usuario:'cliente'});
+    }
   }
 
   if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-send"></i> Enviar Solicitação';}
@@ -1360,11 +1406,13 @@ async function tecAbrirDetalhe(id){
   const equipamentoInfo=eq?[eq.marca,eq.modelo].filter(Boolean).join(' '):null;
   const sla=tecFormatarSLA(c);
   const prioMap={baixa:'Baixa',normal:'Normal',alta:'Alta',urgente:'Urgente'};
-  const [{data:fotos},{data:pRows}]=await Promise.all([
+  const [{data:fotos},{data:pRows},historico]=await Promise.all([
     sfTec('/rest/v1/chamado_fotos?chamado_id=eq.'+id+'&order=created_at&select=id,url'),
-    sfTec('/rest/v1/chamado_pecas?chamado_id=eq.'+id+'&select=*,pecas(codigo,descricao,unidade)')
+    sfTec('/rest/v1/chamado_pecas?chamado_id=eq.'+id+'&select=*,pecas(codigo,descricao,unidade)'),
+    _buscarHistoricoStatus(id,null,sfTec)
   ]);
   c._fotos=fotos||[];c._pecas=pRows||[];
+  const historicoHtml=historico.length?`<div class="tec-det-section"><div class="tec-det-lbl-standalone">Histórico</div><div style="margin-top:6px;font-size:13px;color:#374151;line-height:1.8;">${historico.map(l=>'• '+l).join('<br>')}</div></div>`:'';
   // Anexos: foto que o cliente já anexa ao abrir o chamado (chamados.imagem_url,
   // gravada há tempos mas nunca exibida em lugar nenhum) + fotos que o técnico
   // anexa durante o atendimento (tabela chamado_fotos). Sempre visível, não só
@@ -1399,6 +1447,7 @@ async function tecAbrirDetalhe(id){
     </div>
     ${c._pecas.length?`<div class="tec-det-section"><div class="tec-det-lbl-standalone">Peças utilizadas</div><table class="ac-table" style="margin-top:6px;"><thead><tr><th>Código</th><th>Descrição</th><th>Qtd.</th></tr></thead><tbody>${c._pecas.map(p=>`<tr><td>${(p.pecas&&p.pecas.codigo)||'–'}</td><td>${(p.pecas&&p.pecas.descricao)||'–'}</td><td>${p.quantidade||0} ${(p.pecas&&p.pecas.unidade)||'un'}</td></tr>`).join('')}</tbody></table></div>`:''}
     ${fotosHtml}
+    ${historicoHtml}
     <div class="tec-fotos-section">
       <div class="tec-det-lbl-standalone" style="color:#92400E">⚠️ Observações Internas (uso interno)</div>
       <textarea id="tec-obs-interna-ta" class="ac-input" rows="3" style="margin-top:6px" placeholder="Anotações internas sobre este chamado — NÃO visível ao cliente...">${obsEscaped}</textarea>
@@ -1439,22 +1488,26 @@ function tecRenderAcoes(st){
 // ── TRANSIÇÕES DE STATUS ──
 async function tecEnDeslocamento(){
   const c=_tecChamadoAtual;if(!c) return;
+  const statusAnterior=c.status_tecnico||c.status||'aberto';
   const {ok}=await sfTec('/rest/v1/chamados?id=eq.'+c.id,{method:'PATCH',
     headers:{'Prefer':'return=minimal'},
     body:JSON.stringify({status_tecnico:'em_deslocamento',data_deslocamento:new Date().toISOString()})});
   if(!ok){alert('Erro ao atualizar status.');return;}
   c.status_tecnico='em_deslocamento';
+  registrarHistoricoStatus({httpFn:sfTec,chamadoId:c.id,statusAnterior:statusAnterior,statusNovo:'em_deslocamento',usuario:_tecNome});
   tecEnviarEmailDeslocamento(c);
   tecFecharDetalhe();await tecCarregarChamados();
 }
 
 async function tecEnAtendimento(){
   const c=_tecChamadoAtual;if(!c) return;
+  const statusAnterior=c.status_tecnico||c.status||'aberto';
   const {ok}=await sfTec('/rest/v1/chamados?id=eq.'+c.id,{method:'PATCH',
     headers:{'Prefer':'return=minimal'},
     body:JSON.stringify({status_tecnico:'em_atendimento',data_atendimento_inicio:new Date().toISOString()})});
   if(!ok){alert('Erro ao atualizar status.');return;}
   c.status_tecnico='em_atendimento';
+  registrarHistoricoStatus({httpFn:sfTec,chamadoId:c.id,statusAnterior:statusAnterior,statusNovo:'em_atendimento',usuario:_tecNome});
   tecFecharDetalhe();await tecCarregarChamados();
 }
 
@@ -1467,6 +1520,7 @@ function tecFecharModalPendente(){document.getElementById('tec-pend-modal').clas
 
 async function tecConfirmarPendente(){
   const c=_tecChamadoAtual;if(!c) return;
+  const statusAnterior=c.status_tecnico||c.status||'aberto';
   const motivo=document.getElementById('tec-pend-motivo').value.trim();
   const erroEl=document.getElementById('tec-pend-erro');
   if(!motivo){erroEl.style.display='block';erroEl.textContent='Informe o motivo da pendência.';return;}
@@ -1476,11 +1530,13 @@ async function tecConfirmarPendente(){
     body:JSON.stringify({status_tecnico:'pendente',sla_pausado:true,sla_pausa_inicio:new Date().toISOString(),motivo_pendente:motivo})});
   if(!ok){erroEl.style.display='block';erroEl.textContent='Erro ao atualizar status.';return;}
   c.status_tecnico='pendente';c.sla_pausado=true;c.sla_pausa_inicio=new Date().toISOString();
+  registrarHistoricoStatus({httpFn:sfTec,chamadoId:c.id,statusAnterior:statusAnterior,statusNovo:'pendente',usuario:_tecNome});
   tecFecharModalPendente();tecFecharDetalhe();await tecCarregarChamados();
 }
 
 async function tecRetomar(){
   const c=_tecChamadoAtual;if(!c) return;
+  const statusAnterior=c.status_tecnico||c.status||'aberto';
   let totalPausado=c.sla_tempo_pausado||0;
   if(c.sla_pausa_inicio) totalPausado+=Math.floor((new Date()-new Date(c.sla_pausa_inicio))/60000);
   const {ok}=await sfTec('/rest/v1/chamados?id=eq.'+c.id,{method:'PATCH',
@@ -1488,6 +1544,7 @@ async function tecRetomar(){
     body:JSON.stringify({status_tecnico:'despachado',sla_pausado:false,sla_pausa_inicio:null,sla_tempo_pausado:totalPausado})});
   if(!ok){alert('Erro ao retomar.');return;}
   c.status_tecnico='despachado';c.sla_pausado=false;c.sla_pausa_inicio=null;c.sla_tempo_pausado=totalPausado;
+  registrarHistoricoStatus({httpFn:sfTec,chamadoId:c.id,statusAnterior:statusAnterior,statusNovo:'despachado',usuario:_tecNome});
   tecFecharDetalhe();await tecCarregarChamados();
 }
 
@@ -1520,6 +1577,7 @@ async function tecAdicionarPecaEncerrar(){
 
 async function tecConfirmarEncerramento(){
   const c=_tecChamadoAtual;if(!c) return;
+  const statusAnterior=c.status_tecnico||c.status||'aberto';
   const desc=document.getElementById('tec-desc-defeito').value.trim();
   const sol=document.getElementById('tec-solucao').value.trim();
   const erroEl=document.getElementById('tec-encerrar-erro');
@@ -1539,6 +1597,7 @@ async function tecConfirmarEncerramento(){
     await sfTec('/rest/v1/chamado_pecas',{method:'POST',headers:{'Prefer':'return=minimal'},body:JSON.stringify(p)});
   }
   c.status='encerrado';c.status_tecnico='encerrado';c.resolucao=sol;c.descricao_tecnico=desc;
+  registrarHistoricoStatus({httpFn:sfTec,chamadoId:c.id,statusAnterior:statusAnterior,statusNovo:'encerrado',usuario:_tecNome});
   tecEnviarEmailEncerramento(c);
   tecFecharEncerrar();tecFecharDetalhe();await tecCarregarChamados();
 }
@@ -1606,6 +1665,7 @@ function tecTogglePecaDisponivel(checkbox){
 
 async function tecConfirmarPeca(){
   const c=_tecChamadoAtual;if(!c) return;
+  const statusAnterior=c.status_tecnico||c.status||'aberto';
   const desc=document.getElementById('tec-peca-desc').value.trim();
   const erroEl=document.getElementById('tec-peca-erro');
   if(!desc){erroEl.style.display='block';erroEl.textContent='Descreva as peças necessárias.';return;}
@@ -1615,16 +1675,19 @@ async function tecConfirmarPeca(){
     body:JSON.stringify({status_tecnico:'aguardando_peca',pecas_status:'solicitado',pecas_solicitadas:desc,sla_pausado:true,sla_pausa_inicio:new Date().toISOString()})});
   if(!ok){erroEl.style.display='block';erroEl.textContent='Erro ao atualizar status.';return;}
   c.status_tecnico='aguardando_peca';c.pecas_status='solicitado';c.pecas_solicitadas=desc;c.sla_pausado=true;
+  registrarHistoricoStatus({httpFn:sfTec,chamadoId:c.id,statusAnterior:statusAnterior,statusNovo:'aguardando_peca',usuario:_tecNome});
   tecFecharPecaModal();tecFecharDetalhe();await tecCarregarChamados();
 }
 
 async function tecReceberPecas(id){
   const c=_tecChamadosData[id];if(!c) return;
+  const statusAnterior=c.status_tecnico||c.status||'aberto';
   const totalDecorrido=calcularSLAUtil(c.created_at,0);
   const {ok}=await sfTec('/rest/v1/chamados?id=eq.'+id,{method:'PATCH',
     headers:{'Prefer':'return=minimal'},
     body:JSON.stringify({status_tecnico:'despachado',pecas_status:null,sla_pausado:false,sla_pausa_inicio:null,sla_tempo_pausado:totalDecorrido})});
   if(!ok){alert('Erro ao confirmar recebimento de peças.');return;}
+  registrarHistoricoStatus({httpFn:sfTec,chamadoId:id,statusAnterior:statusAnterior,statusNovo:'despachado',usuario:_tecNome});
   await tecCarregarChamados();tecMostrarView('chamados');
 }
 

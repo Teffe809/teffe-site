@@ -487,7 +487,7 @@ async function cpCarregarHistorico(){
   var res = await sf(
     '/rest/v1/chamados?cliente_id=eq.' + _cid +
     '&or=(status.eq.encerrado,status.eq.concluido,status.eq.resolvido)' +
-    '&order=data_fechamento.desc,created_at.desc&select=*'
+    '&order=data_encerramento.desc,created_at.desc&select=*'
   );
 
   if(!res.ok || !res.data || !res.data.length){
@@ -498,11 +498,11 @@ async function cpCarregarHistorico(){
   _cpHistoricoData = res.data;
 
   var statusLabels = {encerrado:'Encerrado', concluido:'Concluído', resolvido:'Resolvido'};
-  var fmtDate = function(v){ return v ? new Date(v).toLocaleDateString('pt-BR') : '–'; };
+  var fmtDate = function(v){ return v ? new Date(v).toLocaleString('pt-BR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '–'; };
 
   el.innerHTML =
     '<table class="ac-table"><thead><tr>' +
-    '<th>O.S.</th><th>Descrição</th><th>Técnico</th><th>Status</th><th>Fechamento</th><th></th>' +
+    '<th>O.S.</th><th>Descrição</th><th>Técnico</th><th>Status</th><th>Encerramento</th><th></th>' +
     '</tr></thead><tbody>' +
     res.data.map(function(r, idx){
       var desc = (r.descricao || r.titulo || '–').slice(0, 80);
@@ -511,7 +511,7 @@ async function cpCarregarHistorico(){
         '<td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + (r.descricao||'').replace(/"/g,'&quot;') + '">' + desc + '</td>' +
         '<td>' + (r.tecnico||'–') + '</td>' +
         '<td><span class="badge badge-' + r.status + '">' + (statusLabels[r.status]||r.status) + '</span></td>' +
-        '<td>' + fmtDate(r.data_fechamento) + '</td>' +
+        '<td>' + fmtDate(r.data_encerramento) + '</td>' +
         '<td><button class="adm-btn adm-btn-sm" onclick="cpVerHistorico(' + idx + ')">Ver</button></td>' +
       '</tr>';
     }).join('') +

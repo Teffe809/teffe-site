@@ -430,7 +430,7 @@ async function admAbrirDetalhe(id){
     ${c.descricao?`<div class="adm-det-section"><div class="adm-det-label">Descrição</div><div class="adm-det-text">${c.descricao.replace(/\n/g,'<br>')}</div></div>`:''}
     ${encerrado&&c.resolucao?`<div class="adm-det-section"><div class="adm-det-label">Resolução do Técnico</div><div class="adm-det-text adm-det-resolucao">${c.resolucao.replace(/\n/g,'<br>')}</div></div>`:''}
     ${pecasModalHtml}
-    ${c.data_fechamento?`<div class="adm-det-row" style="margin-top:12px;"><span class="adm-det-label">Data de fechamento</span><span class="adm-det-val">${fmtD(c.data_fechamento)}</span></div>`:''}
+    ${c.data_encerramento?`<div class="adm-det-row" style="margin-top:12px;"><span class="adm-det-label">Data de encerramento</span><span class="adm-det-val">${fmt(c.data_encerramento)}</span></div>`:''}
   `;
   document.getElementById('adm-detalhe-btn-os').onclick=()=>admImprimirOS(c);
   document.getElementById('adm-detalhe-bg').classList.add('open');
@@ -570,7 +570,7 @@ function admImprimirOS(c){
     c.solicitante_email&&['E-mail do Solicitante',c.solicitante_email],
     c.prioridade&&['Prioridade',prioLabels[c.prioridade]||c.prioridade],
     c.tecnico&&['Técnico Responsável',c.tecnico],
-    c.data_fechamento&&['Data de Fechamento',fmtD(c.data_fechamento)],
+    c.data_encerramento&&['Data/Hora de Encerramento',fmt(c.data_encerramento)],
   ].filter(Boolean);
 
   const rowsHTML=rows.map(([l,v])=>`<tr><th>${l}</th><td>${v}</td></tr>`).join('');
