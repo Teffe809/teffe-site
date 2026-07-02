@@ -386,6 +386,11 @@ async function abrirDetalhesChamado(id){
       ${isAssistencia&&(c.descricao||c.titulo)?`<div class="ac-det-item ac-det-full"><span class="ac-det-lbl">Descrição</span><span class="ac-det-val">${(c.descricao||c.titulo).replace(/\n/g,'<br>')}</span></div>`:''}
       ${isAssistencia&&encerrado&&c.resolucao?`<div class="ac-det-item ac-det-full ac-det-resolucao"><span class="ac-det-lbl">Resolução do Técnico</span><span class="ac-det-val">${c.resolucao.replace(/\n/g,'<br>')}</span></div>`:''}
       ${pecasModalHtml}
+      ${encerrado&&c.assinatura_cliente?`<div class="ac-det-item ac-det-full" style="text-align:center;margin-top:8px;">
+        <span class="ac-det-lbl">Assinatura do Cliente</span>
+        <div style="margin-top:8px;"><img src="${c.assinatura_cliente}" style="max-width:320px;width:100%;border:1px solid #E5E7EB;border-radius:8px;background:#fff"/></div>
+        <div style="margin-top:6px;font-size:13px;font-weight:600;color:#374151;border-top:1px solid #D1D5DB;display:inline-block;padding-top:4px">${c.nome_assinatura||''}</div>
+      </div>`:''}
       ${c.data_encerramento?`<div class="ac-det-item"><span class="ac-det-lbl">Data de encerramento</span><span class="ac-det-val">${fmt(c.data_encerramento)}</span></div>`:''}
       ${historicoHtml}
     </div>`;
@@ -1549,14 +1554,34 @@ async function tecRetomar(){
 }
 
 // ── ENCERRAR CHAMADO ──
+let _tecSignaturePad=null;
+
 function tecAbrirEncerrar(){
   document.getElementById('tec-desc-defeito').value='';
   document.getElementById('tec-solucao').value='';
   document.getElementById('tec-pecas-lista').innerHTML='';
+  document.getElementById('tec-encerrar-nome-cliente').value='';
   document.getElementById('tec-encerrar-erro').style.display='none';
   document.getElementById('tec-encerrar-modal').classList.add('open');
+  // requestAnimationFrame: o canvas só tem largura/altura reais depois que o
+  // modal (display:none -> flex) terminar o reflow.
+  requestAnimationFrame(tecInicializarAssinatura);
 }
 function tecFecharEncerrar(){document.getElementById('tec-encerrar-modal').classList.remove('open');}
+
+function tecInicializarAssinatura(){
+  const canvas=document.getElementById('tec-assinatura-canvas');
+  if(!canvas||typeof SignaturePad==='undefined') return;
+  const ratio=Math.max(window.devicePixelRatio||1,1);
+  canvas.width=canvas.offsetWidth*ratio;
+  canvas.height=canvas.offsetHeight*ratio;
+  canvas.getContext('2d').scale(ratio,ratio);
+  _tecSignaturePad=new SignaturePad(canvas,{backgroundColor:'rgb(255,255,255)'});
+}
+
+function tecLimparAssinatura(){
+  if(_tecSignaturePad) _tecSignaturePad.clear();
+}
 
 async function tecAdicionarPecaEncerrar(){
   if(!_tecPecasCatalogo){
@@ -1580,9 +1605,13 @@ async function tecConfirmarEncerramento(){
   const statusAnterior=c.status_tecnico||c.status||'aberto';
   const desc=document.getElementById('tec-desc-defeito').value.trim();
   const sol=document.getElementById('tec-solucao').value.trim();
+  const nomeCliente=document.getElementById('tec-encerrar-nome-cliente').value.trim();
   const erroEl=document.getElementById('tec-encerrar-erro');
   if(!desc||!sol){erroEl.style.display='block';erroEl.textContent='Preencha o defeito encontrado e a solução aplicada.';return;}
+  if(!nomeCliente){erroEl.style.display='block';erroEl.textContent='Informe o nome do cliente que está recebendo o serviço.';return;}
+  if(!_tecSignaturePad||_tecSignaturePad.isEmpty()){erroEl.style.display='block';erroEl.textContent='Colete a assinatura do cliente.';return;}
   erroEl.style.display='none';
+  const assinaturaBase64=_tecSignaturePad.toDataURL('image/png');
   const pecas=[];
   document.querySelectorAll('#tec-pecas-lista .tec-peca-row').forEach(row=>{
     const pId=row.querySelector('.tec-peca-sel').value;
@@ -1591,12 +1620,13 @@ async function tecConfirmarEncerramento(){
   });
   const {ok}=await sfTec('/rest/v1/chamados?id=eq.'+c.id,{method:'PATCH',
     headers:{'Prefer':'return=minimal'},
-    body:JSON.stringify({status:'encerrado',status_tecnico:'encerrado',data_encerramento:new Date().toISOString(),descricao_tecnico:desc,resolucao:sol})});
+    body:JSON.stringify({status:'encerrado',status_tecnico:'encerrado',data_encerramento:new Date().toISOString(),descricao_tecnico:desc,resolucao:sol,nome_assinatura:nomeCliente,assinatura_cliente:assinaturaBase64})});
   if(!ok){erroEl.style.display='block';erroEl.textContent='Erro ao encerrar chamado. Tente novamente.';return;}
   for(const p of pecas){
     await sfTec('/rest/v1/chamado_pecas',{method:'POST',headers:{'Prefer':'return=minimal'},body:JSON.stringify(p)});
   }
   c.status='encerrado';c.status_tecnico='encerrado';c.resolucao=sol;c.descricao_tecnico=desc;
+  c.nome_assinatura=nomeCliente;c.assinatura_cliente=assinaturaBase64;
   registrarHistoricoStatus({httpFn:sfTec,chamadoId:c.id,statusAnterior:statusAnterior,statusNovo:'encerrado',usuario:_tecNome});
   tecEnviarEmailEncerramento(c);
   tecFecharEncerrar();tecFecharDetalhe();await tecCarregarChamados();
