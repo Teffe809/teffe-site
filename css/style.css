@@ -798,9 +798,12 @@ body:has(.orca-bg.open),body:has(.modal-bg.open){overflow:hidden;}
 .badge-aberto{background:#fff3e0;color:#e65100;}
 .badge-ativo,.badge-ativo-c{background:#e8f5e9;color:#2e7d32;}
 .badge-normal{background:#e3f2fd;color:#1565c0;}
-.badge-encerrado,.badge-resolvido{background:#e8f5e9;color:#2e7d32;}
+.badge-encerrado,.badge-resolvido,.badge-concluido{background:#e8f5e9;color:#2e7d32;}
 .badge-andamento{background:#fff8e1;color:#f57f17;}
 .badge-urgente{background:#fce4ec;color:#c62828;}
+.badge-faturado{background:#DBEAFE;color:#1E40AF;}
+.badge-enviado{background:#DCFCE7;color:#166534;}
+.badge-cancelado{background:#FEE2E2;color:#991B1B;}
 .btn-novo{background:#E07820;color:#fff;border:none;padding:9px 20px;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;}
 /* ── ÁREA DO CLIENTE — redesign ── */
 .ac-view{display:none;}

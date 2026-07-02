@@ -298,6 +298,7 @@ async function carregarChamados(){
   document.getElementById('n-cham').textContent=todos.filter(r=>r.status==='aberto').length;
   document.getElementById('n-encerrado').textContent=todos.filter(r=>r.status==='encerrado').length;
   if(!todos.length){el.innerHTML='<div class="ac-empty">Nenhum chamado ainda.</div>';return;}
+  const statusLabelsLista={aberto:'Aberto',andamento:'Em andamento',encerrado:'Encerrado',concluido:'Concluído',resolvido:'Resolvido',faturado:'Faturado',enviado:'Enviado',cancelado:'Cancelado'};
   el.innerHTML='<table class="ac-table"><thead><tr><th>O.S.</th><th>Tipo</th><th>Descrição</th><th>Status</th><th>Data</th></tr></thead><tbody>'+
     todos.map(r=>{
       const descricaoCol=r._tipo==='suprimento'
@@ -307,7 +308,7 @@ async function carregarChamados(){
       <td><b>O.S. ${r.numero||r.id.slice(0,6)}</b></td>
       <td><span class="badge ${r._tipo==='suprimento'?'badge-suprim':'badge-assist'}">${r._tipo==='suprimento'?'Suprimentos':'Assistência'}</span></td>
       <td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${descricaoCol}</td>
-      <td><span class="badge badge-${r.status}">${r.status}</span></td>
+      <td><span class="badge badge-${r.status}">${statusLabelsLista[r.status]||r.status}</span></td>
       <td>${new Date(r.created_at).toLocaleDateString('pt-BR')}</td>
     </tr>`;
     }).join('')+
@@ -320,7 +321,7 @@ async function abrirDetalhesChamado(id){
   const isAssistencia=c._tipo!=='suprimento';
   const tipo=isAssistencia?'Assistência Técnica':'Suprimentos';
   const badgeTipo=`<span class="badge ${isAssistencia?'badge-assist':'badge-suprim'}">${tipo}</span>`;
-  const statusLabels={aberto:'Aberto',andamento:'Em andamento',encerrado:'Encerrado',concluido:'Concluído',resolvido:'Resolvido'};
+  const statusLabels={aberto:'Aberto',andamento:'Em andamento',encerrado:'Encerrado',concluido:'Concluído',resolvido:'Resolvido',faturado:'Faturado',enviado:'Enviado',cancelado:'Cancelado'};
   const prioLabels={baixa:'Baixa',normal:'Normal',alta:'Alta',urgente:'Urgente'};
   const badgeStatus=`<span class="badge badge-${c.status}">${statusLabels[c.status]||c.status}</span>`;
   const data=new Date(c.created_at).toLocaleString('pt-BR');
@@ -405,7 +406,7 @@ function acFecharDetalhe(){
 function imprimirOS(c){
   const fmt=v=>v?new Date(v).toLocaleString('pt-BR'):'–';
   const fmtD=v=>v?new Date(v).toLocaleDateString('pt-BR'):'–';
-  const statusLabels={aberto:'Aberto',andamento:'Em andamento',encerrado:'Encerrado',concluido:'Concluído',resolvido:'Resolvido'};
+  const statusLabels={aberto:'Aberto',andamento:'Em andamento',encerrado:'Encerrado',concluido:'Concluído',resolvido:'Resolvido',faturado:'Faturado',enviado:'Enviado',cancelado:'Cancelado'};
   const prioLabels={baixa:'Baixa',normal:'Normal',alta:'Alta',urgente:'Urgente'};
   const isAssistencia=c._tipo!=='suprimento';
   const tipoLabel=isAssistencia?'Assistência Técnica':'Suprimentos';
