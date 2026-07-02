@@ -329,7 +329,7 @@ async function admCarregarChamados(){
         ps==='faturado'?`<button class="adm-btn adm-btn-sm" style="margin-top:4px;font-size:11px;" onclick="event.stopPropagation();admDespacharPecas('${r.id}')">Despachar</button>`:
         ps==='despachado'?`<button class="adm-btn adm-btn-sm" style="margin-top:4px;font-size:11px;" onclick="event.stopPropagation();admConfirmarEntregaPecas('${r.id}','${r.tecnico_id||''}','${r.numero||r.id.slice(0,6)}')">Confirmar Entrega</button>`:'';
       return `<tr style="cursor:pointer;" onclick="admAbrirDetalhe('${r.id}')">
-        <td><b>#${r.numero||r.id.slice(0,6)}</b></td>
+        <td><b>O.S. ${r.numero||r.id.slice(0,6)}</b></td>
         <td>${cliNome}</td>
         <td class="adm-td-trunc" title="${(r.descricao||'').replace(/"/g,'&quot;')}">${r.descricao||r.titulo||'–'}</td>
         <td>${r.solicitante_nome||'–'}</td>
@@ -375,10 +375,10 @@ async function admConfirmarEntregaPecas(id,tecnicoId,numChamado){
     if(tec&&tec.email){
       const {data:{session}}=await _supabase.auth.getSession();
       if(session){
-        const html=`<p>Olá <strong>${tec.nome||'Técnico'}</strong>,</p><p>As peças solicitadas para o chamado <strong>#${numChamado}</strong> foram entregues e estão disponíveis. Por favor, acesse o portal e inicie o atendimento.</p><p>Atenciosamente,<br><strong>Teffe Tecnologia</strong></p>`;
+        const html=`<p>Olá <strong>${tec.nome||'Técnico'}</strong>,</p><p>As peças solicitadas para o chamado <strong>O.S. ${numChamado}</strong> foram entregues e estão disponíveis. Por favor, acesse o portal e inicie o atendimento.</p><p>Atenciosamente,<br><strong>Teffe Tecnologia</strong></p>`;
         fetch(ADMIN_URL+'/functions/v1/enviar-email',{method:'POST',
           headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},
-          body:JSON.stringify({to:tec.email,subject:`Peças Disponíveis — Chamado #${numChamado} — Teffe Tecnologia`,html})
+          body:JSON.stringify({to:tec.email,subject:`Peças Disponíveis — Chamado O.S. ${numChamado} — Teffe Tecnologia`,html})
         }).catch(()=>{});
       }
     }
@@ -417,7 +417,7 @@ async function admAbrirDetalhe(id){
 
   document.getElementById('adm-detalhe-corpo').innerHTML=`
     <div class="adm-det-grid">
-      <div class="adm-det-row"><span class="adm-det-label">Número</span><span class="adm-det-val">#${c.numero||c.id.slice(0,6)}</span></div>
+      <div class="adm-det-row"><span class="adm-det-label">Número</span><span class="adm-det-val">O.S. ${c.numero||c.id.slice(0,6)}</span></div>
       <div class="adm-det-row"><span class="adm-det-label">Abertura</span><span class="adm-det-val">${fmt(c.created_at)}</span></div>
       <div class="adm-det-row"><span class="adm-det-label">Status</span><span class="adm-det-val"><span class="badge badge-${c.status}">${statusLabels[c.status]||c.status}</span></span></div>
       ${c.tipo_chamado?`<div class="adm-det-row"><span class="adm-det-label">Tipo</span><span class="adm-det-val">${c.tipo_chamado}</span></div>`:''}
@@ -561,7 +561,7 @@ function admImprimirOS(c){
   const descEscapada=(c.descricao||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
   const rows=[
-    ['Número',`#${num}`],
+    ['Número',`O.S. ${num}`],
     ['Data/Hora de Abertura',fmt(c.created_at)],
     ['Status',statusLabels[c.status]||c.status],
     ['Tipo de Chamado','Assistência Técnica'],
@@ -579,7 +579,7 @@ function admImprimirOS(c){
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8"/>
-<title>OS #${num} — Teffe Tecnologia</title>
+<title>O.S. ${num} — Teffe Tecnologia</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0;}
   body{font-family:Arial,sans-serif;font-size:13px;color:#222;background:#fff;padding:32px;}
@@ -618,7 +618,7 @@ function admImprimirOS(c){
 <div class="os-header">
   <img src="https://teffe.com.br/assets/images/logo-teffe.png" alt="Teffe Tecnologia"/>
   <div class="os-header-text">
-    <h1>ORDEM DE SERVIÇO Nº ${num}</h1>
+    <h1>O.S. ${num}</h1>
     <p>Teffe Tecnologia — Suporte e Assistência Técnica</p>
   </div>
 </div>

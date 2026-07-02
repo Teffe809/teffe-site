@@ -502,12 +502,12 @@ async function cpCarregarHistorico(){
 
   el.innerHTML =
     '<table class="ac-table"><thead><tr>' +
-    '<th>#</th><th>Descrição</th><th>Técnico</th><th>Status</th><th>Fechamento</th><th></th>' +
+    '<th>O.S.</th><th>Descrição</th><th>Técnico</th><th>Status</th><th>Fechamento</th><th></th>' +
     '</tr></thead><tbody>' +
     res.data.map(function(r, idx){
       var desc = (r.descricao || r.titulo || '–').slice(0, 80);
       return '<tr>' +
-        '<td><b>#' + (r.numero||r.id.slice(0,6)) + '</b></td>' +
+        '<td><b>O.S. ' + (r.numero||r.id.slice(0,6)) + '</b></td>' +
         '<td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + (r.descricao||'').replace(/"/g,'&quot;') + '">' + desc + '</td>' +
         '<td>' + (r.tecnico||'–') + '</td>' +
         '<td><span class="badge badge-' + r.status + '">' + (statusLabels[r.status]||r.status) + '</span></td>' +

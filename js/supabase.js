@@ -265,13 +265,13 @@ async function carregarChamados(){
   document.getElementById('n-cham').textContent=todos.filter(r=>r.status==='aberto').length;
   document.getElementById('n-encerrado').textContent=todos.filter(r=>r.status==='encerrado').length;
   if(!todos.length){el.innerHTML='<div class="ac-empty">Nenhum chamado ainda.</div>';return;}
-  el.innerHTML='<table class="ac-table"><thead><tr><th>#</th><th>Tipo</th><th>Descrição</th><th>Status</th><th>Data</th></tr></thead><tbody>'+
+  el.innerHTML='<table class="ac-table"><thead><tr><th>O.S.</th><th>Tipo</th><th>Descrição</th><th>Status</th><th>Data</th></tr></thead><tbody>'+
     todos.map(r=>{
       const descricaoCol=r._tipo==='suprimento'
         ?('Solicitação de Suprimentos'+(r._itens.length>1?' — '+r._itens.length+' itens':''))
         :(r.descricao||r.titulo||'–');
       return `<tr class="ac-row-click" onclick="abrirDetalhesChamado('${r.id}')">
-      <td><b>#${r.numero||r.id.slice(0,6)}</b></td>
+      <td><b>O.S. ${r.numero||r.id.slice(0,6)}</b></td>
       <td><span class="badge ${r._tipo==='suprimento'?'badge-suprim':'badge-assist'}">${r._tipo==='suprimento'?'Suprimentos':'Assistência'}</span></td>
       <td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${descricaoCol}</td>
       <td><span class="badge badge-${r.status}">${r.status}</span></td>
@@ -329,9 +329,9 @@ async function abrirDetalhesChamado(id){
   }
 
   document.getElementById('ac-detalhe-conteudo').innerHTML=`
-    <div class="ac-det-title">Chamado #${c.numero||c.id.slice(0,6)}</div>
+    <div class="ac-det-title">Chamado O.S. ${c.numero||c.id.slice(0,6)}</div>
     <div class="ac-det-grid">
-      <div class="ac-det-item"><span class="ac-det-lbl">Número</span><span class="ac-det-val">#${c.numero||c.id.slice(0,6)}</span></div>
+      <div class="ac-det-item"><span class="ac-det-lbl">Número</span><span class="ac-det-val">O.S. ${c.numero||c.id.slice(0,6)}</span></div>
       <div class="ac-det-item"><span class="ac-det-lbl">Data de abertura</span><span class="ac-det-val">${data}</span></div>
       <div class="ac-det-item"><span class="ac-det-lbl">Status</span><span>${badgeStatus}</span></div>
       <div class="ac-det-item"><span class="ac-det-lbl">Tipo</span><span>${badgeTipo}</span></div>
@@ -367,7 +367,7 @@ function imprimirOS(c){
   const num=c.numero||c.id.slice(0,6);
 
   const rows=[
-    ['Número',`#${num}`],
+    ['Número',`O.S. ${num}`],
     ['Data/Hora de Abertura',fmt(c.created_at)],
     ['Status',statusLabels[c.status]||c.status],
     ['Tipo de Chamado',tipoLabel],
@@ -389,7 +389,7 @@ function imprimirOS(c){
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8"/>
-<title>OS #${num} — Teffe Tecnologia</title>
+<title>O.S. ${num} — Teffe Tecnologia</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0;}
   body{font-family:Arial,sans-serif;font-size:13px;color:#222;background:#fff;padding:32px;}
@@ -428,7 +428,7 @@ function imprimirOS(c){
 <div class="os-header">
   <img src="https://teffe.com.br/assets/images/logo-teffe.png" alt="Teffe Tecnologia"/>
   <div class="os-header-text">
-    <h1>ORDEM DE SERVIÇO Nº ${num}</h1>
+    <h1>O.S. ${num}</h1>
     <p>Teffe Tecnologia — Suporte e Assistência Técnica</p>
   </div>
 </div>
@@ -1092,7 +1092,7 @@ async function tecCarregarPecas(){
     const entregue=ps==='entregue';
     return `<div class="tec-card tec-card-aguardando_peca">
       <div class="tec-card-header">
-        <span class="tec-card-num">#${c.numero||c.id.slice(0,6).toUpperCase()}</span>
+        <span class="tec-card-num">O.S. ${c.numero||c.id.slice(0,6).toUpperCase()}</span>
         <span class="tec-pecas-badge tec-pecas-${ps}">${entregue?'✅ '+pecasLabel[ps]:pecasLabel[ps]||ps}</span>
       </div>
       <div class="tec-card-cliente">${cliente}</div>
@@ -1213,7 +1213,7 @@ function tecHistRenderCard(c,idx){
     <div class="tec-card-inner">
       <div class="tec-card-body">
         <div class="tec-card-l1">
-          <span class="tec-card-num">#${num}</span>
+          <span class="tec-card-num">O.S. ${num}</span>
           <span class="tec-card-cliente-nome">${cliente}</span>
         </div>
         <div class="tec-card-l4" style="margin-top:4px">
@@ -1258,7 +1258,7 @@ async function tecHistAbrirDetalhe(idx){
   const anexosHtml=anexosImgs.length?`<div class="tec-fotos-section"><div class="tec-det-lbl-standalone">Anexos</div><div class="tec-fotos-grid">${anexosImgs.map(f=>`<a href="${f.url}" target="_blank" title="${f.cliente?'Foto enviada pelo cliente':'Foto do técnico'}"><img src="${f.url}" class="tec-foto-thumb" loading="lazy"/></a>`).join('')}</div></div>`:'';
   document.getElementById('tec-hist-modal-conteudo').innerHTML=`
     <div class="tec-modal-header">
-      <h2>Chamado #${c.numero||c.id.slice(0,6).toUpperCase()}</h2>
+      <h2>Chamado O.S. ${c.numero||c.id.slice(0,6).toUpperCase()}</h2>
       <span class="tec-badge-st tec-st-${st}">${tecStatusLabel(st)}</span>
     </div>
     <div class="tec-det-grid">
@@ -1324,14 +1324,14 @@ function tecRenderCard(c,idx){
     <div class="tec-card-inner">
       <div class="tec-card-body">
         <div class="tec-card-l1">
-          <span class="tec-card-num">#${num}</span>
+          <span class="tec-card-num">O.S. ${num}</span>
           <span class="tec-card-cliente-nome">${cliente}</span>
           ${codCli?`<span class="tec-card-cod">(${codCli})</span>`:''}
         </div>
         ${cidade?`<div class="tec-card-l2">📍 ${cidade}</div>`:''}
         ${l3}
         <div class="tec-card-l4">
-          <span style="font-size:10px;color:#9CA3AF">OS ${num}</span>
+          <span style="font-size:10px;color:#9CA3AF">O.S. ${num}</span>
           <span class="tec-tipo-badge tec-tipo-${tipoRaw||'assistencia'}">${tipo}</span>
           <span class="tec-badge-st tec-st-${st}">${tecStatusLabel(st)}</span>
         </div>
@@ -1379,7 +1379,7 @@ async function tecAbrirDetalhe(id){
   const obsEscaped=(c.observacoes_internas||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   document.getElementById('tec-modal-conteudo').innerHTML=`
     <div class="tec-modal-header">
-      <h2>Chamado #${c.numero||c.id.slice(0,6).toUpperCase()}</h2>
+      <h2>Chamado O.S. ${c.numero||c.id.slice(0,6).toUpperCase()}</h2>
       <span class="tec-badge-st tec-st-${st}">${tecStatusLabel(st)}</span>
     </div>
     <div class="tec-modal-sla${sla.atrasado?' tec-sla-atrasado':''}">${sla.texto}</div>
@@ -1704,7 +1704,7 @@ async function tecEnviarEmailDeslocamento(c){
   <p style="font-size:15px;color:#374151;margin:0 0 24px;">O técnico <strong style="color:#1A3F80;">${_tecNome}</strong> está a caminho do seu local para atender o chamado:</p>
   <div style="background:#EBF4FF;border-left:4px solid #1A3F80;border-radius:8px;padding:16px 20px;margin-bottom:24px;">
     <p style="margin:0;font-size:13px;color:#6B7280;">Número do Chamado</p>
-    <p style="margin:4px 0 0;font-size:22px;font-weight:900;color:#1A3F80;">#${num}</p>
+    <p style="margin:4px 0 0;font-size:22px;font-weight:900;color:#1A3F80;">O.S. ${num}</p>
     ${cliente?`<p style="margin:8px 0 0;font-size:13px;color:#374151;"><strong>Cliente:</strong> ${cliente}</p>`:''}
     ${c.descricao?`<p style="margin:6px 0 0;font-size:13px;color:#374151;"><strong>Descrição:</strong> ${c.descricao}</p>`:''}
   </div>
@@ -1744,7 +1744,7 @@ async function tecEnviarEmailEncerramento(c){
   <p style="font-size:15px;color:#374151;margin:0 0 24px;">O chamado abaixo foi encerrado com sucesso pelo técnico <strong style="color:#1A3F80;">${_tecNome}</strong>:</p>
   <div style="background:#F0FDF4;border-left:4px solid #16A34A;border-radius:8px;padding:16px 20px;margin-bottom:20px;">
     <p style="margin:0;font-size:13px;color:#6B7280;">Número do Chamado</p>
-    <p style="margin:4px 0 8px;font-size:22px;font-weight:900;color:#166534;">#${num}</p>
+    <p style="margin:4px 0 8px;font-size:22px;font-weight:900;color:#166534;">O.S. ${num}</p>
     ${cliente?`<p style="margin:0 0 6px;font-size:13px;color:#374151;"><strong>Cliente:</strong> ${cliente}</p>`:''}
     ${c.descricao_tecnico?`<p style="margin:0 0 6px;font-size:13px;color:#374151;"><strong>Defeito encontrado:</strong> ${c.descricao_tecnico}</p>`:''}
     ${c.resolucao?`<p style="margin:0;font-size:13px;color:#374151;"><strong>Solução aplicada:</strong> ${c.resolucao}</p>`:''}
@@ -1762,7 +1762,7 @@ async function tecEnviarEmailEncerramento(c){
   try{
     const r=await fetch(SURL+'/functions/v1/enviar-email',{method:'POST',
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+_tecTok},
-      body:JSON.stringify({to:c.solicitante_email,subject:`Chamado #${num} Encerrado com Sucesso — Teffe Tecnologia`,html})});
+      body:JSON.stringify({to:c.solicitante_email,subject:`Chamado O.S. ${num} Encerrado com Sucesso — Teffe Tecnologia`,html})});
     if(!r.ok) console.error('[Email enc.] HTTP',r.status);
   }catch(e){console.error('[Email enc.]',e);}
 }
