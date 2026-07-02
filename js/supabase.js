@@ -983,7 +983,8 @@ window.addEventListener('DOMContentLoaded',function(){
 
 let _tecTok=null,_tecUid=null,_tecId=null,_tecNome='';
 let _tecChamadoAtual=null,_tecChamadosData={},_tecPecasCatalogo=null;
-const TEC_SLA_MAP={corretiva:480,assistencia:480,instalacao:480,desinstalacao:480,troca_pecas:480,troca_de_pecas:480,manutencao:1440,manutencao_preventiva:1440,vistoria:1440,visita_tecnica:1440};
+// Prazo padrão: 12h úteis (720min) — antes 8h (480min).
+const TEC_SLA_MAP={corretiva:720,assistencia:720,instalacao:720,desinstalacao:720,troca_pecas:720,troca_de_pecas:720,manutencao:1440,manutencao_preventiva:1440,vistoria:1440,visita_tecnica:1440};
 
 async function sfTec(path,opts){
   const h={'apikey':SKEY,'Content-Type':'application/json'};
@@ -1350,7 +1351,7 @@ const _TEC_TIPO_MAP={assistencia:'Assistência Técnica',corretiva:'Corretiva',m
 function _tecSlaDecorrido(c){
   if(!c.created_at) return{hhmm:'–',atrasado:false};
   const tipoRaw=c.tipo_servico||c.tipo_chamado||'';
-  const slaMin=TEC_SLA_MAP[tipoRaw]||480;
+  const slaMin=TEC_SLA_MAP[tipoRaw]||720;
   let pausado=c.sla_tempo_pausado||0;
   if(c.sla_pausado&&c.sla_pausa_inicio) pausado+=Math.floor((new Date()-new Date(c.sla_pausa_inicio))/60000);
   const dec=calcularSLAUtil(c.created_at,pausado);
@@ -1769,7 +1770,7 @@ function tecFormatarSLA(c){
   const st=c.status_tecnico||c.status;
   if(st==='encerrado') return {texto:'Encerrado',atrasado:false};
   const tipoRaw=c.tipo_servico||c.tipo_chamado||'assistencia';
-  const slaMin=TEC_SLA_MAP[tipoRaw]||480;
+  const slaMin=TEC_SLA_MAP[tipoRaw]||720;
   let pausado=c.sla_tempo_pausado||0;
   if(c.sla_pausado&&c.sla_pausa_inicio) pausado+=Math.floor((new Date()-new Date(c.sla_pausa_inicio))/60000);
   const decorrido=calcularSLAUtil(c.created_at,pausado);
