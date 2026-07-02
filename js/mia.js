@@ -62,8 +62,10 @@ function miaIniciarSupporte(nomeCliente) {
   _miaLeadSalvo = false;
   var wrap = document.getElementById('mia-messages');
   if (wrap) wrap.innerHTML = '';
-  // Abre o chat automaticamente
-  if (!_miaAberto) miaToggle();
+  // Não abre o chat automaticamente — Mia fica só como o ícone/bolha; a
+  // saudação (_miaBoasVindas, via miaToggle) só dispara quando o cliente
+  // clica nela por conta própria. _miaIniciado continua false aqui, então
+  // esse clique manual ainda vai mostrar a saudação normalmente.
 }
 
 /* ── Sequência de boas-vindas ── */
