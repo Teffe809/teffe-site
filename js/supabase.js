@@ -431,6 +431,8 @@ function imprimirOS(c){
   const rowsHTML=rows.map(([l,v])=>`<tr><th>${l}</th><td>${v}</td></tr>`).join('');
   const resolucaoEscapada=(c.resolucao||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   const descEscapada=((c.descricao||c.titulo)||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const nomeAssinaturaEscapado=(c.nome_assinatura||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const temAssinaturaCliente=encerrado&&!!c.assinatura_cliente;
 
   const html=`<!DOCTYPE html>
 <html lang="pt-BR">
@@ -454,6 +456,9 @@ function imprimirOS(c){
   .os-resolucao{width:100%;min-height:100px;border:1px solid #bbb;border-radius:4px;padding:10px 12px;font-family:Arial,sans-serif;font-size:13px;line-height:1.6;resize:vertical;background:#fafbfd;color:#222;}
   .os-assinaturas{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:40px;}
   .os-assinatura{border-top:1px solid #888;padding-top:8px;text-align:center;font-size:12px;color:#555;}
+  .os-assinatura-cliente{border-top:none;padding-top:0;}
+  .os-assinatura-cliente img{max-width:100%;height:70px;object-fit:contain;display:block;margin:0 auto 6px;border:1px solid #dde3ee;border-radius:4px;background:#fff;padding:4px;}
+  .os-assinatura-cliente .os-assinatura-nome{border-top:1px solid #888;padding-top:8px;font-weight:700;color:#333;}
   .os-footer{text-align:center;font-size:11px;color:#888;border-top:1px solid #dde3ee;padding-top:12px;margin-top:32px;}
   .os-btns{display:flex;gap:12px;justify-content:flex-end;margin-bottom:20px;}
   .os-btn{padding:8px 20px;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;}
@@ -510,7 +515,10 @@ ${isAssistencia?`<div class="os-section">
 </div>`:''}
 <div class="os-assinaturas">
   <div class="os-assinatura">Assinatura do Técnico</div>
-  <div class="os-assinatura">Assinatura do Cliente</div>
+  ${temAssinaturaCliente?`<div class="os-assinatura os-assinatura-cliente">
+    <img src="${c.assinatura_cliente}"/>
+    <div class="os-assinatura-nome">${nomeAssinaturaEscapado||'Assinatura do Cliente'}</div>
+  </div>`:`<div class="os-assinatura">Assinatura do Cliente</div>`}
 </div>
 <div class="os-footer">Teffe Tecnologia — teffe.com.br — (14) 99828-9248</div>
 </body>
