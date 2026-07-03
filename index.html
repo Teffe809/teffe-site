@@ -2188,7 +2188,8 @@
           </div>
           <div class="ac-fg" id="sp-campo-color" style="display:none;">
             <label class="ac-label">Contador Colorido *</label>
-            <input type="text" inputmode="numeric" id="sp-contador-color" class="ac-input" placeholder="Leitura do contador colorido"/>
+            <input type="text" inputmode="numeric" id="sp-contador-color" class="ac-input" placeholder="Leitura do contador colorido" oninput="validarContadorColor()"/>
+            <div id="sp-contador-color-erro" class="ac-counter-error" style="display:none;"></div>
           </div>
 
           <button class="ac-submit-btn" id="sp-btn-enviar" onclick="enviarSuprimento()" disabled><i class="ti ti-send"></i> Enviar Solicitação</button>

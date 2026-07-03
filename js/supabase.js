@@ -5,7 +5,7 @@ function capitalizarNome(nome) {
   return nome.toLowerCase().split(' ').map(function(p) { return p.charAt(0).toUpperCase() + p.slice(1); }).join(' ');
 }
 
-let _tok=null,_uid=null,_cid=null,_email=null,_atEquipId=null,_spEquipId=null,_spUltimoContador=null,_spTipoImpressao='monocromatico',_chamadosCache={};
+let _tok=null,_uid=null,_cid=null,_email=null,_atEquipId=null,_spEquipId=null,_spUltimoContador=null,_spUltimoContadorColor=null,_spTipoImpressao='monocromatico',_chamadosCache={};
 let _spItens=[]; // carrinho da solicitação de suprimento: [{insumo_id, label, quantidade}]
 let _equipsAC=[];
 let _tecHistData=[],_tecHistPage=0,_tecHistEquip=null;
@@ -683,15 +683,18 @@ function spRenderItens(){
 }
 
 // ── VALIDAR CONTADOR ──
-async function validarContador(){
-  if(!_spEquipId) return;
-  const val=parseInt(document.getElementById('sp-contador-pb').value);
-  const erroEl=document.getElementById('sp-contador-erro');
-  const inputEl=document.getElementById('sp-contador-pb');
-  if(isNaN(val)){erroEl.style.display='none';inputEl.style.borderColor='';return;}
-  const {data}=await sf('/rest/v1/solicitacoes_suprimento?equipamento_id=eq.'+_spEquipId+'&order=created_at.desc&limit=1&select=contador_atual');
-  const ultimo=data&&data[0]?data[0].contador_atual:null;
-  _spUltimoContador=ultimo;
+// Consulta o último valor já registrado (coluna informada) para o equipamento
+// selecionado e valida em tempo real (borda vermelha + mensagem). Usado tanto
+// para o contador PB quanto para o colorido — ver validarContador() e
+// validarContadorColor() abaixo.
+async function validarContadorCampo(inputId,erroId,coluna){
+  if(!_spEquipId) return null;
+  const val=parseInt(document.getElementById(inputId).value);
+  const erroEl=document.getElementById(erroId);
+  const inputEl=document.getElementById(inputId);
+  if(isNaN(val)){erroEl.style.display='none';inputEl.style.borderColor='';return null;}
+  const {data}=await sf('/rest/v1/solicitacoes_suprimento?equipamento_id=eq.'+_spEquipId+'&order=created_at.desc&limit=1&select='+coluna);
+  const ultimo=data&&data[0]?data[0][coluna]:null;
   if(ultimo!==null&&val<ultimo){
     erroEl.style.display='block';
     erroEl.textContent='Contador inválido: o valor informado ('+val+') é menor que o último registrado ('+ultimo+').';
@@ -700,6 +703,15 @@ async function validarContador(){
     erroEl.style.display='none';
     inputEl.style.borderColor='';
   }
+  return ultimo;
+}
+
+async function validarContador(){
+  _spUltimoContador=await validarContadorCampo('sp-contador-pb','sp-contador-erro','contador_atual');
+}
+
+async function validarContadorColor(){
+  _spUltimoContadorColor=await validarContadorCampo('sp-contador-color','sp-contador-color-erro','contador_color_atual');
 }
 
 // ── ENVIAR ASSISTÊNCIA TÉCNICA ──
@@ -780,6 +792,10 @@ async function enviarSuprimento(){
     alert('Contador PB inválido: o valor informado é menor que o último registrado ('+_spUltimoContador+').');
     return;
   }
+  if(_spUltimoContadorColor!==null&&contadorColor!=null&&contadorColor<_spUltimoContadorColor){
+    alert('Contador Colorido inválido: o valor informado é menor que o último registrado ('+_spUltimoContadorColor+').');
+    return;
+  }
 
   const btn=document.getElementById('sp-btn-enviar');
   if(btn){btn.disabled=true;btn.textContent='Enviando...';}
@@ -834,12 +850,14 @@ async function enviarSuprimento(){
   document.getElementById('sp-contador-pb').style.borderColor='';
   document.getElementById('sp-contador-erro').style.display='none';
   const ccEl=document.getElementById('sp-contador-color');
-  if(ccEl) ccEl.value='';
+  if(ccEl){ccEl.value='';ccEl.style.borderColor='';}
+  const ccErroEl=document.getElementById('sp-contador-color-erro');
+  if(ccErroEl) ccErroEl.style.display='none';
   const sfEl=document.getElementById('sp-campo-color');
   if(sfEl) sfEl.style.display='none';
   document.getElementById('sp-equip-info').style.display='none';
   document.getElementById('sp-insumo').innerHTML='<option value="">Busque o equipamento primeiro</option>';
-  _spEquipId=null;_spUltimoContador=null;_spTipoImpressao='monocromatico';
+  _spEquipId=null;_spUltimoContador=null;_spUltimoContadorColor=null;_spTipoImpressao='monocromatico';
   _spItens=[];spRenderItens();
   carregarChamados();
   acMostrarView('dash');
