@@ -6,6 +6,7 @@ function capitalizarNome(nome) {
 }
 
 let _tok=null,_uid=null,_cid=null,_email=null,_atEquipId=null,_spEquipId=null,_spUltimoContador=null,_spUltimoContadorColor=null,_spTipoImpressao='monocromatico',_chamadosCache={};
+let _clientePerfil=null; // { acesso_total, permissoes: {chamados,financeiro,equipamentos} } — usuário logado na área do cliente (multi-usuário por empresa)
 let _spItens=[]; // carrinho da solicitação de suprimento: [{insumo_id, label, quantidade}]
 let _equipsAC=[];
 let _tecHistData=[],_tecHistPage=0,_tecHistEquip=null;
@@ -229,22 +230,45 @@ async function carregarArea(){
   const c=cl&&cl[0];
   _cid=c?c.id:null;
   let primeiroNome=c?capitalizarNome(c.nome).split(' ')[0]:'cliente';
+  // Login direto em clientes.user_id é o dono/admin da empresa — acesso total
+  // sempre. Login via cliente_usuarios (usuário adicional) é quem pode estar
+  // restrito por permissoes/acesso_total daquele registro.
+  _clientePerfil=c?{acesso_total:true,permissoes:{}}:null;
   if(_email){
-    const {data:cu}=await sf('/rest/v1/cliente_usuarios?email=eq.'+encodeURIComponent(_email)+'&limit=1&select=nome,cliente_id');
+    const {data:cu}=await sf('/rest/v1/cliente_usuarios?email=eq.'+encodeURIComponent(_email)+'&limit=1&select=nome,cliente_id,acesso_total,permissoes');
     if(cu&&cu[0]){
       if(cu[0].nome) primeiroNome=capitalizarNome(cu[0].nome).split(' ')[0];
       if(!_cid&&cu[0].cliente_id) _cid=cu[0].cliente_id;
+      if(!_clientePerfil) _clientePerfil={acesso_total:!!cu[0].acesso_total,permissoes:cu[0].permissoes||{}};
     }
   }
+  if(!_clientePerfil) _clientePerfil={acesso_total:false,permissoes:{}};
   window.clienteLogado={nome:primeiroNome,clienteId:_cid};
   document.getElementById('ac-nome').textContent=primeiroNome;
   document.getElementById('ac-empresa').textContent=c?c.empresa:'Minha Área';
   if(typeof miaIniciarSupporte==='function') setTimeout(function(){miaIniciarSupporte(primeiroNome);},1500);
   acMostrarView('dash');
-  carregarChamados();
-  carregarEquips();
+  if(_cpTemPermissaoCliente('chamados')){ carregarChamados(); }
+  if(_cpTemPermissaoCliente('equipamentos')){ carregarEquips(); }
   carregarContratos();
   if(typeof cpOnAreaLoad==='function') cpOnAreaLoad();
+  _cpAplicarPermissoesCliente();
+}
+
+// ── PERMISSÕES DO USUÁRIO DA ÁREA DO CLIENTE (multi-usuário por empresa) ──
+function _cpTemPermissaoCliente(modulo){
+  if(!_clientePerfil) return false;
+  if(_clientePerfil.acesso_total) return true;
+  return !!(_clientePerfil.permissoes&&_clientePerfil.permissoes[modulo]);
+}
+
+function _cpAplicarPermissoesCliente(){
+  document.querySelectorAll('[data-modulo-cliente]').forEach(function(el){
+    var m=el.getAttribute('data-modulo-cliente');
+    el.style.display=_cpTemPermissaoCliente(m)?'':'none';
+  });
+  var acoesRapidas=document.querySelector('.cp-acoes-rapidas');
+  if(acoesRapidas) acoesRapidas.style.display=_cpTemPermissaoCliente('chamados')?'':'none';
 }
 
 // ── NAVEGAÇÃO ENTRE VIEWS ──

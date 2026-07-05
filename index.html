@@ -2014,13 +2014,13 @@
         <button class="cp-nav-item cp-nav-active" data-view="dash" onclick="cpNavegar('dash')">
           <i class="ti ti-home"></i> Início
         </button>
-        <button class="cp-nav-item" data-view="contratos" onclick="cpNavegar('contratos')">
+        <button class="cp-nav-item" data-view="contratos" data-modulo-cliente="financeiro" onclick="cpNavegar('contratos')">
           <i class="ti ti-file-description"></i> Contratos
         </button>
-        <button class="cp-nav-item" data-view="financeiro" onclick="cpNavegar('financeiro')">
+        <button class="cp-nav-item" data-view="financeiro" data-modulo-cliente="financeiro" onclick="cpNavegar('financeiro')">
           <i class="ti ti-receipt-2"></i> Financeiro
         </button>
-        <button class="cp-nav-item" data-view="historico" onclick="cpNavegar('historico')">
+        <button class="cp-nav-item" data-view="historico" data-modulo-cliente="chamados" onclick="cpNavegar('historico')">
           <i class="ti ti-history"></i> Histórico
         </button>
       </div>
@@ -2043,22 +2043,22 @@
         <p class="ac-pg-sub">Bem-vindo ao portal de atendimento Teffe</p>
 
         <div class="ac-cards">
-          <div class="ac-card">
+          <div class="ac-card" data-modulo-cliente="chamados">
             <i class="ti ti-ticket ac-card-icon"></i>
             <div class="ac-card-num" id="n-cham">–</div>
             <div class="ac-card-label">Chamados abertos</div>
           </div>
-          <div class="ac-card">
+          <div class="ac-card" data-modulo-cliente="financeiro">
             <i class="ti ti-file-description ac-card-icon"></i>
             <div class="ac-card-num" id="n-cont">–</div>
             <div class="ac-card-label">Contratos ativos</div>
           </div>
-          <div class="ac-card">
+          <div class="ac-card" data-modulo-cliente="financeiro">
             <i class="ti ti-receipt-2 ac-card-icon"></i>
             <div class="ac-card-num" id="cp-n-boletos">–</div>
             <div class="ac-card-label">Boletos a vencer</div>
           </div>
-          <div class="ac-card">
+          <div class="ac-card" data-modulo-cliente="financeiro">
             <i class="ti ti-calendar-due ac-card-icon"></i>
             <div class="ac-card-num cp-prox-venc-num" id="cp-prox-venc">–</div>
             <div class="ac-card-label">Próximo vencimento</div>
@@ -2074,14 +2074,14 @@
           </button>
         </div>
 
-        <div class="ac-section">
+        <div class="ac-section" data-modulo-cliente="chamados">
           <div class="ac-section-header">
             <h2><i class="ti ti-ticket" style="margin-right:7px;vertical-align:-2px;"></i>Chamados abertos</h2>
           </div>
           <div id="lista-cham"><div class="ac-empty">Carregando...</div></div>
         </div>
 
-        <div class="ac-section">
+        <div class="ac-section" data-modulo-cliente="equipamentos">
           <div class="ac-section-header">
             <h2><i class="ti ti-device-desktop-analytics" style="margin-right:7px;vertical-align:-2px;"></i>Equipamentos</h2>
           </div>

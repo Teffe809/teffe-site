@@ -58,7 +58,10 @@ function cpOnAreaLoad(){
       {icon:'ti-file-description', label:'Contratos', view:'contratos'},
       {icon:'ti-receipt-2',        label:'Financeiro', view:'financeiro'},
       {icon:'ti-history',          label:'Histórico',  view:'historico'}
-    ];
+    ].filter(function(a){
+      var modulo = _CP_VIEW_MODULO_CLIENTE[a.view];
+      return !modulo || typeof _cpTemPermissaoCliente !== 'function' || _cpTemPermissaoCliente(modulo);
+    });
     var grid = document.createElement('div');
     grid.className = 'cp-acesso-rapido';
     grid.innerHTML = atalhos.map(function(a){
@@ -73,7 +76,20 @@ function cpOnAreaLoad(){
 }
 
 // ── NAVEGAÇÃO ──
+// Módulo exigido por view (gate de permissão, mesmo padrão de
+// _ERP_VIEW_MODULO/erpShowView no ERP) — views sem entrada aqui (dash) são
+// sempre acessíveis.
+var _CP_VIEW_MODULO_CLIENTE = {
+  assist:'chamados', suprim:'chamados', historico:'chamados',
+  contratos:'financeiro', financeiro:'financeiro'
+};
+
 function cpNavegar(id){
+  var modulo = _CP_VIEW_MODULO_CLIENTE[id];
+  if(modulo && typeof _cpTemPermissaoCliente === 'function' && !_cpTemPermissaoCliente(modulo)){
+    alert('Acesso não autorizado.');
+    id = 'dash';
+  }
   cpSetNavAtivo(id);
   document.querySelectorAll('.ac-view').forEach(function(v){ v.classList.remove('ac-view-active'); });
   var view = document.getElementById('ac-view-' + id);
