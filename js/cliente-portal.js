@@ -478,38 +478,84 @@ async function cpCarregarContratosView(){
 }
 
 // ── VIEW HISTÓRICO ──
+// Mesmos status terminais de suprimento já usados no ERP
+// (ERP_STATUS_SUPRIMENTO_TERMINAL, js/supabase.js do teffe-erp).
+var _CP_HIST_STATUS_SUPRIMENTO_TERMINAL = ['enviado', 'encerrado', 'cancelado'];
+
 async function cpCarregarHistorico(){
   var el = document.getElementById('cp-lista-historico');
   if(!el) return;
   el.innerHTML = '<div class="ac-empty">Carregando...</div>';
-  if(!_cid){ el.innerHTML = '<div class="ac-empty">Nenhum chamado encerrado.</div>'; return; }
+  if(!_cid){ el.innerHTML = '<div class="ac-empty">Nenhum item no histórico.</div>'; return; }
 
-  var res = await sf(
-    '/rest/v1/chamados?cliente_id=eq.' + _cid +
-    '&or=(status.eq.encerrado,status.eq.concluido,status.eq.resolvido)' +
-    '&order=data_encerramento.desc,created_at.desc&select=*'
-  );
+  var supOr = _CP_HIST_STATUS_SUPRIMENTO_TERMINAL.map(function(s){ return 'status.eq.' + s; }).join(',');
+  var [resCh, resSp] = await Promise.all([
+    sf('/rest/v1/chamados?cliente_id=eq.' + _cid +
+      '&or=(status.eq.encerrado,status.eq.concluido,status.eq.resolvido)' +
+      '&order=data_encerramento.desc,created_at.desc&select=*'),
+    sf('/rest/v1/solicitacoes_suprimento?cliente_id=eq.' + _cid +
+      '&or=(' + supOr + ')' +
+      '&order=data_encerramento.desc,created_at.desc&select=*')
+  ]);
 
-  if(!res.ok || !res.data || !res.data.length){
-    el.innerHTML = '<div class="ac-empty">Nenhum chamado encerrado encontrado.</div>';
+  var chamados = _arrOuVazio(resCh).map(function(r){ return Object.assign({}, r, {_tipo:'assistencia'}); });
+
+  // Agrupa as linhas de suprimento pelo mesmo "numero" (um pedido com vários
+  // insumos vira várias linhas) — mesmo padrão de carregarChamados() em
+  // js/supabase.js.
+  var suprimentosRaw = _arrOuVazio(resSp);
+  var gruposMap = {};
+  var ordemGrupos = [];
+  suprimentosRaw.forEach(function(r){
+    var chave = r.numero != null ? ('n' + r.numero) : ('r' + r.id);
+    if(!gruposMap[chave]){
+      gruposMap[chave] = Object.assign({}, r, {_tipo:'suprimento', id:'sup-' + chave, _itens:[]});
+      ordemGrupos.push(chave);
+    }
+    gruposMap[chave]._itens.push({insumo_id:r.insumo_id, quantidade:r.quantidade});
+  });
+  var suprimentos = ordemGrupos.map(function(k){ return gruposMap[k]; });
+
+  var insumoIds = Array.from(new Set(suprimentos.reduce(function(acc, s){
+    return acc.concat(s._itens.map(function(it){ return it.insumo_id; }).filter(Boolean));
+  }, [])));
+  if(insumoIds.length){
+    var insumosRes = await sf('/rest/v1/insumos?id=in.(' + insumoIds.join(',') + ')&select=id,nome,codigo');
+    var insumoMap = {};
+    _arrOuVazio(insumosRes).forEach(function(i){ insumoMap[i.id] = i; });
+    suprimentos.forEach(function(s){ s._itens.forEach(function(it){ it._insumo = insumoMap[it.insumo_id] || null; }); });
+  }
+
+  var todos = chamados.concat(suprimentos).sort(function(a, b){
+    return new Date(b.data_encerramento || b.created_at) - new Date(a.data_encerramento || a.created_at);
+  });
+
+  if(!todos.length){
+    el.innerHTML = '<div class="ac-empty">Nenhum item no histórico.</div>';
     return;
   }
 
-  _cpHistoricoData = res.data;
+  _cpHistoricoData = todos;
 
-  var statusLabels = {encerrado:'Encerrado', concluido:'Concluído', resolvido:'Resolvido'};
+  var statusLabels = {encerrado:'Encerrado', concluido:'Concluído', resolvido:'Resolvido', faturado:'Faturado', enviado:'Enviado', cancelado:'Cancelado'};
+  var tipoChamadoLabels = {assistencia:'Assistência', instalacao:'Instalação', desinstalacao:'Desinstalação'};
   var fmtDate = function(v){ return v ? new Date(v).toLocaleString('pt-BR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '–'; };
 
   el.innerHTML =
     '<table class="ac-table"><thead><tr>' +
-    '<th>O.S.</th><th>Descrição</th><th>Técnico</th><th>Status</th><th>Encerramento</th><th></th>' +
+    '<th>O.S.</th><th>Tipo</th><th>Descrição</th><th>Técnico</th><th>Status</th><th>Encerramento</th><th></th>' +
     '</tr></thead><tbody>' +
-    res.data.map(function(r, idx){
-      var desc = (r.descricao || r.titulo || '–').slice(0, 80);
+    todos.map(function(r, idx){
+      var isAssistencia = r._tipo !== 'suprimento';
+      var tipoLabel = isAssistencia ? (tipoChamadoLabels[r.tipo_chamado] || 'Assistência') : 'Suprimentos';
+      var desc = isAssistencia
+        ? (r.descricao || r.titulo || '–').slice(0, 80)
+        : ('Solicitação de Suprimentos' + (r._itens.length > 1 ? ' — ' + r._itens.length + ' itens' : ''));
       return '<tr>' +
         '<td><b>O.S. ' + (r.numero||r.id.slice(0,6)) + '</b></td>' +
-        '<td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + (r.descricao||'').replace(/"/g,'&quot;') + '">' + desc + '</td>' +
-        '<td>' + (r.tecnico||'–') + '</td>' +
+        '<td><span class="badge ' + (isAssistencia ? 'badge-assist' : 'badge-suprim') + '">' + tipoLabel + '</span></td>' +
+        '<td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + (isAssistencia ? (r.descricao||'').replace(/"/g,'&quot;') : '') + '">' + desc + '</td>' +
+        '<td>' + (isAssistencia ? (r.tecnico||'–') : '–') + '</td>' +
         '<td><span class="badge badge-' + r.status + '">' + (statusLabels[r.status]||r.status) + '</span></td>' +
         '<td>' + fmtDate(r.data_encerramento) + '</td>' +
         '<td><button class="adm-btn adm-btn-sm" onclick="cpVerHistorico(' + idx + ')">Ver</button></td>' +
@@ -526,6 +572,6 @@ async function cpCarregarHistorico(){
 function cpVerHistorico(idx){
   var c = _cpHistoricoData[idx];
   if(!c) return;
-  _chamadosCache[c.id] = Object.assign({}, c, {_tipo:'assistencia'});
+  _chamadosCache[c.id] = c;
   abrirDetalhesChamado(c.id);
 }
