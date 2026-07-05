@@ -257,6 +257,13 @@ function acMostrarView(id){
 }
 
 // ── CHAMADOS (assistência + suprimentos) ──
+// Status "em andamento" (não finalizados) — mesmo critério do Histórico
+// (cpCarregarHistorico, js/cliente-portal.js) e do ERP_STATUS_SUPRIMENTO_TERMINAL
+// do teffe-erp: assim que o status vira um dos finalizados, o item some daqui
+// e passa a aparecer só no Histórico.
+const STATUS_CHAMADO_EM_ANDAMENTO=['aberto','em_deslocamento','em_atendimento','aguardando_peca','pendente'];
+const STATUS_SUPRIMENTO_EM_ANDAMENTO=['aberto','faturado'];
+
 async function carregarChamados(){
   const el=document.getElementById('lista-cham');
   if(!_cid){
@@ -295,12 +302,23 @@ async function carregarChamados(){
   const todos=[...chamados,...suprimentos].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
   _chamadosCache={};
   todos.forEach(r=>{_chamadosCache[r.id]=r;});
-  document.getElementById('n-cham').textContent=todos.filter(r=>r.status==='aberto').length;
+
+  // Tela inicial mostra só o que ainda está em andamento — finalizado sai
+  // daqui e passa a aparecer só no Histórico (evita duplicar informação).
+  // Chamados usam status_tecnico (progresso granular do técnico) quando
+  // presente — chamados.status só alterna entre 'aberto' e 'encerrado',
+  // então checar só "status" não veria em_deslocamento/em_atendimento/etc.
+  const emAndamento=todos.filter(r=>{
+    if(r._tipo==='suprimento') return STATUS_SUPRIMENTO_EM_ANDAMENTO.includes(r.status);
+    return STATUS_CHAMADO_EM_ANDAMENTO.includes(r.status_tecnico||r.status);
+  });
+
+  document.getElementById('n-cham').textContent=emAndamento.length;
   document.getElementById('n-encerrado').textContent=todos.filter(r=>r.status==='encerrado').length;
-  if(!todos.length){el.innerHTML='<div class="ac-empty">Nenhum chamado ainda.</div>';return;}
+  if(!emAndamento.length){el.innerHTML='<div class="ac-empty">Nenhum chamado em andamento.</div>';return;}
   const statusLabelsLista={aberto:'Aberto',andamento:'Em andamento',encerrado:'Encerrado',concluido:'Concluído',resolvido:'Resolvido',faturado:'Faturado',enviado:'Enviado',cancelado:'Cancelado'};
   el.innerHTML='<table class="ac-table"><thead><tr><th>O.S.</th><th>Tipo</th><th>Descrição</th><th>Status</th><th>Data</th></tr></thead><tbody>'+
-    todos.map(r=>{
+    emAndamento.map(r=>{
       const descricaoCol=r._tipo==='suprimento'
         ?('Solicitação de Suprimentos'+(r._itens.length>1?' — '+r._itens.length+' itens':''))
         :(r.descricao||r.titulo||'–');
