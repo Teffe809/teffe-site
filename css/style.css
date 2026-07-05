@@ -891,6 +891,9 @@ body:has(.orca-bg.open),body:has(.modal-bg.open){overflow:hidden;}
 .ac-modal-bg{display:none;position:fixed;inset:0;z-index:6000;background:rgba(14,34,72,.88);backdrop-filter:blur(6px);align-items:center;justify-content:center;}
 .ac-modal-bg.open{display:flex;}
 .ac-modal-box{background:#fff;border-radius:20px;padding:48px 40px;max-width:400px;width:100%;text-align:center;animation:mIn .3s ease;}
+#ac-detalhe-modal .ac-modal-box{display:flex;flex-direction:column;max-height:90vh;}
+#ac-detalhe-conteudo{overflow-y:auto;flex:1 1 auto;min-height:0;}
+.ac-detalhe-footer{flex-shrink:0;}
 .ac-modal-box h3{font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:#1A3F80;margin-bottom:10px;}
 .ac-modal-box p{font-size:14px;font-weight:300;color:#4A5568;line-height:1.7;margin-bottom:24px;}
 .ac-modal-box button{background:#1A3F80;color:#fff;border:none;padding:12px 32px;border-radius:9px;font-size:14px;font-weight:600;cursor:pointer;}
