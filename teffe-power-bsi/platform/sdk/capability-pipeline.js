@@ -13,6 +13,7 @@ class CapabilityPipeline {
 
   run(request, hooks) {
     const validation = hooks.validate(request.input);
+    const baseExecutionContext = this.withMemoryContext(request.executionContext);
 
     if (!validation.allowed) {
       return this.deny(request, validation);
@@ -24,9 +25,13 @@ class CapabilityPipeline {
       capability: request.capability,
       input: normalizedInput,
       context: request.context,
+      executionContext: baseExecutionContext,
     }));
 
-    const result = this.pluginEngine.execute(request.pluginId, normalizedInput, request.context);
+    const executionContext = this.withAuditContext(baseExecutionContext, {
+      startedId: startedAudit.id,
+    });
+    const result = this.pluginEngine.execute(request.pluginId, normalizedInput, executionContext);
 
     const execution = this.memoryEngine.persistExecution(this.withMetadata(request, {
       id: `exec_${Date.now()}`,
@@ -36,6 +41,7 @@ class CapabilityPipeline {
       auditId: startedAudit.id,
       timestamp: new Date().toISOString(),
       context: request.context,
+      executionContext,
     }));
 
     const completedAudit = this.auditLog.record({
@@ -72,6 +78,7 @@ class CapabilityPipeline {
       normalizedPlate: normalizedValue,
       input: request.input,
       context: request.context,
+      executionContext: this.withMemoryContext(request.executionContext),
     }));
 
     return createCapabilityErrorResponse({
@@ -91,6 +98,22 @@ class CapabilityPipeline {
     return {
       ...payload,
       metadata: request.metadata,
+    };
+  }
+
+  withMemoryContext(executionContext) {
+    return {
+      ...executionContext,
+      memory: executionContext.memory ?? {
+        latestExecution: this.memoryEngine.latestExecution(),
+      },
+    };
+  }
+
+  withAuditContext(executionContext, audit) {
+    return {
+      ...executionContext,
+      audit: executionContext.audit ?? audit,
     };
   }
 }

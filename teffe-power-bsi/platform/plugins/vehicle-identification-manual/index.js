@@ -56,7 +56,7 @@ module.exports = {
       },
     },
   },
-  execute(input) {
+  execute(input, _executionContext = {}) {
     const fallback = {
       plate: input.plate,
       brand: 'Fiat',

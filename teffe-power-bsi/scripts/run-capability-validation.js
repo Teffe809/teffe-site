@@ -59,7 +59,14 @@ function main() {
   assert(response.vehicle.plate === 'ABC1D23', 'vehicle plate mismatch');
   assert(response.source === 'mock', 'capability must use mock source');
   assert(response.auditId, 'success response must include auditId');
-  assert(platform.engines.memoryEngine.latestExecution()?.result.vehicle.plate === 'ABC1D23', 'context was not persisted in memory');
+  const latestExecution = platform.engines.memoryEngine.latestExecution();
+  assert(latestExecution?.result.vehicle.plate === 'ABC1D23', 'context was not persisted in memory');
+  assert(latestExecution?.executionContext?.runtime?.source === 'mia-core', 'ExecutionContext runtime source missing');
+  assert(latestExecution?.executionContext?.user?.id === 'validation-user', 'ExecutionContext user missing');
+  assert(latestExecution?.executionContext?.runtime?.intent === 'vehicle.identify.manual', 'ExecutionContext intent missing');
+  assert(latestExecution?.executionContext?.memory, 'ExecutionContext memory missing');
+  assert(latestExecution?.executionContext?.audit?.startedId, 'ExecutionContext audit reference missing');
+  assert(response.audit.started.executionContext.runtime.source === 'mia-core', 'audit missing ExecutionContext');
 
   const negativeTests = [
     assertFailure(platform, '', 'plate_required'),
