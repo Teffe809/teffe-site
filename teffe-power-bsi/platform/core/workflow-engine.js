@@ -1,8 +1,16 @@
 const { CapabilityPipeline, createCapabilityRequest } = require('../sdk');
 
 class WorkflowEngine {
-  constructor({ pluginEngine, memoryEngine, auditLog, securityGuardian, capabilityPipeline }) {
+  constructor({
+    pluginEngine,
+    memoryEngine,
+    auditLog,
+    securityGuardian,
+    capabilityPipeline,
+    capabilityRegistry,
+  }) {
     this.securityGuardian = securityGuardian;
+    this.capabilityRegistry = capabilityRegistry;
     this.capabilityPipeline = capabilityPipeline || new CapabilityPipeline({
       pluginEngine,
       memoryEngine,
@@ -11,9 +19,11 @@ class WorkflowEngine {
   }
 
   runVehicleIdentification(input, context = {}) {
+    const capabilityId = 'vehicle-identification.manual';
+    const capability = this.capabilityRegistry?.get(capabilityId);
     const request = createCapabilityRequest({
-      capability: 'vehicle-identification.manual',
-      pluginId: 'vehicle-identification-manual',
+      capability: capabilityId,
+      pluginId: capability?.pluginId || 'vehicle-identification-manual',
       input,
       context,
     });

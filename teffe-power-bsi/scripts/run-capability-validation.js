@@ -35,6 +35,19 @@ function main() {
   assert(platform.engines.miaCore, 'MIA Core missing');
   assert(platform.engines.auditLog, 'Audit Log missing');
   assert(platform.engines.capabilityPipeline, 'Capability Pipeline missing');
+  assert(platform.engines.capabilityRegistry, 'Capability Registry missing');
+  assert(platform.engines.capabilityDiscovery, 'Capability Discovery missing');
+  assert(platform.engines.capabilityRegistry.has('vehicle-identification.manual'), 'Vehicle capability not registered');
+
+  const discoveredById = platform.engines.capabilityDiscovery.findById('vehicle-identification.manual');
+  const discoveredByMetadata = platform.engines.capabilityDiscovery.findByMetadata({
+    name: 'Vehicle Identification Manual',
+  });
+
+  assert(discoveredById?.pluginId === 'vehicle-identification-manual', 'Vehicle capability plugin mapping missing');
+  assert(discoveredById?.inputContract?.required?.includes('plate'), 'Vehicle input contract missing plate');
+  assert(discoveredById?.outputContract?.success?.normalizedPlate === 'string', 'Vehicle output contract missing normalizedPlate');
+  assert(discoveredByMetadata.length === 1, 'Vehicle capability discovery by metadata failed');
 
   const response = platform.engines.miaCore.handleManualVehicleIdentification({
     plate: 'ABC-1D23',
@@ -77,7 +90,15 @@ function main() {
         'MIA Core',
         'Audit Log',
         'Capability Pipeline',
+        'Capability Registry',
+        'Capability Discovery',
       ],
+      capabilities: platform.capabilities.map((capability) => ({
+        id: capability.id,
+        name: capability.name,
+        version: capability.version,
+        pluginId: capability.pluginId,
+      })),
     },
     input: {
       plate: 'ABC-1D23',

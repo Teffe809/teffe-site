@@ -23,6 +23,39 @@ module.exports = {
   id: 'vehicle-identification-manual',
   name: 'Vehicle Identification Manual',
   version: '0.1.0',
+  capability: {
+    id: 'vehicle-identification.manual',
+    name: 'Vehicle Identification Manual',
+    version: '0.1.0',
+    description: 'Identifies a vehicle from a manually provided Brazilian plate using local mock data.',
+    inputContract: {
+      type: 'object',
+      required: ['plate'],
+      properties: {
+        plate: {
+          type: 'string',
+          description: 'Brazilian vehicle plate with optional hyphen or spaces.',
+        },
+      },
+    },
+    outputContract: {
+      success: {
+        ok: true,
+        normalizedPlate: 'string',
+        vehicle: 'object',
+        auditId: 'string',
+      },
+      failure: {
+        ok: false,
+        normalizedPlate: 'string|null',
+        error: {
+          code: 'string',
+          message: 'string',
+        },
+        auditId: 'string',
+      },
+    },
+  },
   execute(input) {
     const fallback = {
       plate: input.plate,
