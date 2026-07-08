@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const { createClient } = require('@supabase/supabase-js');
+const { bootPlatform } = require('./platform');
 
 const app = express();
 app.use(express.json());
@@ -10,9 +11,35 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_KEY
 );
 
+const platform = bootPlatform();
+
 /* ── GET /health ──────────────────────────────────────────────────────────── */
 app.get('/health', (_req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    platform: {
+      status: platform.status,
+      bootedAt: platform.bootedAt,
+      plugins: platform.plugins,
+    },
+  });
+});
+
+app.post('/capabilities/vehicle-identification/manual', (req, res) => {
+  try {
+    const { plate, userId } = req.body ?? {};
+    const result = platform.engines.miaCore.handleManualVehicleIdentification({ plate, userId });
+
+    if (!result.ok) {
+      return res.status(400).json(result);
+    }
+
+    return res.json(result);
+  } catch (err) {
+    console.error('[/capabilities/vehicle-identification/manual]', err.message);
+    res.status(500).json({ ok: false, reason: 'internal server error' });
+  }
 });
 
 /* ── POST /auth/pin ───────────────────────────────────────────────────────── */
@@ -161,5 +188,6 @@ app.listen(PORT, () => {
   console.log(`Teffe Power BSI rodando na porta ${PORT}`);
   console.log(`  POST  /auth/pin`);
   console.log(`  POST  /log/acesso`);
+  console.log(`  POST  /capabilities/vehicle-identification/manual`);
   console.log(`  GET   /health`);
 });
