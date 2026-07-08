@@ -5,6 +5,7 @@ const { MiaCore } = require('./core/mia-core');
 const { PluginEngine } = require('./core/plugin-engine');
 const { SecurityGuardian } = require('./core/security-guardian');
 const { WorkflowEngine } = require('./core/workflow-engine');
+const { CapabilityPipeline } = require('./sdk');
 
 function bootPlatform(options = {}) {
   const baseDir = options.baseDir || path.join(__dirname, '..');
@@ -16,11 +17,17 @@ function bootPlatform(options = {}) {
   const securityGuardian = new SecurityGuardian();
   const pluginEngine = new PluginEngine({ pluginsDir });
   const pluginBoot = pluginEngine.boot();
+  const capabilityPipeline = new CapabilityPipeline({
+    pluginEngine,
+    memoryEngine,
+    auditLog,
+  });
   const workflowEngine = new WorkflowEngine({
     pluginEngine,
     memoryEngine,
     auditLog,
     securityGuardian,
+    capabilityPipeline,
   });
   const miaCore = new MiaCore({ workflowEngine });
 
@@ -34,6 +41,7 @@ function bootPlatform(options = {}) {
       securityGuardian,
       miaCore,
       auditLog,
+      capabilityPipeline,
     },
     plugins: pluginBoot.loaded,
   };

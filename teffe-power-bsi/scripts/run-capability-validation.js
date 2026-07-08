@@ -34,6 +34,7 @@ function main() {
   assert(platform.engines.securityGuardian, 'Security Guardian missing');
   assert(platform.engines.miaCore, 'MIA Core missing');
   assert(platform.engines.auditLog, 'Audit Log missing');
+  assert(platform.engines.capabilityPipeline, 'Capability Pipeline missing');
 
   const response = platform.engines.miaCore.handleManualVehicleIdentification({
     plate: 'ABC-1D23',
@@ -75,6 +76,7 @@ function main() {
         'Security Guardian',
         'MIA Core',
         'Audit Log',
+        'Capability Pipeline',
       ],
     },
     input: {

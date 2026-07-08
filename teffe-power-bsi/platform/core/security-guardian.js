@@ -27,6 +27,10 @@ class SecurityGuardian {
 
     return {
       allowed: true,
+      normalizedInput: {
+        ...input,
+        plate: normalizedPlate,
+      },
       normalizedPlate,
       sanitizedInput: {
         ...input,
@@ -38,6 +42,7 @@ class SecurityGuardian {
   deny(code, message, normalizedPlate) {
     return {
       allowed: false,
+      normalizedInput: normalizedPlate ? { normalizedPlate } : null,
       normalizedPlate,
       error: {
         code,
