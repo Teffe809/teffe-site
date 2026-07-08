@@ -101,6 +101,16 @@ class ContractValidator {
       }
     }
 
+    if (Array.isArray(value)) {
+      if (contract.minItems != null && value.length < contract.minItems) {
+        errors.push({ path, rule: 'minItems', message: `Minimum item count is ${contract.minItems}` });
+      }
+
+      if (contract.items) {
+        value.forEach((item, index) => this.validateNode(item, contract.items, `${path}[${index}]`, errors));
+      }
+    }
+
     if (value && typeof value === 'object' && !Array.isArray(value)) {
       for (const key of contract.required || []) {
         if (!Object.prototype.hasOwnProperty.call(value, key)) {

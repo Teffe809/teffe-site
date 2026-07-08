@@ -39,6 +39,50 @@ class SecurityGuardian {
     };
   }
 
+  validateVehicleCompatibilityRequest(input) {
+    const category = this.normalizeCategory(input?.category);
+    const supportedCategories = ['freios', 'suspensao', 'motor', 'filtros'];
+
+    if (!input?.vehicle) {
+      return this.denyRequest('vehicle_required', 'identified vehicle is required');
+    }
+
+    if (!category) {
+      return this.denyRequest('category_required', 'part category is required');
+    }
+
+    if (!supportedCategories.includes(category)) {
+      return this.denyRequest(
+        'category_not_supported',
+        `part category must be one of: ${supportedCategories.join(', ')}`
+      );
+    }
+
+    return {
+      allowed: true,
+      normalizedInput: {
+        ...input,
+        category,
+      },
+    };
+  }
+
+  normalizeCategory(category) {
+    return String(category ?? '')
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+  }
+
+  denyRequest(code, message) {
+    return {
+      allowed: false,
+      normalizedInput: null,
+      error: { code, message },
+    };
+  }
+
   deny(code, message, normalizedPlate) {
     return {
       allowed: false,

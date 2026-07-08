@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "validate:vehicle": "node scripts/run-capability-validation.js"
+    "validate:vehicle": "node scripts/run-capability-validation.js",
+    "validate:compatibility": "node scripts/run-vehicle-compatibility-validation.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",

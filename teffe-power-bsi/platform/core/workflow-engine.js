@@ -37,6 +37,25 @@ class WorkflowEngine {
     return this.toVehicleIdentificationResponse(response);
   }
 
+  runVehicleCompatibility(input, context = {}) {
+    const capabilityId = 'vehicle.compatibility';
+    const capability = this.capabilityRegistry?.get(capabilityId);
+    const request = createCapabilityRequest({
+      capability: capabilityId,
+      pluginId: capability?.pluginId || 'vehicle-compatibility',
+      input,
+      context,
+      inputContract: capability?.inputContract,
+      resultContract: capability?.resultContract,
+    });
+
+    const response = this.capabilityPipeline.run(request, {
+      validate: (requestInput) => this.securityGuardian.validateVehicleCompatibilityRequest(requestInput),
+    });
+
+    return this.toVehicleCompatibilityResponse(response);
+  }
+
   toVehicleIdentificationResponse(response) {
     if (!response.ok) {
       return {
@@ -52,6 +71,28 @@ class WorkflowEngine {
       ok: true,
       normalizedPlate: response.normalizedInput.plate,
       vehicle: response.result.vehicle,
+      source: response.result.source,
+      auditId: response.auditId,
+      execution: response.execution,
+      audit: response.audit,
+    };
+  }
+
+  toVehicleCompatibilityResponse(response) {
+    if (!response.ok) {
+      return {
+        ok: false,
+        error: response.error,
+        auditId: response.auditId,
+        audit: response.audit,
+      };
+    }
+
+    return {
+      ok: true,
+      vehicle: response.result.vehicle,
+      category: response.result.category,
+      compatibleParts: response.result.compatibleParts,
       source: response.result.source,
       auditId: response.auditId,
       execution: response.execution,

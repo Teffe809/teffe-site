@@ -42,6 +42,26 @@ app.post('/capabilities/vehicle-identification/manual', (req, res) => {
   }
 });
 
+app.post('/capabilities/vehicle-compatibility', (req, res) => {
+  try {
+    const { vehicle, category, userId } = req.body ?? {};
+    const result = platform.engines.miaCore.handleVehicleCompatibility({
+      vehicle,
+      category,
+      userId,
+    });
+
+    if (!result.ok) {
+      return res.status(400).json(result);
+    }
+
+    return res.json(result);
+  } catch (err) {
+    console.error('[/capabilities/vehicle-compatibility]', err.message);
+    return res.status(500).json({ ok: false, reason: 'internal server error' });
+  }
+});
+
 /* ── POST /auth/pin ───────────────────────────────────────────────────────── */
 app.post('/auth/pin', async (req, res) => {
   try {
@@ -189,5 +209,6 @@ app.listen(PORT, () => {
   console.log(`  POST  /auth/pin`);
   console.log(`  POST  /log/acesso`);
   console.log(`  POST  /capabilities/vehicle-identification/manual`);
+  console.log(`  POST  /capabilities/vehicle-compatibility`);
   console.log(`  GET   /health`);
 });
