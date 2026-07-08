@@ -26,6 +26,8 @@ class WorkflowEngine {
       pluginId: capability?.pluginId || 'vehicle-identification-manual',
       input,
       context,
+      inputContract: capability?.inputContract,
+      resultContract: capability?.resultContract,
     });
 
     const response = this.capabilityPipeline.run(request, {

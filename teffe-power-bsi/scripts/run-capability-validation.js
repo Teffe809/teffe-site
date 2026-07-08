@@ -37,6 +37,7 @@ function main() {
   assert(platform.engines.capabilityPipeline, 'Capability Pipeline missing');
   assert(platform.engines.capabilityRegistry, 'Capability Registry missing');
   assert(platform.engines.capabilityDiscovery, 'Capability Discovery missing');
+  assert(platform.engines.contractValidator, 'Contract Validator missing');
   assert(platform.engines.capabilityRegistry.has('vehicle-identification.manual'), 'Vehicle capability not registered');
 
   const discoveredById = platform.engines.capabilityDiscovery.findById('vehicle-identification.manual');
@@ -76,12 +77,50 @@ function main() {
     assertFailure(platform, '123ABCD', 'plate_invalid_format'),
   ];
 
+  const invalidInputContract = platform.engines.miaCore.handleManualVehicleIdentification({
+    plate: 1234567,
+    userId: 'contract-validation-user',
+  });
+  assert(invalidInputContract.ok === false, 'invalid input contract must fail');
+  assert(
+    invalidInputContract.error?.code === 'capability_input_contract_invalid',
+    'invalid input contract error code mismatch'
+  );
+
+  const invalidRequestContract = platform.engines.capabilityPipeline.run({
+    capability: 'vehicle-identification.manual',
+    input: { plate: 'ABC1D23' },
+  }, {
+    validate: () => {
+      throw new Error('business validation must not run for an invalid request contract');
+    },
+  });
+  assert(invalidRequestContract.ok === false, 'invalid CapabilityRequest must fail');
+  assert(
+    invalidRequestContract.error?.code === 'capability_request_contract_invalid',
+    'invalid CapabilityRequest error code mismatch'
+  );
+
+  const vehiclePlugin = platform.engines.pluginEngine.plugins.get('vehicle-identification-manual');
+  const originalExecute = vehiclePlugin.execute;
+  vehiclePlugin.execute = () => ({ source: 'mock' });
+  const invalidResultContract = platform.engines.miaCore.handleManualVehicleIdentification({
+    plate: 'ABC1D23',
+    userId: 'contract-validation-user',
+  });
+  vehiclePlugin.execute = originalExecute;
+  assert(invalidResultContract.ok === false, 'invalid capability result must fail');
+  assert(
+    invalidResultContract.error?.code === 'capability_result_contract_invalid',
+    'invalid capability result error code mismatch'
+  );
+
   const auditFile = path.join(dataDir, 'audit.jsonl');
   const contextFile = path.join(dataDir, 'context-store.json');
   const auditLines = fs.readFileSync(auditFile, 'utf8').trim().split('\n');
   const persistedContext = JSON.parse(fs.readFileSync(contextFile, 'utf8'));
 
-  assert(auditLines.length >= 7, 'audit records were not written');
+  assert(auditLines.length >= 11, 'audit records were not written');
   assert(persistedContext.executions.length === 1, 'memory context execution count mismatch');
 
   console.log(JSON.stringify({
@@ -99,6 +138,7 @@ function main() {
         'Capability Pipeline',
         'Capability Registry',
         'Capability Discovery',
+        'Contract Validator',
       ],
       capabilities: platform.capabilities.map((capability) => ({
         id: capability.id,
@@ -119,6 +159,15 @@ function main() {
     negativeTests: negativeTests.map((test) => ({
       ok: test.ok,
       normalizedPlate: test.normalizedPlate,
+      error: test.error,
+      auditId: test.auditId,
+    })),
+    contractTests: [
+      invalidInputContract,
+      invalidRequestContract,
+      invalidResultContract,
+    ].map((test) => ({
+      ok: test.ok,
       error: test.error,
       auditId: test.auditId,
     })),

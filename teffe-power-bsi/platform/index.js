@@ -6,7 +6,7 @@ const { PluginEngine } = require('./core/plugin-engine');
 const { SecurityGuardian } = require('./core/security-guardian');
 const { WorkflowEngine } = require('./core/workflow-engine');
 const { CapabilityDiscovery, CapabilityRegistry } = require('./registry');
-const { CapabilityPipeline } = require('./sdk');
+const { CapabilityPipeline, ContractValidator } = require('./sdk');
 
 function bootPlatform(options = {}) {
   const baseDir = options.baseDir || path.join(__dirname, '..');
@@ -20,10 +20,12 @@ function bootPlatform(options = {}) {
   const capabilityDiscovery = new CapabilityDiscovery({ registry: capabilityRegistry });
   const pluginEngine = new PluginEngine({ pluginsDir, capabilityRegistry });
   const pluginBoot = pluginEngine.boot();
+  const contractValidator = new ContractValidator();
   const capabilityPipeline = new CapabilityPipeline({
     pluginEngine,
     memoryEngine,
     auditLog,
+    contractValidator,
   });
   const workflowEngine = new WorkflowEngine({
     pluginEngine,
@@ -48,6 +50,7 @@ function bootPlatform(options = {}) {
       capabilityPipeline,
       capabilityRegistry,
       capabilityDiscovery,
+      contractValidator,
     },
     plugins: pluginBoot.loaded,
     capabilities: capabilityRegistry.list(),

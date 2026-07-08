@@ -3,20 +3,31 @@ const {
   createCapabilityErrorResponse,
   createCapabilitySuccessResponse,
 } = require('./capability-response');
+const { ContractValidator } = require('./contract-validator');
 
 class CapabilityPipeline {
-  constructor({ pluginEngine, memoryEngine, auditLog }) {
+  constructor({ pluginEngine, memoryEngine, auditLog, contractValidator = new ContractValidator() }) {
     this.pluginEngine = pluginEngine;
     this.memoryEngine = memoryEngine;
     this.auditLog = auditLog;
+    this.contractValidator = contractValidator;
   }
 
   run(request, hooks) {
-    const validation = hooks.validate(request.input);
     const baseExecutionContext = this.withMemoryContext(request.executionContext);
+    const contractValidation = this.contractValidator.validateRequest(
+      request,
+      request.contracts?.input
+    );
+
+    if (!contractValidation.valid) {
+      return this.deny(request, contractValidation, 'request_contract', baseExecutionContext);
+    }
+
+    const validation = hooks.validate(request.input);
 
     if (!validation.allowed) {
-      return this.deny(request, validation);
+      return this.deny(request, validation, 'business_validation', baseExecutionContext);
     }
 
     const normalizedInput = validation.normalizedInput ?? validation.sanitizedInput;
@@ -32,8 +43,21 @@ class CapabilityPipeline {
       startedId: startedAudit.id,
     });
     const result = this.pluginEngine.execute(request.pluginId, normalizedInput, executionContext);
+    const resultValidation = this.contractValidator.validateResult(
+      result,
+      request.contracts?.result
+    );
 
-    const execution = this.memoryEngine.persistExecution(this.withMetadata(request, {
+    if (!resultValidation.valid) {
+      return this.deny(
+        request,
+        { ...resultValidation, normalizedInput },
+        'result_contract',
+        executionContext
+      );
+    }
+
+    const executionCandidate = this.withMetadata(request, {
       id: `exec_${Date.now()}`,
       capability: request.capability,
       input: normalizedInput,
@@ -42,7 +66,29 @@ class CapabilityPipeline {
       timestamp: new Date().toISOString(),
       context: request.context,
       executionContext,
-    }));
+    });
+
+    const responseCandidate = createCapabilitySuccessResponse({
+      normalizedInput,
+      result,
+      execution: executionCandidate,
+      audit: {
+        started: startedAudit,
+        completed: { id: 'pending_contract_validation' },
+      },
+    });
+    const responseValidation = this.contractValidator.validateResponse(responseCandidate);
+
+    if (!responseValidation.valid) {
+      return this.deny(
+        request,
+        { ...responseValidation, normalizedInput },
+        'response_contract',
+        executionContext
+      );
+    }
+
+    const execution = this.memoryEngine.persistExecution(executionCandidate);
 
     const completedAudit = this.auditLog.record({
       type: 'capability.execution.completed',
@@ -62,7 +108,7 @@ class CapabilityPipeline {
     });
   }
 
-  deny(request, validation) {
+  deny(request, validation, stage = 'business_validation', executionContext = null) {
     const error = CapabilityError.from(validation.error);
     const normalizedInput = validation.normalizedInput ?? null;
     const normalizedValue =
@@ -73,21 +119,29 @@ class CapabilityPipeline {
     const deniedAudit = this.auditLog.record(this.withMetadata(request, {
       type: 'capability.execution.denied',
       capability: request.capability,
+      stage,
       error,
       normalizedInput,
       normalizedPlate: normalizedValue,
       input: request.input,
       context: request.context,
-      executionContext: this.withMemoryContext(request.executionContext),
+      executionContext: executionContext || this.withMemoryContext(request.executionContext || {}),
     }));
 
-    return createCapabilityErrorResponse({
+    const response = createCapabilityErrorResponse({
       normalizedInput,
       error,
       audit: {
         denied: deniedAudit,
       },
     });
+    const responseValidation = this.contractValidator.validateResponse(response);
+
+    if (!responseValidation.valid) {
+      throw new Error('CapabilityPipeline produced an invalid error response');
+    }
+
+    return response;
   }
 
   withMetadata(request, payload) {
@@ -102,9 +156,11 @@ class CapabilityPipeline {
   }
 
   withMemoryContext(executionContext) {
+    const context = executionContext || {};
+
     return {
-      ...executionContext,
-      memory: executionContext.memory ?? {
+      ...context,
+      memory: context.memory ?? {
         latestExecution: this.memoryEngine.latestExecution(),
       },
     };

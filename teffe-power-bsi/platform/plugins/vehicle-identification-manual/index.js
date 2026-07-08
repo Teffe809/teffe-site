@@ -38,6 +38,26 @@ module.exports = {
         },
       },
     },
+    resultContract: {
+      type: 'object',
+      required: ['source', 'vehicle'],
+      properties: {
+        source: { type: 'string', minLength: 1 },
+        vehicle: {
+          type: 'object',
+          required: ['plate', 'brand', 'model', 'year', 'color', 'ownerType', 'status'],
+          properties: {
+            plate: { type: 'string', minLength: 7, maxLength: 7 },
+            brand: { type: 'string', minLength: 1 },
+            model: { type: 'string', minLength: 1 },
+            year: { type: 'integer' },
+            color: { type: 'string', minLength: 1 },
+            ownerType: { type: 'string', minLength: 1 },
+            status: { type: 'string', minLength: 1 },
+          },
+        },
+      },
+    },
     outputContract: {
       success: {
         ok: true,

@@ -1,6 +1,14 @@
 const { createExecutionContext } = require('./execution-context');
 
-function createCapabilityRequest({ capability, pluginId, input, context = {}, metadata = {} }) {
+function createCapabilityRequest({
+  capability,
+  pluginId,
+  input,
+  context = {},
+  metadata = {},
+  inputContract = null,
+  resultContract = null,
+}) {
   const executionContext = createExecutionContext(context);
 
   return {
@@ -10,6 +18,10 @@ function createCapabilityRequest({ capability, pluginId, input, context = {}, me
     context,
     executionContext,
     metadata,
+    contracts: {
+      input: inputContract,
+      result: resultContract,
+    },
     requestedAt: new Date().toISOString(),
   };
 }
