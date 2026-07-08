@@ -80,7 +80,7 @@ async function main() {
   assert(platform.status === 'ok', 'platform boot failed');
   assert(platform.plugins.includes('vehicle-identification-manual'), 'identification plugin not loaded');
   assert(platform.plugins.includes('vehicle-compatibility'), 'compatibility plugin not loaded');
-  assert(platform.capabilities.length === 2, 'expected two registered capabilities');
+  assert(platform.capabilities.length >= 2, 'expected vehicle capabilities to be registered');
   assert(platform.engines.capabilityRegistry.has('vehicle.compatibility'), 'compatibility not registered');
 
   const discovered = platform.engines.capabilityDiscovery.findById('vehicle.compatibility');

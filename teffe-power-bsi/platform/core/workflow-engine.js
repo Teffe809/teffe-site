@@ -56,6 +56,25 @@ class WorkflowEngine {
     return this.toVehicleCompatibilityResponse(response);
   }
 
+  runStockAvailability(input, context = {}) {
+    const capabilityId = 'stock.availability';
+    const capability = this.capabilityRegistry?.get(capabilityId);
+    const request = createCapabilityRequest({
+      capability: capabilityId,
+      pluginId: capability?.pluginId || 'stock-availability',
+      input,
+      context,
+      inputContract: capability?.inputContract,
+      resultContract: capability?.resultContract,
+    });
+
+    const response = this.capabilityPipeline.run(request, {
+      validate: (requestInput) => this.securityGuardian.validateStockAvailabilityRequest(requestInput),
+    });
+
+    return this.toStockAvailabilityResponse(response);
+  }
+
   toVehicleIdentificationResponse(response) {
     if (!response.ok) {
       return {
@@ -93,6 +112,32 @@ class WorkflowEngine {
       vehicle: response.result.vehicle,
       category: response.result.category,
       compatibleParts: response.result.compatibleParts,
+      source: response.result.source,
+      auditId: response.auditId,
+      execution: response.execution,
+      audit: response.audit,
+    };
+  }
+
+  toStockAvailabilityResponse(response) {
+    if (!response.ok) {
+      return {
+        ok: false,
+        error: response.error,
+        auditId: response.auditId,
+        audit: response.audit,
+      };
+    }
+
+    return {
+      ok: true,
+      vehicle: response.result.vehicle,
+      part: response.result.part,
+      available: response.result.available,
+      quantity: response.result.quantity,
+      branch: response.result.branch,
+      estimatedDelivery: response.result.estimatedDelivery,
+      notes: response.result.notes,
       source: response.result.source,
       auditId: response.auditId,
       execution: response.execution,

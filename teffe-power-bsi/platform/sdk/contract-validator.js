@@ -101,6 +101,10 @@ class ContractValidator {
       }
     }
 
+    if (typeof value === 'number' && contract.minimum != null && value < contract.minimum) {
+      errors.push({ path, rule: 'minimum', message: `Minimum value is ${contract.minimum}` });
+    }
+
     if (Array.isArray(value)) {
       if (contract.minItems != null && value.length < contract.minItems) {
         errors.push({ path, rule: 'minItems', message: `Minimum item count is ${contract.minItems}` });

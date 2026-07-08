@@ -62,6 +62,26 @@ app.post('/capabilities/vehicle-compatibility', (req, res) => {
   }
 });
 
+app.post('/capabilities/stock-availability', (req, res) => {
+  try {
+    const { vehicle, part, userId } = req.body ?? {};
+    const result = platform.engines.miaCore.handleStockAvailability({
+      vehicle,
+      part,
+      userId,
+    });
+
+    if (!result.ok) {
+      return res.status(400).json(result);
+    }
+
+    return res.json(result);
+  } catch (err) {
+    console.error('[/capabilities/stock-availability]', err.message);
+    return res.status(500).json({ ok: false, reason: 'internal server error' });
+  }
+});
+
 /* ── POST /auth/pin ───────────────────────────────────────────────────────── */
 app.post('/auth/pin', async (req, res) => {
   try {
@@ -210,5 +230,6 @@ app.listen(PORT, () => {
   console.log(`  POST  /log/acesso`);
   console.log(`  POST  /capabilities/vehicle-identification/manual`);
   console.log(`  POST  /capabilities/vehicle-compatibility`);
+  console.log(`  POST  /capabilities/stock-availability`);
   console.log(`  GET   /health`);
 });

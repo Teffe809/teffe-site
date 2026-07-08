@@ -26,6 +26,18 @@ class MiaCore {
       }
     );
   }
+
+  handleStockAvailability({ vehicle, part, userId = 'capability-validation' }) {
+    return this.workflowEngine.runStockAvailability(
+      { vehicle, part },
+      {
+        source: 'mia-core',
+        userId,
+        intent: 'stock.availability',
+        ai: false,
+      }
+    );
+  }
 }
 
 module.exports = { MiaCore };

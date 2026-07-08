@@ -67,6 +67,44 @@ class SecurityGuardian {
     };
   }
 
+  validateStockAvailabilityRequest(input) {
+    if (!input?.vehicle) {
+      return this.denyRequest('vehicle_required', 'identified vehicle is required');
+    }
+
+    if (!input?.part) {
+      return this.denyRequest('part_required', 'compatible part is required');
+    }
+
+    const internalCode = String(input.part.internalCode ?? '').trim().toUpperCase();
+    if (!internalCode) {
+      return this.denyRequest('part_internal_code_required', 'part internal code is required');
+    }
+
+    const supportedCodes = [
+      'TFF-FRE-001',
+      'TFF-FRE-002',
+      'TFF-SUS-001',
+      'TFF-MOT-001',
+      'TFF-FIL-001',
+      'TFF-FIL-002',
+    ];
+    if (!supportedCodes.includes(internalCode)) {
+      return this.denyRequest('part_not_found', 'compatible part was not found in mock stock');
+    }
+
+    return {
+      allowed: true,
+      normalizedInput: {
+        ...input,
+        part: {
+          ...input.part,
+          internalCode,
+        },
+      },
+    };
+  }
+
   normalizeCategory(category) {
     return String(category ?? '')
       .trim()
