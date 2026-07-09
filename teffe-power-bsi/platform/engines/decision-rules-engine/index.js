@@ -114,6 +114,76 @@ class DecisionRulesEngine {
       justifications: decisions.map(({ reason }) => reason),
     };
   }
+
+  buildSalesStrategy({ pricing, decision, library }) {
+    if (!pricing || !decision || !library) {
+      throw new Error('Decision Rules Engine requires pricing, decision and library contexts');
+    }
+
+    const decisionTypes = decision.decisions.map(({ type }) => type);
+    const hasComplementaryOpportunity =
+      decisionTypes.includes('suggest_complementary_sale') ||
+      decisionTypes.includes('suggest_kit');
+    const complementaryItemIds = decision.decisions
+      .filter(({ type }) =>
+        type === 'suggest_complementary_sale' || type === 'suggest_kit'
+      )
+      .flatMap(({ relatedItemIds }) => relatedItemIds);
+    const uniqueComplementaryItemIds = [...new Set(complementaryItemIds)];
+    const requiresHuman =
+      decision.summary.requiresHuman ||
+      decisionTypes.includes('route_to_human');
+
+    let commercialPriority = 'low';
+    if (requiresHuman) {
+      commercialPriority = 'critical';
+    } else if (hasComplementaryOpportunity) {
+      commercialPriority = 'high';
+    } else if (decision.summary.canProceed) {
+      commercialPriority = 'medium';
+    }
+
+    const commercialRisks = [];
+    if (decisionTypes.includes('request_more_information')) {
+      commercialRisks.push('Dados comerciais incompletos podem impedir a conclusao da proposta.');
+    }
+    if (decisionTypes.includes('await_stock')) {
+      commercialRisks.push('Disponibilidade de estoque pendente pode alterar o prazo comercial.');
+    }
+    if (requiresHuman) {
+      commercialRisks.push('O caso exige validacao humana antes do proximo compromisso comercial.');
+    }
+    if (pricing.totals.total == null) {
+      commercialRisks.push('Total comercial ainda nao definido.');
+    }
+
+    const suggestedApproach = requiresHuman
+      ? 'Realizar abordagem assistida por um vendedor responsavel.'
+      : hasComplementaryOpportunity
+        ? 'Apresentar a solucao principal junto aos complementos tecnicamente relacionados.'
+        : decision.summary.canProceed
+          ? 'Apresentar a proposta comercial estruturada para confirmacao.'
+          : 'Coletar os dados pendentes antes de apresentar uma proposta.';
+
+    return {
+      library: {
+        id: library.id,
+        version: library.version,
+        type: library.type,
+        segment: library.segment,
+      },
+      complementarySaleOpportunity: {
+        available: hasComplementaryOpportunity,
+        itemIds: uniqueComplementaryItemIds,
+      },
+      commercialPriority,
+      technicalJustification: decision.justifications.join(' '),
+      suggestedApproach,
+      requiresHuman,
+      commercialRisks,
+      nextSteps: [...new Set(decision.decisions.map(({ nextAction }) => nextAction))],
+    };
+  }
 }
 
 module.exports = { DecisionRulesEngine };

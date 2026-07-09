@@ -242,6 +242,45 @@ class SecurityGuardian {
     };
   }
 
+  validateLibraryDiscoveryRequest(input) {
+    const id = String(input?.id ?? '').trim();
+    const version = input?.version == null ? null : String(input.version).trim();
+
+    if (!id) {
+      return this.denyRequest('library_id_required', 'library id is required');
+    }
+
+    if (version && !/^\d+\.\d+\.\d+$/.test(version)) {
+      return this.denyRequest('library_version_invalid', 'library version must use semantic versioning');
+    }
+
+    return {
+      allowed: true,
+      normalizedInput: { id, version },
+    };
+  }
+
+  validateSalesIntelligenceRequest(input) {
+    if (input?.pricing?.source !== 'budget-intelligence') {
+      return this.denyRequest(
+        'pricing_source_invalid',
+        'Sales input must originate from Pricing Intelligence'
+      );
+    }
+
+    if (input?.decision?.source !== 'pricing-intelligence') {
+      return this.denyRequest(
+        'decision_source_invalid',
+        'Sales input must originate from Decision Intelligence'
+      );
+    }
+
+    return {
+      allowed: true,
+      normalizedInput: input,
+    };
+  }
+
   normalizeCategory(category) {
     return String(category ?? '')
       .trim()

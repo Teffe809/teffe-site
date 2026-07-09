@@ -300,6 +300,57 @@ const decisionIntelligence = objectContract(
   }
 );
 
+const libraryReference = objectContract(
+  ['id', 'version', 'type', 'segment'],
+  {
+    id: nonEmptyString,
+    version: nonEmptyString,
+    type: {
+      type: 'string',
+      enum: ['knowledge', 'decision', 'business', 'commercial'],
+    },
+    segment: nonEmptyString,
+  }
+);
+
+const salesIntelligence = objectContract(
+  [
+    'source',
+    'pricingAuditId',
+    'decisionAuditId',
+    'library',
+    'complementarySaleOpportunity',
+    'commercialPriority',
+    'technicalJustification',
+    'suggestedApproach',
+    'requiresHuman',
+    'commercialRisks',
+    'nextSteps',
+  ],
+  {
+    source: nonEmptyString,
+    pricingAuditId: nullableString,
+    decisionAuditId: nullableString,
+    library: libraryReference,
+    complementarySaleOpportunity: objectContract(
+      ['available', 'itemIds'],
+      {
+        available: { type: 'boolean' },
+        itemIds: arrayContract(nonEmptyString),
+      }
+    ),
+    commercialPriority: {
+      type: 'string',
+      enum: ['low', 'medium', 'high', 'critical'],
+    },
+    technicalJustification: nonEmptyString,
+    suggestedApproach: nonEmptyString,
+    requiresHuman: { type: 'boolean' },
+    commercialRisks: arrayContract(nonEmptyString),
+    nextSteps: arrayContract(nonEmptyString, { minItems: 1 }),
+  }
+);
+
 const contracts = deepFreeze({
   nonEmptyString,
   rawPlate,
@@ -322,6 +373,8 @@ const contracts = deepFreeze({
   decisionType,
   decision,
   decisionIntelligence,
+  libraryReference,
+  salesIntelligence,
 });
 
 module.exports = {

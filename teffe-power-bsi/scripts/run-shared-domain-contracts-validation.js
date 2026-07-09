@@ -23,8 +23,9 @@ function main() {
   const budget = capabilityRegistry.get('budget.intelligence');
   const pricing = capabilityRegistry.get('pricing.intelligence');
   const decision = capabilityRegistry.get('decision.intelligence');
+  const sales = capabilityRegistry.get('sales.intelligence');
 
-  assert(platform.capabilities.length === 8, 'expected eight registered capabilities');
+  assert(platform.capabilities.length === 9, 'expected nine registered capabilities');
   assert(identification.inputContract.properties.plate === contracts.rawPlate, 'raw plate contract not shared');
   assert(
     identification.resultContract.properties.vehicle.properties.brand ===
@@ -83,6 +84,20 @@ function main() {
   assert(
     decision.requirements?.includes('decisionRules'),
     'Decision Rules runtime requirement missing'
+  );
+  assert(
+    sales.inputContract.properties.pricing === contracts.pricingIntelligence,
+    'Sales Pricing input not shared'
+  );
+  assert(
+    sales.inputContract.properties.decision === contracts.decisionIntelligence,
+    'Sales Decision input not shared'
+  );
+  assert(sales.resultContract === contracts.salesIntelligence, 'Sales result not shared');
+  assert(
+    sales.requirements?.includes('decisionRules') &&
+      sales.requirements?.includes('libraries'),
+    'Sales runtime requirements missing'
   );
 
   const vehicle = {
@@ -212,6 +227,7 @@ function main() {
       'budgetIntelligence',
       'pricingIntelligence',
       'decisionIntelligence',
+      'salesIntelligence',
     ],
     migratedCapabilities: platform.capabilities.map(({ id }) => id),
     validation: {

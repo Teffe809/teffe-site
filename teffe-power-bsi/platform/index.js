@@ -7,7 +7,13 @@ const { MiaCore } = require('./core/mia-core');
 const { PluginEngine } = require('./core/plugin-engine');
 const { SecurityGuardian } = require('./core/security-guardian');
 const { WorkflowEngine } = require('./core/workflow-engine');
-const { CapabilityDiscovery, CapabilityRegistry } = require('./registry');
+const { DEFAULT_LIBRARIES } = require('./libraries/default-libraries');
+const {
+  CapabilityDiscovery,
+  CapabilityRegistry,
+  LibraryDiscovery,
+  LibraryRegistry,
+} = require('./registry');
 const { CapabilityPipeline, ContractValidator } = require('./sdk');
 
 function bootPlatform(options = {}) {
@@ -22,6 +28,9 @@ function bootPlatform(options = {}) {
   const decisionRulesEngine = new DecisionRulesEngine();
   const capabilityRegistry = new CapabilityRegistry();
   const capabilityDiscovery = new CapabilityDiscovery({ registry: capabilityRegistry });
+  const libraryRegistry = new LibraryRegistry();
+  const libraryDiscovery = new LibraryDiscovery({ registry: libraryRegistry });
+  DEFAULT_LIBRARIES.forEach((library) => libraryRegistry.register(library));
   const pluginEngine = new PluginEngine({ pluginsDir, capabilityRegistry });
   const pluginBoot = pluginEngine.boot();
   const contractValidator = new ContractValidator();
@@ -31,6 +40,8 @@ function bootPlatform(options = {}) {
     auditLog,
     domainKnowledgeEngine,
     decisionRulesEngine,
+    libraryRegistry,
+    libraryDiscovery,
     contractValidator,
   });
   const workflowEngine = new WorkflowEngine({
@@ -42,6 +53,8 @@ function bootPlatform(options = {}) {
     capabilityRegistry,
     domainKnowledgeEngine,
     decisionRulesEngine,
+    libraryRegistry,
+    libraryDiscovery,
   });
   const miaCore = new MiaCore({ workflowEngine });
 
@@ -61,6 +74,8 @@ function bootPlatform(options = {}) {
       contractValidator,
       domainKnowledgeEngine,
       decisionRulesEngine,
+      libraryRegistry,
+      libraryDiscovery,
     },
     plugins: pluginBoot.loaded,
     capabilities: capabilityRegistry.list(),

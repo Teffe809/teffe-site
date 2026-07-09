@@ -111,6 +111,30 @@ class MiaCore {
       }
     );
   }
+
+  handleLibraryDiscovery({ id, version, userId = 'capability-validation' }) {
+    return this.workflowEngine.findLibrary(
+      { id, version },
+      {
+        source: 'mia-core',
+        userId,
+        intent: 'library.discovery',
+        ai: false,
+      }
+    );
+  }
+
+  handleSalesIntelligence({ pricing, decision, userId = 'capability-validation' }) {
+    return this.workflowEngine.runSalesIntelligence(
+      { pricing, decision },
+      {
+        source: 'mia-core',
+        userId,
+        intent: 'sales.intelligence',
+        ai: false,
+      }
+    );
+  }
 }
 
 module.exports = { MiaCore };

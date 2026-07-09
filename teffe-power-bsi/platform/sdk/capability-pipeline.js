@@ -12,6 +12,8 @@ class CapabilityPipeline {
     auditLog,
     domainKnowledgeEngine = null,
     decisionRulesEngine = null,
+    libraryRegistry = null,
+    libraryDiscovery = null,
     contractValidator = new ContractValidator(),
   }) {
     this.pluginEngine = pluginEngine;
@@ -19,6 +21,8 @@ class CapabilityPipeline {
     this.auditLog = auditLog;
     this.domainKnowledgeEngine = domainKnowledgeEngine;
     this.decisionRulesEngine = decisionRulesEngine;
+    this.libraryRegistry = libraryRegistry;
+    this.libraryDiscovery = libraryDiscovery;
     this.contractValidator = contractValidator;
   }
 
@@ -252,9 +256,50 @@ class CapabilityPipeline {
           const result = this.decisionRulesEngine.evaluate(pricing);
           this.auditLog.record({
             type: 'decision.rules.evaluated',
+            operation: 'evaluate_decision',
             capability: request.capability,
             capabilityAuditId: startedAudit.id,
             pricing,
+            result,
+            executionContext,
+          });
+          return result;
+        },
+        buildSalesStrategy: (parameters) => {
+          const result = this.decisionRulesEngine.buildSalesStrategy(parameters);
+          this.auditLog.record({
+            type: 'decision.rules.evaluated',
+            operation: 'build_sales_strategy',
+            capability: request.capability,
+            capabilityAuditId: startedAudit.id,
+            parameters,
+            result,
+            executionContext,
+          });
+          return result;
+        },
+      };
+    }
+
+    if (requirements.includes('libraries')) {
+      if (!this.libraryRegistry || !this.libraryDiscovery) {
+        throw new Error('Library Registry is not available');
+      }
+
+      services.libraries = {
+        findForConsumer: (capabilityId, type) => {
+          const matches = this.libraryDiscovery.findByConsumer(capabilityId)
+            .filter((library) => library.type === type && library.status === 'active');
+          const result = matches.sort((left, right) =>
+            this.libraryRegistry.compareVersions(left.version, right.version)
+          ).at(-1) || null;
+          this.auditLog.record({
+            type: 'library.discovery.queried',
+            operation: 'find_for_consumer',
+            capability: request.capability,
+            capabilityAuditId: startedAudit.id,
+            query: { capabilityId, type, status: 'active' },
+            found: result != null,
             result,
             executionContext,
           });

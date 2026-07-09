@@ -17,6 +17,9 @@ function createExecutionContext(input = {}) {
     ...(input.domainKnowledge != null
       ? { domainKnowledge: input.domainKnowledge }
       : {}),
+    ...(input.libraries != null
+      ? { libraries: input.libraries }
+      : {}),
   };
 
   return context;

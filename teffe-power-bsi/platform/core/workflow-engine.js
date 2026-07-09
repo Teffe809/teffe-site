@@ -9,11 +9,16 @@ class WorkflowEngine {
     capabilityPipeline,
     capabilityRegistry,
     domainKnowledgeEngine,
+    libraryRegistry,
+    libraryDiscovery,
   }) {
     this.securityGuardian = securityGuardian;
     this.capabilityRegistry = capabilityRegistry;
     this.auditLog = auditLog;
+    this.memoryEngine = memoryEngine;
     this.domainKnowledgeEngine = domainKnowledgeEngine;
+    this.libraryRegistry = libraryRegistry;
+    this.libraryDiscovery = libraryDiscovery;
     this.capabilityPipeline = capabilityPipeline || new CapabilityPipeline({
       pluginEngine,
       memoryEngine,
@@ -175,6 +180,80 @@ class WorkflowEngine {
     });
 
     return this.toDecisionIntelligenceResponse(response);
+  }
+
+  runSalesIntelligence(input, context = {}) {
+    const capabilityId = 'sales.intelligence';
+    const capability = this.capabilityRegistry?.get(capabilityId);
+    const request = createCapabilityRequest({
+      capability: capabilityId,
+      pluginId: capability?.pluginId || 'sales-intelligence',
+      input,
+      context,
+      inputContract: capability?.inputContract,
+      resultContract: capability?.resultContract,
+      requirements: capability?.requirements,
+    });
+
+    const response = this.capabilityPipeline.run(request, {
+      validate: (requestInput) => this.securityGuardian.validateSalesIntelligenceRequest(requestInput),
+    });
+
+    return this.toSalesIntelligenceResponse(response);
+  }
+
+  findLibrary(input, context = {}) {
+    const validation = this.securityGuardian.validateLibraryDiscoveryRequest(input);
+    if (!validation.allowed) {
+      const audit = this.auditLog.record({
+        type: 'library.discovery.denied',
+        input,
+        error: validation.error,
+        context,
+      });
+      return {
+        ok: false,
+        error: validation.error,
+        auditId: audit.id,
+        audit,
+      };
+    }
+
+    const query = validation.normalizedInput;
+    const executionContext = createExecutionContext({
+      ...context,
+      libraries: {
+        operation: 'find_by_id',
+        query,
+      },
+    });
+    const result = this.libraryDiscovery.findById(query.id, query.version);
+    const audit = this.auditLog.record({
+      type: 'library.discovery.queried',
+      query,
+      found: result != null,
+      result,
+      executionContext,
+    });
+    const access = this.memoryEngine.persistLibraryAccess({
+      id: `library_access_${Date.now()}`,
+      query,
+      found: result != null,
+      library: result
+        ? { id: result.id, version: result.version, type: result.type }
+        : null,
+      auditId: audit.id,
+      timestamp: new Date().toISOString(),
+      executionContext,
+    });
+
+    return {
+      ok: true,
+      result,
+      auditId: audit.id,
+      audit,
+      access,
+    };
   }
 
   getDomainSystem(name, context = {}) {
@@ -438,6 +517,35 @@ class WorkflowEngine {
       decisions: response.result.decisions,
       summary: response.result.summary,
       justifications: response.result.justifications,
+      auditId: response.auditId,
+      execution: response.execution,
+      audit: response.audit,
+    };
+  }
+
+  toSalesIntelligenceResponse(response) {
+    if (!response.ok) {
+      return {
+        ok: false,
+        error: response.error,
+        auditId: response.auditId,
+        audit: response.audit,
+      };
+    }
+
+    return {
+      ok: true,
+      source: response.result.source,
+      pricingAuditId: response.result.pricingAuditId,
+      decisionAuditId: response.result.decisionAuditId,
+      library: response.result.library,
+      complementarySaleOpportunity: response.result.complementarySaleOpportunity,
+      commercialPriority: response.result.commercialPriority,
+      technicalJustification: response.result.technicalJustification,
+      suggestedApproach: response.result.suggestedApproach,
+      requiresHuman: response.result.requiresHuman,
+      commercialRisks: response.result.commercialRisks,
+      nextSteps: response.result.nextSteps,
       auditId: response.auditId,
       execution: response.execution,
       audit: response.audit,
