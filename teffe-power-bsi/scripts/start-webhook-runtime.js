@@ -4,10 +4,16 @@ const path = require('path');
 const { bootPlatform } = require('../platform');
 const { TenantChannelConfigLoader } = require('../src/config/TenantChannelConfigLoader.ts');
 const { EnvSecretProvider } = require('../src/secrets/EnvSecretProvider.ts');
+const { FileIdempotencyStore } = require('../src/runtime/idempotency/FileIdempotencyStore.ts');
+const { SanitizedLogger } = require('../src/runtime/logging/SanitizedLogger.ts');
 const { WebhookRuntime } = require('../src/runtime/webhook/WebhookRuntime.ts');
 
 const PORT = Number(process.env.TEFFE_WEBHOOK_PORT || process.env.WEBHOOK_RUNTIME_PORT || 3100);
+const PUBLIC_URL = process.env.TEFFE_WEBHOOK_PUBLIC_URL || `http://localhost:${PORT}`;
+const SEND_ENABLED = process.env.TEFFE_WHATSAPP_SEND_ENABLED === 'true';
+const IDEMPOTENCY_STORE_FILE = process.env.TEFFE_IDEMPOTENCY_STORE_FILE || path.join('data', 'idempotency-store.json');
 const dataDir = process.env.TEFFE_DATA_DIR || path.join(os.tmpdir(), 'teffe-webhook-runtime');
+const logger = new SanitizedLogger();
 const platform = bootPlatform({ dataDir });
 const configLoader = new TenantChannelConfigLoader({
   configs: [{
@@ -25,10 +31,13 @@ const configLoader = new TenantChannelConfigLoader({
 });
 const runtime = new WebhookRuntime({
   configLoader,
+  idempotencyStore: new FileIdempotencyStore({
+    filePath: path.resolve(IDEMPOTENCY_STORE_FILE),
+  }),
   secretProvider: new EnvSecretProvider(),
   platform,
   runtimeConfig: {
-    whatsappSendEnabled: process.env.TEFFE_WHATSAPP_SEND_ENABLED === 'true',
+    whatsappSendEnabled: SEND_ENABLED,
   },
 });
 
@@ -47,14 +56,30 @@ const server = http.createServer((req, res) => {
       headers: req.headers,
       rawBody,
     });
+    logger.info('webhook.request.handled', {
+      method: req.method,
+      path: url.pathname,
+      statusCode: response.statusCode,
+      headers: req.headers,
+      rawBody,
+    });
     send(res, response);
   });
 });
 
 server.listen(PORT, () => {
-  console.log(`TEFFE webhook runtime listening on ${PORT}`);
-  console.log('  GET  /webhook/whatsapp-cloud');
-  console.log('  POST /webhook/whatsapp-cloud');
+  logger.info('webhook.runtime.booted', {
+    port: PORT,
+    publicUrl: PUBLIC_URL,
+    mode: process.env.TEFFE_WEBHOOK_MODE || 'sandbox',
+    sendEnabled: SEND_ENABLED,
+    sendPolicy: SEND_ENABLED ? 'real_send_enabled' : 'real_send_blocked',
+    idempotencyStoreFile: IDEMPOTENCY_STORE_FILE,
+    routes: [
+      'GET /webhook/whatsapp-cloud',
+      'POST /webhook/whatsapp-cloud',
+    ],
+  });
 });
 
 function collectBody(req, done) {

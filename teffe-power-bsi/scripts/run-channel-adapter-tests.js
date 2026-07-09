@@ -13,6 +13,9 @@ const tests = [
   '../tests/runtime/webhook-runtime-security.test.ts',
   '../tests/runtime/webhook-runtime-idempotency.test.ts',
   '../tests/runtime/webhook-runtime-raw-body.test.ts',
+  '../tests/runtime/file-idempotency-store.test.ts',
+  '../tests/runtime/sanitized-logger.test.ts',
+  '../tests/runtime/webhook-readiness-check.test.ts',
 ];
 
 try {
