@@ -19,7 +19,8 @@
     "validate:decision-rules": "node scripts/run-decision-rules-validation.js",
     "validate:libraries": "node scripts/run-library-registry-validation.js",
     "validate:sales": "node scripts/run-sales-intelligence-validation.js",
-    "validate:autoparts-flow": "node scripts/run-autoparts-full-sales-flow-validation.js"
+    "validate:autoparts-flow": "node scripts/run-autoparts-full-sales-flow-validation.js",
+    "validate:tenants": "node scripts/run-tenant-specialization-validation.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",

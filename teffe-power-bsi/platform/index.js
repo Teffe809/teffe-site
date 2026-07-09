@@ -15,6 +15,7 @@ const {
   LibraryRegistry,
 } = require('./registry');
 const { CapabilityPipeline, ContractValidator } = require('./sdk');
+const { TenantSpecializationRegistry } = require('./tenancy/tenant-specialization');
 
 function bootPlatform(options = {}) {
   const baseDir = options.baseDir || path.join(__dirname, '..');
@@ -31,6 +32,7 @@ function bootPlatform(options = {}) {
   const libraryRegistry = new LibraryRegistry();
   const libraryDiscovery = new LibraryDiscovery({ registry: libraryRegistry });
   DEFAULT_LIBRARIES.forEach((library) => libraryRegistry.register(library));
+  const tenantSpecializationRegistry = new TenantSpecializationRegistry({ libraryRegistry });
   const pluginEngine = new PluginEngine({ pluginsDir, capabilityRegistry });
   const pluginBoot = pluginEngine.boot();
   const contractValidator = new ContractValidator();
@@ -55,6 +57,7 @@ function bootPlatform(options = {}) {
     decisionRulesEngine,
     libraryRegistry,
     libraryDiscovery,
+    tenantSpecializationRegistry,
   });
   const miaCore = new MiaCore({ workflowEngine });
 
@@ -76,6 +79,7 @@ function bootPlatform(options = {}) {
       decisionRulesEngine,
       libraryRegistry,
       libraryDiscovery,
+      tenantSpecializationRegistry,
     },
     plugins: pluginBoot.loaded,
     capabilities: capabilityRegistry.list(),

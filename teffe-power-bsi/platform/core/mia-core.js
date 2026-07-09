@@ -140,6 +140,7 @@ class MiaCore {
     plate,
     category,
     partCategory,
+    tenantId = null,
     userId = 'capability-validation',
   }) {
     return this.workflowEngine.runAutopartsFullSalesFlow(
@@ -147,7 +148,21 @@ class MiaCore {
       {
         source: 'mia-core',
         userId,
+        tenantId,
         intent: 'autoparts.full-sales-flow',
+        ai: false,
+      }
+    );
+  }
+
+  handleTenantSpecialization({ tenantId, tenant_id, userId = 'capability-validation' }) {
+    return this.workflowEngine.getTenantSpecialization(
+      { tenantId, tenant_id },
+      {
+        source: 'mia-core',
+        userId,
+        tenantId: tenantId ?? tenant_id,
+        intent: 'tenant.specialization',
         ai: false,
       }
     );

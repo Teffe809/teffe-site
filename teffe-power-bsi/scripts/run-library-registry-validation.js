@@ -48,7 +48,7 @@ function main() {
   assert(libraryDiscovery, 'Library Discovery missing');
   assert(platform.capabilities.length === 9, 'capability behavior changed unexpectedly');
   const initialLibraryCount = libraryRegistry.list().length;
-  assert(initialLibraryCount === 1, 'default library registration missing');
+  assert(initialLibraryCount === 3, 'default library registration missing');
 
   const knowledgeV1 = library({});
   const knowledgeV11 = library({

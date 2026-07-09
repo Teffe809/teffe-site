@@ -12,6 +12,32 @@ const DEFAULT_LIBRARIES = [
     consumingCapabilities: ['sales.intelligence'],
     status: 'active',
   },
+  {
+    type: 'commercial',
+    id: 'teffe-print-strategy',
+    name: 'TEFFE Print Strategy Library',
+    version: '1.0.0',
+    segment: 'grafica',
+    description: 'Default commercial strategy metadata for print tenant specialization.',
+    author: 'TEFFE Engineering',
+    publishedAt: '2026-07-09T00:00:00.000Z',
+    dependencies: [],
+    consumingCapabilities: [],
+    status: 'active',
+  },
+  {
+    type: 'commercial',
+    id: 'teffe-lighting-strategy',
+    name: 'TEFFE Lighting Strategy Library',
+    version: '1.0.0',
+    segment: 'iluminacao',
+    description: 'Default commercial strategy metadata for lighting tenant specialization.',
+    author: 'TEFFE Engineering',
+    publishedAt: '2026-07-09T00:00:00.000Z',
+    dependencies: [],
+    consumingCapabilities: [],
+    status: 'active',
+  },
 ];
 
 module.exports = { DEFAULT_LIBRARIES };

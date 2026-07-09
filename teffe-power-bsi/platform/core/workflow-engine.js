@@ -11,6 +11,7 @@ class WorkflowEngine {
     domainKnowledgeEngine,
     libraryRegistry,
     libraryDiscovery,
+    tenantSpecializationRegistry,
   }) {
     this.securityGuardian = securityGuardian;
     this.capabilityRegistry = capabilityRegistry;
@@ -19,6 +20,7 @@ class WorkflowEngine {
     this.domainKnowledgeEngine = domainKnowledgeEngine;
     this.libraryRegistry = libraryRegistry;
     this.libraryDiscovery = libraryDiscovery;
+    this.tenantSpecializationRegistry = tenantSpecializationRegistry;
     this.capabilityPipeline = capabilityPipeline || new CapabilityPipeline({
       pluginEngine,
       memoryEngine,
@@ -207,12 +209,34 @@ class WorkflowEngine {
     const validation = this.securityGuardian.validateAutopartsFullSalesFlowRequest(input);
     const startedAt = new Date().toISOString();
     const runId = `workflow_${Date.now()}`;
+    const tenantProfile = context.tenantId
+      ? this.tenantSpecializationRegistry?.resolveRuntimeProfile(context.tenantId)
+      : null;
     const baseContext = {
       ...context,
+      ...(tenantProfile
+        ? {
+          tenant: {
+            id: tenantProfile.tenant.tenantId,
+            specialistName: tenantProfile.tenant.specialistName,
+            segment: tenantProfile.tenant.segment,
+            primaryLibrary: tenantProfile.tenant.primaryLibrary,
+            primaryWorkflow: tenantProfile.tenant.primaryWorkflow,
+          },
+        }
+        : {}),
       workflowId,
       workflow: {
         id: workflowId,
         runId,
+        ...(tenantProfile
+          ? {
+            tenantSpecialization: {
+              specialistName: tenantProfile.tenant.specialistName,
+              segment: tenantProfile.tenant.segment,
+            },
+          }
+          : {}),
       },
     };
 
@@ -243,8 +267,7 @@ class WorkflowEngine {
       const response = execute({
         ...baseContext,
         workflow: {
-          id: workflowId,
-          runId,
+          ...baseContext.workflow,
           step: name,
         },
       });
@@ -578,6 +601,91 @@ class WorkflowEngine {
     return {
       ok: true,
       result,
+      auditId: audit.id,
+      audit,
+      access,
+    };
+  }
+
+  getTenantSpecialization(input, context = {}) {
+    const validation = this.securityGuardian.validateTenantSpecializationRequest(input);
+    if (!validation.allowed) {
+      const audit = this.auditLog.record({
+        type: 'tenant.specialization.denied',
+        input,
+        error: validation.error,
+        context,
+      });
+      return {
+        ok: false,
+        error: validation.error,
+        auditId: audit.id,
+        audit,
+      };
+    }
+
+    const { tenantId } = validation.normalizedInput;
+    const executionContext = createExecutionContext({
+      ...context,
+      tenantId,
+      runtime: {
+        operation: 'tenant_specialization_lookup',
+      },
+    });
+    const profile = this.tenantSpecializationRegistry.resolveRuntimeProfile(tenantId);
+    if (!profile) {
+      const error = {
+        code: 'tenant_not_found',
+        message: 'tenant specialization was not found',
+      };
+      const audit = this.auditLog.record({
+        type: 'tenant.specialization.denied',
+        tenantId,
+        error,
+        executionContext,
+      });
+      return {
+        ok: false,
+        error,
+        auditId: audit.id,
+        audit,
+      };
+    }
+
+    const audit = this.auditLog.record({
+      type: 'tenant.specialization.resolved',
+      tenantId,
+      tenant: profile.tenant,
+      library: profile.library
+        ? { id: profile.library.id, version: profile.library.version, type: profile.library.type }
+        : null,
+      workflow: profile.workflow,
+      executionContext,
+    });
+    const access = this.memoryEngine.persistTenantAccess({
+      id: `tenant_access_${Date.now()}`,
+      tenantId,
+      specialistName: profile.tenant.specialistName,
+      segment: profile.tenant.segment,
+      library: profile.library
+        ? { id: profile.library.id, version: profile.library.version, type: profile.library.type }
+        : null,
+      workflow: profile.workflow,
+      auditId: audit.id,
+      timestamp: new Date().toISOString(),
+      executionContext,
+    });
+
+    return {
+      ok: true,
+      tenant: profile.tenant,
+      library: profile.library,
+      workflow: profile.workflow,
+      personality: profile.personality,
+      textTone: profile.textTone,
+      voice: profile.voice,
+      enabledChannels: profile.enabledChannels,
+      humanHandoffPolicy: profile.humanHandoffPolicy,
       auditId: audit.id,
       audit,
       access,

@@ -215,11 +215,12 @@ app.post('/capabilities/sales', (req, res) => {
 
 app.post('/workflows/autoparts/full-sales-flow', (req, res) => {
   try {
-    const { plate, category, partCategory, userId } = req.body ?? {};
+    const { plate, category, partCategory, tenantId, userId } = req.body ?? {};
     const result = platform.engines.miaCore.handleAutopartsFullSalesFlow({
       plate,
       category,
       partCategory,
+      tenantId,
       userId,
     });
 
@@ -230,6 +231,26 @@ app.post('/workflows/autoparts/full-sales-flow', (req, res) => {
     return res.json(result);
   } catch (err) {
     console.error('[/workflows/autoparts/full-sales-flow]', err.message);
+    return res.status(500).json({ ok: false, reason: 'internal server error' });
+  }
+});
+
+app.post('/tenants/specialization', (req, res) => {
+  try {
+    const { tenantId, tenant_id, userId } = req.body ?? {};
+    const result = platform.engines.miaCore.handleTenantSpecialization({
+      tenantId,
+      tenant_id,
+      userId,
+    });
+
+    if (!result.ok) {
+      return res.status(400).json(result);
+    }
+
+    return res.json(result);
+  } catch (err) {
+    console.error('[/tenants/specialization]', err.message);
     return res.status(500).json({ ok: false, reason: 'internal server error' });
   }
 });
@@ -390,5 +411,6 @@ app.listen(PORT, () => {
   console.log(`  POST  /capabilities/decision`);
   console.log(`  POST  /capabilities/sales`);
   console.log(`  POST  /workflows/autoparts/full-sales-flow`);
+  console.log(`  POST  /tenants/specialization`);
   console.log(`  GET   /health`);
 });

@@ -1,6 +1,6 @@
 function createExecutionContext(input = {}) {
   const context = {
-    tenant: input.tenant ?? null,
+    tenant: input.tenant ?? createTenantContext(input),
     user: input.user ?? createUserContext(input),
     conversation: input.conversation ?? createConversationContext(input),
     workflow: input.workflow ?? createWorkflowContext(input),
@@ -32,6 +32,16 @@ function createUserContext(input) {
 
   return {
     id: input.userId,
+  };
+}
+
+function createTenantContext(input) {
+  if (!input.tenantId) {
+    return null;
+  }
+
+  return {
+    id: input.tenantId,
   };
 }
 

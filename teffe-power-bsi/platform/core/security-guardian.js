@@ -303,6 +303,23 @@ class SecurityGuardian {
     };
   }
 
+  validateTenantSpecializationRequest(input) {
+    const tenantId = String(input?.tenantId ?? input?.tenant_id ?? '').trim().toLowerCase();
+
+    if (!tenantId) {
+      return this.denyRequest('tenant_id_required', 'tenant id is required');
+    }
+
+    if (!/^[a-z0-9_-]+$/.test(tenantId)) {
+      return this.denyRequest('tenant_id_invalid', 'tenant id format is invalid');
+    }
+
+    return {
+      allowed: true,
+      normalizedInput: { tenantId },
+    };
+  }
+
   normalizeCategory(category) {
     return String(category ?? '')
       .trim()
