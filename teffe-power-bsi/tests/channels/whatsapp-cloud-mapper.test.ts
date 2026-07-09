@@ -49,8 +49,11 @@ function run() {
   assert.strictEqual(providerPayload.text.body, 'Resposta mockada');
 
   const verifier = new WhatsAppCloudWebhookVerifier();
-  assert.strictEqual(verifier.verifySignature('ignored').mock, true);
-  assert.strictEqual(verifier.verifyHandshake({ 'hub.challenge': '123' }).ok, true);
+  assert.strictEqual(verifier.verifySignature({ rawBody: '{}', signature: '', secret: null }).ok, false);
+  assert.strictEqual(verifier.verifyHandshake({
+    'hub.verify_token': 'verify-secret',
+    'hub.challenge': '123',
+  }, 'verify-secret').ok, true);
 
   return { name: 'whatsapp-cloud-mapper', pass: true };
 }

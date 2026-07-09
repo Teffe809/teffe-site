@@ -1,35 +1,66 @@
+const crypto = require('crypto');
+
 class WhatsAppCloudWebhookVerifier {
   constructor({ verifyToken = null } = {}) {
     this.verifyToken = verifyToken;
   }
 
-  verifyHandshake(query = {}) {
-    if (!this.verifyToken) {
+  verifyHandshake(query = {}, verifyToken = this.verifyToken) {
+    const token = query['hub.verify_token'];
+    if (!verifyToken) {
       return {
-        ok: true,
+        ok: false,
         mode: query['hub.mode'] ?? null,
-        challenge: query['hub.challenge'] ?? null,
-        mock: true,
+        challenge: null,
+        reason: 'verify_secret_missing',
       };
     }
 
-    const token = query['hub.verify_token'];
-    const ok = token === this.verifyToken;
+    const ok = token === verifyToken;
     return {
       ok,
       mode: query['hub.mode'] ?? null,
       challenge: ok ? query['hub.challenge'] ?? null : null,
-      mock: false,
+      reason: ok ? null : 'verify_token_invalid',
     };
   }
 
-  verifySignature() {
+  verifySignature({ rawBody = '', signature = '', secret = null } = {}) {
+    if (!secret) {
+      return {
+        ok: false,
+        reason: 'signature_secret_missing',
+      };
+    }
+
+    if (!signature || !signature.startsWith('sha256=')) {
+      return {
+        ok: false,
+        reason: 'signature_missing',
+      };
+    }
+
+    const expected = `sha256=${crypto
+      .createHmac('sha256', secret)
+      .update(rawBody)
+      .digest('hex')}`;
+    const ok = timingSafeEqual(signature, expected);
+
     return {
-      ok: true,
-      mock: true,
-      reason: 'signature verification is not enabled until real Meta integration',
+      ok,
+      reason: ok ? null : 'signature_invalid',
     };
   }
+}
+
+function timingSafeEqual(left, right) {
+  const leftBuffer = Buffer.from(String(left));
+  const rightBuffer = Buffer.from(String(right));
+  if (leftBuffer.length !== rightBuffer.length) {
+    return false;
+  }
+
+  return crypto.timingSafeEqual(leftBuffer, rightBuffer);
 }
 
 module.exports = { WhatsAppCloudWebhookVerifier };
