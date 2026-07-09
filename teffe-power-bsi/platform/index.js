@@ -26,7 +26,10 @@ function bootPlatform(options = {}) {
   const pluginsDir = options.pluginsDir || path.join(__dirname, 'plugins');
 
   const auditLog = new AuditLog({ dataDir });
-  const memoryEngine = new MemoryEngine({ dataDir });
+  const memoryEngine = new MemoryEngine({
+    dataDir,
+    retention: options.memoryRetention,
+  });
   const securityGuardian = new SecurityGuardian();
   const domainKnowledgeEngine = new DomainKnowledgeEngine();
   const decisionRulesEngine = new DecisionRulesEngine();

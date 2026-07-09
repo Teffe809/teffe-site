@@ -34,6 +34,7 @@ async function validateHttp(vehicle, part) {
     env: {
       ...process.env,
       PORT: String(port),
+      TEFFE_DATA_DIR: fs.mkdtempSync(path.join(os.tmpdir(), 'teffe-http-stock-')),
     },
     stdio: ['ignore', 'pipe', 'pipe'],
   });

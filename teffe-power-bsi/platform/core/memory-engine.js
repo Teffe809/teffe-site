@@ -1,9 +1,11 @@
 const fs = require('fs');
 const path = require('path');
+const { MemoryRetention, estimateBytes } = require('./memory-retention');
 
 class MemoryEngine {
-  constructor({ dataDir }) {
+  constructor({ dataDir, retention = {} }) {
     this.contextFile = path.join(dataDir, 'context-store.json');
+    this.retention = new MemoryRetention(retention);
     this.context = this.load();
   }
 
@@ -34,10 +36,7 @@ class MemoryEngine {
   }
 
   persistExecution(execution) {
-    this.context.executions.push(execution);
-    fs.mkdirSync(path.dirname(this.contextFile), { recursive: true });
-    fs.writeFileSync(this.contextFile, JSON.stringify(this.context, null, 2), 'utf8');
-    return execution;
+    return this.persistRecord('executions', execution);
   }
 
   latestExecution() {
@@ -60,10 +59,7 @@ class MemoryEngine {
   }
 
   persistLibraryAccess(access) {
-    this.context.libraryAccesses.push(access);
-    fs.mkdirSync(path.dirname(this.contextFile), { recursive: true });
-    fs.writeFileSync(this.contextFile, JSON.stringify(this.context, null, 2), 'utf8');
-    return access;
+    return this.persistRecord('libraryAccesses', access);
   }
 
   latestLibraryAccess() {
@@ -71,10 +67,7 @@ class MemoryEngine {
   }
 
   persistWorkflow(workflow) {
-    this.context.workflows.push(workflow);
-    fs.mkdirSync(path.dirname(this.contextFile), { recursive: true });
-    fs.writeFileSync(this.contextFile, JSON.stringify(this.context, null, 2), 'utf8');
-    return workflow;
+    return this.persistRecord('workflows', workflow);
   }
 
   latestWorkflow() {
@@ -82,10 +75,7 @@ class MemoryEngine {
   }
 
   persistTenantAccess(access) {
-    this.context.tenantAccesses.push(access);
-    fs.mkdirSync(path.dirname(this.contextFile), { recursive: true });
-    fs.writeFileSync(this.contextFile, JSON.stringify(this.context, null, 2), 'utf8');
-    return access;
+    return this.persistRecord('tenantAccesses', access);
   }
 
   latestTenantAccess() {
@@ -93,10 +83,7 @@ class MemoryEngine {
   }
 
   persistCommunication(message) {
-    this.context.communications.push(message);
-    fs.mkdirSync(path.dirname(this.contextFile), { recursive: true });
-    fs.writeFileSync(this.contextFile, JSON.stringify(this.context, null, 2), 'utf8');
-    return message;
+    return this.persistRecord('communications', message);
   }
 
   latestCommunication() {
@@ -104,10 +91,7 @@ class MemoryEngine {
   }
 
   persistDispatch(dispatch) {
-    this.context.dispatches.push(dispatch);
-    fs.mkdirSync(path.dirname(this.contextFile), { recursive: true });
-    fs.writeFileSync(this.contextFile, JSON.stringify(this.context, null, 2), 'utf8');
-    return dispatch;
+    return this.persistRecord('dispatches', dispatch);
   }
 
   latestDispatch() {
@@ -115,14 +99,47 @@ class MemoryEngine {
   }
 
   persistUnderstanding(understanding) {
-    this.context.understandings.push(understanding);
-    fs.mkdirSync(path.dirname(this.contextFile), { recursive: true });
-    fs.writeFileSync(this.contextFile, JSON.stringify(this.context, null, 2), 'utf8');
-    return understanding;
+    return this.persistRecord('understandings', understanding);
   }
 
   latestUnderstanding() {
     return this.context.understandings[this.context.understandings.length - 1] || null;
+  }
+
+  persistRecord(collection, record) {
+    const compactedRecord = this.retention.compactRecord(collection, record);
+    this.context[collection].push(compactedRecord);
+    this.compactNow({ persist: false });
+    this.write();
+    return compactedRecord;
+  }
+
+  compactNow({ persist = true } = {}) {
+    const { context, stats } = this.retention.compactContext(this.context);
+    this.context = context;
+
+    if (persist) {
+      this.write();
+    }
+
+    return {
+      ...stats,
+      file: this.contextFile,
+      currentBytes: this.sizeBytes(),
+    };
+  }
+
+  sizeBytes() {
+    if (fs.existsSync(this.contextFile)) {
+      return fs.statSync(this.contextFile).size;
+    }
+
+    return estimateBytes(this.context);
+  }
+
+  write() {
+    fs.mkdirSync(path.dirname(this.contextFile), { recursive: true });
+    fs.writeFileSync(this.contextFile, JSON.stringify(this.context, null, 2), 'utf8');
   }
 }
 
