@@ -4,6 +4,7 @@ function createWebhookRuntimeConfig(input = {}) {
     channel: String(input.channel ?? 'whatsapp').trim().toLowerCase(),
     exposeErrors: input.exposeErrors === true,
     requireSignature: input.requireSignature !== false,
+    whatsappSendEnabled: input.whatsappSendEnabled === true || input.whatsappSendEnabled === 'true',
   };
 }
 

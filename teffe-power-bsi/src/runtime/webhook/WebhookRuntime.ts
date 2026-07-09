@@ -3,8 +3,11 @@ const { createWebhookResponse, safeErrorResponse } = require('./WebhookResponse.
 const { createWebhookRuntimeConfig } = require('./WebhookRuntimeConfig.ts');
 const { createWebhookSecurityResult } = require('./WebhookSecurityResult.ts');
 const { WhatsAppCloudAdapter } = require('../../channels/whatsapp-cloud/WhatsAppCloudAdapter.ts');
+const { WhatsAppCloudDeliveryGuard } = require('../../channels/whatsapp-cloud/WhatsAppCloudDeliveryGuard.ts');
 const { WhatsAppCloudMessageMapper } = require('../../channels/whatsapp-cloud/WhatsAppCloudMessageMapper.ts');
+const { WhatsAppCloudWebhookParser } = require('../../channels/whatsapp-cloud/WhatsAppCloudWebhookParser.ts');
 const { WhatsAppCloudWebhookVerifier } = require('../../channels/whatsapp-cloud/WhatsAppCloudWebhookVerifier.ts');
+const { InMemoryIdempotencyStore } = require('../idempotency/InMemoryIdempotencyStore.ts');
 
 class WebhookRuntime {
   constructor({
@@ -12,6 +15,8 @@ class WebhookRuntime {
     secretProvider,
     platform,
     verifier = new WhatsAppCloudWebhookVerifier(),
+    parser = new WhatsAppCloudWebhookParser(),
+    idempotencyStore = new InMemoryIdempotencyStore(),
     runtimeConfig = {},
   } = {}) {
     if (!configLoader) throw new Error('configLoader is required');
@@ -22,6 +27,8 @@ class WebhookRuntime {
     this.secretProvider = secretProvider;
     this.platform = platform;
     this.verifier = verifier;
+    this.parser = parser;
+    this.idempotencyStore = idempotencyStore;
     this.runtimeConfig = createWebhookRuntimeConfig(runtimeConfig);
   }
 
@@ -70,12 +77,17 @@ class WebhookRuntime {
   }
 
   handleInbound(request) {
+    if (this.runtimeConfig.requireSignature && !request.rawBody) {
+      return safeErrorResponse(400, 'raw_body_required', 'Raw body is required for webhook signature validation');
+    }
+
     const body = this.parseJson(request.rawBody);
     if (!body.ok) {
       return safeErrorResponse(400, 'invalid_json_payload', 'Webhook payload is invalid');
     }
 
-    const phoneNumberId = this.extractPhoneNumberId(body.value);
+    const parsed = this.parser.parse(body.value);
+    const phoneNumberId = parsed.phoneNumberId ?? this.extractPhoneNumberId(body.value);
     const config = this.configLoader.findByPhoneNumberId(request.provider, phoneNumberId)
       ?? this.configLoader.findByProvider(request.provider);
 
@@ -90,6 +102,37 @@ class WebhookRuntime {
     const security = this.validateInboundSecurity(request, config);
     if (!security.ok) {
       return safeErrorResponse(security.statusCode, security.reason, 'Webhook security validation failed');
+    }
+
+    if (!parsed.supported) {
+      return createWebhookResponse({
+        statusCode: 200,
+        body: {
+          ok: true,
+          ignored: true,
+          reason: parsed.reason,
+          provider: request.provider,
+          tenantId: config.tenantId,
+          channel: config.channel,
+        },
+      });
+    }
+
+    const idempotency = this.idempotencyStore.checkAndStore(parsed.messageId);
+    if (idempotency.reason === 'message_id_missing') {
+      return safeErrorResponse(202, 'message_id_missing', 'Webhook event did not include a message id');
+    }
+
+    if (idempotency.duplicate) {
+      return createWebhookResponse({
+        statusCode: 200,
+        body: {
+          ok: true,
+          duplicate: true,
+          messageId: parsed.messageId,
+          reason: idempotency.reason,
+        },
+      });
     }
 
     const adapter = this.createAdapter(config);
@@ -118,6 +161,7 @@ class WebhookRuntime {
         tenantId: config.tenantId,
         channel: config.channel,
         inboundMessageId: inbound.id,
+        idempotency,
         workflow: result.dispatch.workflow,
         delivery: {
           ok: result.delivery.ok,
@@ -130,8 +174,8 @@ class WebhookRuntime {
   }
 
   validateInboundSecurity(request, config) {
-    const verifySecret = this.secretProvider.getSecret(config.verifyTokenRef);
-    if (!verifySecret) {
+    const signatureSecret = this.secretProvider.getSecret(config.appSecretRef ?? config.verifyTokenRef);
+    if (!signatureSecret) {
       return createWebhookSecurityResult({
         ok: false,
         provider: request.provider,
@@ -167,7 +211,7 @@ class WebhookRuntime {
     const signatureResult = this.verifier.verifySignature({
       rawBody: request.rawBody,
       signature,
-      secret: verifySecret,
+      secret: signatureSecret,
     });
 
     if (!signatureResult.ok) {
@@ -191,6 +235,9 @@ class WebhookRuntime {
 
   createAdapter(config) {
     return new WhatsAppCloudAdapter({
+      deliveryGuard: new WhatsAppCloudDeliveryGuard({
+        sendEnabled: this.runtimeConfig.whatsappSendEnabled,
+      }),
       mapper: new WhatsAppCloudMessageMapper({
         tenantResolver: ({ phoneNumberId }) => ({
           tenantId: config.tenantId,

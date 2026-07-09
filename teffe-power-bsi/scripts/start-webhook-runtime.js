@@ -6,7 +6,7 @@ const { TenantChannelConfigLoader } = require('../src/config/TenantChannelConfig
 const { EnvSecretProvider } = require('../src/secrets/EnvSecretProvider.ts');
 const { WebhookRuntime } = require('../src/runtime/webhook/WebhookRuntime.ts');
 
-const PORT = Number(process.env.WEBHOOK_RUNTIME_PORT || 3100);
+const PORT = Number(process.env.TEFFE_WEBHOOK_PORT || process.env.WEBHOOK_RUNTIME_PORT || 3100);
 const dataDir = process.env.TEFFE_DATA_DIR || path.join(os.tmpdir(), 'teffe-webhook-runtime');
 const platform = bootPlatform({ dataDir });
 const configLoader = new TenantChannelConfigLoader({
@@ -16,8 +16,9 @@ const configLoader = new TenantChannelConfigLoader({
     provider: 'whatsapp-cloud',
     phoneNumberId: process.env.TEFFE_WEBHOOK_PHONE_NUMBER_ID || 'mock-phone-number-id',
     businessAccountId: process.env.TEFFE_WEBHOOK_BUSINESS_ACCOUNT_ID || 'mock-business-account-id',
-    verifyTokenRef: process.env.TEFFE_WEBHOOK_VERIFY_TOKEN_REF || 'TEFFE_WEBHOOK_VERIFY_TOKEN',
-    accessTokenRef: process.env.TEFFE_WEBHOOK_ACCESS_SECRET_REF || 'TEFFE_WEBHOOK_ACCESS_SECRET',
+    verifyTokenRef: process.env.TEFFE_WHATSAPP_VERIFY_TOKEN_REF || 'TEFFE_WHATSAPP_VERIFY_TOKEN',
+    appSecretRef: process.env.TEFFE_WHATSAPP_APP_SECRET_REF || 'TEFFE_WHATSAPP_APP_SECRET',
+    accessTokenRef: process.env.TEFFE_WHATSAPP_ACCESS_TOKEN_REF || 'TEFFE_WHATSAPP_ACCESS_TOKEN',
     enabled: process.env.TEFFE_WEBHOOK_ENABLED !== 'false',
     mode: process.env.TEFFE_WEBHOOK_MODE || 'mock',
   }],
@@ -26,6 +27,9 @@ const runtime = new WebhookRuntime({
   configLoader,
   secretProvider: new EnvSecretProvider(),
   platform,
+  runtimeConfig: {
+    whatsappSendEnabled: process.env.TEFFE_WHATSAPP_SEND_ENABLED === 'true',
+  },
 });
 
 const server = http.createServer((req, res) => {

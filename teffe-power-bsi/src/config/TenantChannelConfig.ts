@@ -6,6 +6,7 @@ function createTenantChannelConfig(input = {}) {
     phoneNumberId: input.phoneNumberId ?? null,
     businessAccountId: input.businessAccountId ?? null,
     verifyTokenRef: input.verifyTokenRef ?? null,
+    appSecretRef: input.appSecretRef ?? null,
     accessTokenRef: input.accessTokenRef ?? null,
     enabled: input.enabled !== false,
     mode: input.mode ?? 'mock',
