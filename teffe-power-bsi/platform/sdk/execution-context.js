@@ -14,6 +14,9 @@ function createExecutionContext(input = {}) {
       createdAt: input.runtime?.createdAt ?? new Date().toISOString(),
       ...withoutReservedRuntime(input.runtime),
     },
+    ...(input.domainKnowledge != null
+      ? { domainKnowledge: input.domainKnowledge }
+      : {}),
   };
 
   return context;

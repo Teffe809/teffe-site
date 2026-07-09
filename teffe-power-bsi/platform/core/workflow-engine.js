@@ -1,4 +1,4 @@
-const { CapabilityPipeline, createCapabilityRequest } = require('../sdk');
+const { CapabilityPipeline, createCapabilityRequest, createExecutionContext } = require('../sdk');
 
 class WorkflowEngine {
   constructor({
@@ -8,9 +8,12 @@ class WorkflowEngine {
     securityGuardian,
     capabilityPipeline,
     capabilityRegistry,
+    domainKnowledgeEngine,
   }) {
     this.securityGuardian = securityGuardian;
     this.capabilityRegistry = capabilityRegistry;
+    this.auditLog = auditLog;
+    this.domainKnowledgeEngine = domainKnowledgeEngine;
     this.capabilityPipeline = capabilityPipeline || new CapabilityPipeline({
       pluginEngine,
       memoryEngine,
@@ -73,6 +76,72 @@ class WorkflowEngine {
     });
 
     return this.toStockAvailabilityResponse(response);
+  }
+
+  getDomainSystem(name, context = {}) {
+    return this.queryDomainKnowledge(
+      'get_system_by_name',
+      { name },
+      () => this.domainKnowledgeEngine.getSystemByName(name),
+      context
+    );
+  }
+
+  getDomainComponents(systemName, context = {}) {
+    return this.queryDomainKnowledge(
+      'get_components',
+      { systemName },
+      () => this.domainKnowledgeEngine.getComponents(systemName),
+      context
+    );
+  }
+
+  getDomainSystemsByComponent(component, context = {}) {
+    return this.queryDomainKnowledge(
+      'get_systems_by_component',
+      { component },
+      () => this.domainKnowledgeEngine.getSystemsByComponent(component),
+      context
+    );
+  }
+
+  checkDomainMembership(component, systemName, context = {}) {
+    return this.queryDomainKnowledge(
+      'component_belongs_to_system',
+      { component, systemName },
+      () => this.domainKnowledgeEngine.componentBelongsToSystem(component, systemName),
+      context
+    );
+  }
+
+  queryDomainKnowledge(operation, parameters, query, context = {}) {
+    if (!this.domainKnowledgeEngine) {
+      throw new Error('Domain Knowledge Engine is not available');
+    }
+
+    const executionContext = createExecutionContext({
+      ...context,
+      domainKnowledge: {
+        engine: 'domain-knowledge',
+        operation,
+      },
+    });
+    const result = query();
+    const audit = this.auditLog.record({
+      type: 'domain.knowledge.queried',
+      domain: 'autoparts',
+      operation,
+      parameters,
+      result,
+      executionContext,
+    });
+
+    return {
+      ok: true,
+      result,
+      auditId: audit.id,
+      audit,
+    };
   }
 
   toVehicleIdentificationResponse(response) {

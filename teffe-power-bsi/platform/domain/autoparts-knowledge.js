@@ -1,0 +1,116 @@
+const AUTOPARTS_SYSTEMS = [
+  {
+    id: 'suspensao',
+    name: 'Suspensao',
+    description: 'Sistema que absorve irregularidades do solo e contribui para estabilidade e controle.',
+    categories: ['amortecimento', 'molas', 'articulacoes', 'estabilizacao'],
+    relatedComponents: [
+      'amortecedor',
+      'mola helicoidal',
+      'bandeja de suspensao',
+      'pivo de suspensao',
+      'bucha de suspensao',
+      'barra estabilizadora',
+      'bieleta',
+    ],
+    technicalNotes: [
+      'Componentes do mesmo eixo devem ser inspecionados em conjunto.',
+      'Alinhamento deve ser verificado apos intervencoes estruturais.',
+    ],
+  },
+  {
+    id: 'freios',
+    name: 'Freios',
+    description: 'Sistema responsavel por reduzir a velocidade e imobilizar o veiculo com seguranca.',
+    categories: ['friccao', 'hidraulica', 'acionamento', 'controle'],
+    relatedComponents: [
+      'pastilha de freio',
+      'disco de freio',
+      'lona de freio',
+      'tambor de freio',
+      'fluido de freio',
+      'cilindro mestre',
+      'pinca de freio',
+    ],
+    technicalNotes: [
+      'Itens de friccao devem ser avaliados por eixo.',
+      'O fluido deve seguir especificacao e intervalo definidos para o sistema.',
+    ],
+  },
+  {
+    id: 'motor',
+    name: 'Motor',
+    description: 'Conjunto que converte energia do combustivel em movimento para propulsao do veiculo.',
+    categories: ['alimentacao', 'ignicao', 'lubrificacao', 'distribuicao', 'vedacao'],
+    relatedComponents: [
+      'vela de ignicao',
+      'bobina de ignicao',
+      'correia dentada',
+      'correia de acessorios',
+      'bomba de oleo',
+      'filtro de oleo',
+      'junta do cabecote',
+      'sensor de rotacao',
+    ],
+    technicalNotes: [
+      'Sincronismo e torque de montagem devem seguir especificacoes tecnicas.',
+      'Falhas de lubrificacao podem comprometer multiplos componentes.',
+    ],
+  },
+  {
+    id: 'arrefecimento',
+    name: 'Arrefecimento',
+    description: 'Sistema que controla a temperatura operacional do motor e dissipa calor.',
+    categories: ['circulacao', 'troca termica', 'controle termico', 'reservatorio'],
+    relatedComponents: [
+      'radiador',
+      'bomba de agua',
+      'valvula termostatica',
+      'ventoinha',
+      'reservatorio de expansao',
+      'mangueira do radiador',
+      'aditivo de arrefecimento',
+    ],
+    technicalNotes: [
+      'O sistema deve ser preenchido com fluido compativel e na proporcao adequada.',
+      'Ar no circuito pode causar superaquecimento e leitura incorreta de temperatura.',
+    ],
+  },
+  {
+    id: 'transmissao',
+    name: 'Transmissao',
+    description: 'Sistema que transfere torque do motor para as rodas e adapta velocidade e forca.',
+    categories: ['embreagem', 'cambio', 'diferencial', 'acionamento'],
+    relatedComponents: [
+      'kit de embreagem',
+      'volante do motor',
+      'oleo de transmissao',
+      'junta homocinetica',
+      'semieixo',
+      'coxim do cambio',
+      'rolamento de cambio',
+    ],
+    technicalNotes: [
+      'O lubrificante deve atender tipo e viscosidade previstos para a transmissao.',
+      'Ruido ou vibracao exige avaliacao conjunta de suportes e elementos de acionamento.',
+    ],
+  },
+  {
+    id: 'filtros',
+    name: 'Filtros',
+    description: 'Elementos que retêm contaminantes nos circuitos de ar, combustivel, oleo e cabine.',
+    categories: ['oleo', 'ar do motor', 'combustivel', 'cabine'],
+    relatedComponents: [
+      'filtro de oleo',
+      'filtro de ar do motor',
+      'filtro de combustivel',
+      'filtro de cabine',
+    ],
+    technicalNotes: [
+      'Intervalos de substituicao dependem das condicoes de uso e manutencao.',
+      'Vedacao e sentido de fluxo devem ser conferidos na instalacao.',
+    ],
+  },
+];
+
+module.exports = { AUTOPARTS_SYSTEMS };
