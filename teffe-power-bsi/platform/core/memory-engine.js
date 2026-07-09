@@ -15,6 +15,7 @@ class MemoryEngine {
         workflows: [],
         tenantAccesses: [],
         communications: [],
+        dispatches: [],
       };
     }
 
@@ -26,6 +27,7 @@ class MemoryEngine {
       workflows: context.workflows || [],
       tenantAccesses: context.tenantAccesses || [],
       communications: context.communications || [],
+      dispatches: context.dispatches || [],
     };
   }
 
@@ -82,6 +84,17 @@ class MemoryEngine {
 
   latestCommunication() {
     return this.context.communications[this.context.communications.length - 1] || null;
+  }
+
+  persistDispatch(dispatch) {
+    this.context.dispatches.push(dispatch);
+    fs.mkdirSync(path.dirname(this.contextFile), { recursive: true });
+    fs.writeFileSync(this.contextFile, JSON.stringify(this.context, null, 2), 'utf8');
+    return dispatch;
+  }
+
+  latestDispatch() {
+    return this.context.dispatches[this.context.dispatches.length - 1] || null;
   }
 }
 

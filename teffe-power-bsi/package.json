@@ -21,7 +21,8 @@
     "validate:sales": "node scripts/run-sales-intelligence-validation.js",
     "validate:autoparts-flow": "node scripts/run-autoparts-full-sales-flow-validation.js",
     "validate:tenants": "node scripts/run-tenant-specialization-validation.js",
-    "validate:communication": "node scripts/run-communication-gateway-validation.js"
+    "validate:communication": "node scripts/run-communication-gateway-validation.js",
+    "validate:dispatcher": "node scripts/run-workflow-dispatcher-validation.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",

@@ -13,6 +13,7 @@ class WorkflowEngine {
     libraryDiscovery,
     tenantSpecializationRegistry,
     communicationGateway,
+    workflowDispatcher,
   }) {
     this.securityGuardian = securityGuardian;
     this.capabilityRegistry = capabilityRegistry;
@@ -23,6 +24,7 @@ class WorkflowEngine {
     this.libraryDiscovery = libraryDiscovery;
     this.tenantSpecializationRegistry = tenantSpecializationRegistry;
     this.communicationGateway = communicationGateway;
+    this.workflowDispatcher = workflowDispatcher;
     this.capabilityPipeline = capabilityPipeline || new CapabilityPipeline({
       pluginEngine,
       memoryEngine,
@@ -767,6 +769,160 @@ class WorkflowEngine {
       type: message.type,
       auditId: audit.id,
       audit,
+    };
+  }
+
+  dispatchCommunicationMessage(input, context = {}) {
+    const received = this.receiveCommunicationMessage(input, context);
+    const dispatchId = `dispatch_${Date.now()}`;
+    if (!received.ok) {
+      const failedAudit = this.auditLog.record({
+        type: 'workflow.dispatch.failed',
+        dispatchId,
+        stage: 'communication.normalization',
+        error: received.error,
+        auditId: received.auditId,
+        executionContext: createExecutionContext({
+          ...context,
+          tenantId: input?.tenant ?? input?.tenantId ?? input?.tenant_id,
+          runtime: {
+            operation: 'workflow_dispatch_failed',
+          },
+        }),
+      });
+      const dispatch = this.memoryEngine.persistDispatch({
+        id: dispatchId,
+        ok: false,
+        stage: 'communication.normalization',
+        error: received.error,
+        communicationAuditId: received.auditId,
+        auditId: failedAudit.id,
+        timestamp: new Date().toISOString(),
+      });
+
+      return {
+        ok: false,
+        error: received.error,
+        auditId: failedAudit.id,
+        audit: failedAudit,
+        dispatch,
+      };
+    }
+
+    const message = received.message;
+    const startedAudit = this.auditLog.record({
+      type: 'workflow.dispatch.started',
+      dispatchId,
+      messageId: message.id,
+      tenant: message.tenant,
+      channel: message.channel,
+      workflow: message.metadata.tenantWorkflow,
+      executionContext: createExecutionContext({
+        ...context,
+        tenantId: message.tenant.id,
+        runtime: {
+          operation: 'workflow_dispatch_started',
+          channel: message.channel,
+        },
+      }),
+    });
+    const dispatchResult = this.workflowDispatcher.dispatch(
+      message,
+      this,
+      {
+        ...context,
+        userId: context.userId,
+      }
+    );
+
+    if (!dispatchResult.ok) {
+      const failedAudit = this.auditLog.record({
+        type: 'workflow.dispatch.failed',
+        dispatchId,
+        messageId: message.id,
+        stage: 'workflow.dispatch',
+        error: dispatchResult.error,
+        executionContext: createExecutionContext({
+          ...context,
+          tenantId: message.tenant.id,
+          runtime: {
+            operation: 'workflow_dispatch_failed',
+            channel: message.channel,
+          },
+        }),
+      });
+      const dispatch = this.memoryEngine.persistDispatch({
+        id: dispatchId,
+        ok: false,
+        stage: 'workflow.dispatch',
+        tenantId: message.tenant.id,
+        channel: message.channel,
+        messageId: message.id,
+        communicationAuditId: received.auditId,
+        startedAuditId: startedAudit.id,
+        auditId: failedAudit.id,
+        error: dispatchResult.error,
+        timestamp: new Date().toISOString(),
+      });
+
+      return {
+        ok: false,
+        message,
+        error: dispatchResult.error,
+        auditId: failedAudit.id,
+        audit: {
+          communication: received.audit,
+          started: startedAudit,
+          failed: failedAudit,
+        },
+        dispatch,
+      };
+    }
+
+    const completedAudit = this.auditLog.record({
+      type: 'workflow.dispatch.completed',
+      dispatchId,
+      messageId: message.id,
+      workflow: dispatchResult.workflow,
+      workflowRunId: dispatchResult.result.runId,
+      executionContext: createExecutionContext({
+        ...context,
+        tenantId: message.tenant.id,
+        workflowId: dispatchResult.workflow,
+        runtime: {
+          operation: 'workflow_dispatch_completed',
+          channel: message.channel,
+        },
+      }),
+    });
+    const dispatch = this.memoryEngine.persistDispatch({
+      id: dispatchId,
+      ok: true,
+      tenantId: message.tenant.id,
+      channel: message.channel,
+      messageId: message.id,
+      workflow: dispatchResult.workflow,
+      workflowRunId: dispatchResult.result.runId,
+      workflowInput: dispatchResult.workflowInput,
+      communicationAuditId: received.auditId,
+      startedAuditId: startedAudit.id,
+      completedAuditId: completedAudit.id,
+      timestamp: new Date().toISOString(),
+    });
+
+    return {
+      ok: true,
+      message,
+      workflow: dispatchResult.workflow,
+      workflowInput: dispatchResult.workflowInput,
+      workflowResult: dispatchResult.result,
+      auditId: completedAudit.id,
+      audit: {
+        communication: received.audit,
+        started: startedAudit,
+        completed: completedAudit,
+      },
+      dispatch,
     };
   }
 

@@ -180,6 +180,19 @@ class MiaCore {
       }
     );
   }
+
+  handleWorkflowDispatch({ message, userId = 'capability-validation' }) {
+    return this.workflowEngine.dispatchCommunicationMessage(
+      message,
+      {
+        source: 'mia-core',
+        userId,
+        tenantId: message?.tenant ?? message?.tenantId ?? message?.tenant_id,
+        intent: 'workflow.dispatch',
+        ai: false,
+      }
+    );
+  }
 }
 
 module.exports = { MiaCore };
