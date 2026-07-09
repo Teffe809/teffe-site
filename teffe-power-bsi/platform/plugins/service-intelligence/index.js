@@ -1,26 +1,5 @@
 const { CapabilityError } = require('../../sdk');
-
-const vehicleContract = {
-  type: 'object',
-  required: ['plate', 'brand', 'model', 'year'],
-  properties: {
-    plate: { type: 'string', minLength: 7, maxLength: 7 },
-    brand: { type: 'string', minLength: 1 },
-    model: { type: 'string', minLength: 1 },
-    year: { type: 'integer' },
-  },
-};
-
-const partContract = {
-  type: 'object',
-  required: ['name', 'manufacturer', 'internalCode', 'technicalNotes'],
-  properties: {
-    name: { type: 'string', minLength: 1 },
-    manufacturer: { type: 'string', minLength: 1 },
-    internalCode: { type: 'string', minLength: 1 },
-    technicalNotes: { type: 'string', minLength: 1 },
-  },
-};
+const { contracts, objectContract } = require('../../domain/contracts');
 
 module.exports = {
   id: 'service-intelligence',
@@ -32,56 +11,23 @@ module.exports = {
     version: '0.1.0',
     description: 'Produces service intelligence exclusively from the Domain Knowledge Engine.',
     requirements: ['domainKnowledge'],
-    inputContract: {
-      type: 'object',
-      required: ['vehicle', 'part', 'category'],
-      properties: {
-        vehicle: vehicleContract,
-        part: partContract,
-        category: { type: 'string', minLength: 1 },
-      },
-    },
-    resultContract: {
-      type: 'object',
-      required: [
-        'source',
-        'vehicle',
-        'part',
-        'category',
-        'system',
-        'relatedComponents',
-        'recommendations',
-        'priority',
-        'technicalJustification',
-      ],
-      properties: {
-        source: { type: 'string', minLength: 1 },
-        vehicle: vehicleContract,
-        part: partContract,
-        category: { type: 'string', minLength: 1 },
-        system: {
-          type: 'object',
-          required: ['id', 'name', 'description'],
-          properties: {
-            id: { type: 'string', minLength: 1 },
-            name: { type: 'string', minLength: 1 },
-            description: { type: 'string', minLength: 1 },
-          },
-        },
-        relatedComponents: {
-          type: 'array',
-          minItems: 1,
-          items: { type: 'string', minLength: 1 },
-        },
-        recommendations: {
-          type: 'array',
-          minItems: 1,
-          items: { type: 'string', minLength: 1 },
-        },
-        priority: { type: 'string', minLength: 1 },
-        technicalJustification: { type: 'string', minLength: 1 },
-      },
-    },
+    inputContract: objectContract(
+      ['vehicle', 'part', 'category'],
+      {
+        vehicle: contracts.vehicle,
+        part: contracts.part,
+        category: contracts.category,
+      }
+    ),
+    resultContract: objectContract(
+      ['vehicle', 'part', 'category', ...contracts.serviceIntelligence.required],
+      {
+        vehicle: contracts.vehicle,
+        part: contracts.part,
+        category: contracts.category,
+        ...contracts.serviceIntelligence.properties,
+      }
+    ),
     outputContract: {
       success: {
         ok: true,

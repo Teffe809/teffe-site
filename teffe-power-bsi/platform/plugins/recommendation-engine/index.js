@@ -1,61 +1,5 @@
 const { CapabilityError } = require('../../sdk');
-
-const vehicleContract = {
-  type: 'object',
-  required: ['plate', 'brand', 'model', 'year'],
-  properties: {
-    plate: { type: 'string', minLength: 7, maxLength: 7 },
-    brand: { type: 'string', minLength: 1 },
-    model: { type: 'string', minLength: 1 },
-    year: { type: 'integer' },
-  },
-};
-
-const partContract = {
-  type: 'object',
-  required: ['name', 'manufacturer', 'internalCode', 'technicalNotes'],
-  properties: {
-    name: { type: 'string', minLength: 1 },
-    manufacturer: { type: 'string', minLength: 1 },
-    internalCode: { type: 'string', minLength: 1 },
-    technicalNotes: { type: 'string', minLength: 1 },
-  },
-};
-
-const serviceIntelligenceContract = {
-  type: 'object',
-  required: [
-    'source',
-    'system',
-    'relatedComponents',
-    'recommendations',
-    'priority',
-    'technicalJustification',
-  ],
-  properties: {
-    source: { type: 'string', minLength: 1 },
-    system: {
-      type: 'object',
-      required: ['id', 'name', 'description'],
-      properties: {
-        id: { type: 'string', minLength: 1 },
-        name: { type: 'string', minLength: 1 },
-        description: { type: 'string', minLength: 1 },
-      },
-    },
-    relatedComponents: {
-      type: 'array',
-      items: { type: 'string', minLength: 1 },
-    },
-    recommendations: {
-      type: 'array',
-      minItems: 1,
-      items: { type: 'string', minLength: 1 },
-    },
-    priority: { type: 'string', minLength: 1 },
-    technicalJustification: { type: 'string', minLength: 1 },
-  },
-};
+const { contracts, objectContract } = require('../../domain/contracts');
 
 module.exports = {
   id: 'recommendation-engine',
@@ -67,64 +11,24 @@ module.exports = {
     version: '0.1.0',
     description: 'Builds reusable recommendations from Service Intelligence and Domain Knowledge.',
     requirements: ['domainKnowledge'],
-    inputContract: {
-      type: 'object',
-      required: ['vehicle', 'part', 'category', 'serviceIntelligence'],
-      properties: {
-        vehicle: vehicleContract,
-        part: partContract,
-        category: { type: 'string', minLength: 1 },
-        serviceIntelligence: serviceIntelligenceContract,
-      },
-    },
-    resultContract: {
-      type: 'object',
-      required: [
-        'source',
-        'vehicle',
-        'part',
-        'category',
-        'complementaryComponents',
-        'suggestedKits',
-        'preventiveRecommendations',
-        'technicalJustification',
-        'priority',
-        'confidence',
-      ],
-      properties: {
-        source: { type: 'string', minLength: 1 },
-        vehicle: vehicleContract,
-        part: partContract,
-        category: { type: 'string', minLength: 1 },
-        complementaryComponents: {
-          type: 'array',
-          items: { type: 'string', minLength: 1 },
-        },
-        suggestedKits: {
-          type: 'array',
-          items: {
-            type: 'object',
-            required: ['name', 'components'],
-            properties: {
-              name: { type: 'string', minLength: 1 },
-              components: {
-                type: 'array',
-                minItems: 1,
-                items: { type: 'string', minLength: 1 },
-              },
-            },
-          },
-        },
-        preventiveRecommendations: {
-          type: 'array',
-          minItems: 1,
-          items: { type: 'string', minLength: 1 },
-        },
-        technicalJustification: { type: 'string', minLength: 1 },
-        priority: { type: 'string', minLength: 1 },
-        confidence: { type: 'string', minLength: 1 },
-      },
-    },
+    inputContract: objectContract(
+      ['vehicle', 'part', 'category', 'serviceIntelligence'],
+      {
+        vehicle: contracts.vehicle,
+        part: contracts.part,
+        category: contracts.category,
+        serviceIntelligence: contracts.serviceIntelligence,
+      }
+    ),
+    resultContract: objectContract(
+      ['vehicle', 'part', 'category', ...contracts.recommendation.required],
+      {
+        vehicle: contracts.vehicle,
+        part: contracts.part,
+        category: contracts.category,
+        ...contracts.recommendation.properties,
+      }
+    ),
     outputContract: {
       success: {
         ok: true,

@@ -12,7 +12,9 @@
     "validate:dke": "node scripts/run-domain-knowledge-validation.js",
     "validate:service": "node scripts/run-service-intelligence-validation.js",
     "validate:recommendation": "node scripts/run-recommendation-validation.js",
-    "validate:budget": "node scripts/run-budget-intelligence-validation.js"
+    "validate:budget": "node scripts/run-budget-intelligence-validation.js",
+    "validate:contracts": "node scripts/run-shared-domain-contracts-validation.js",
+    "validate:pricing": "node scripts/run-pricing-intelligence-validation.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",

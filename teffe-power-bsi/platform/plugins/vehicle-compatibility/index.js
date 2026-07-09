@@ -1,3 +1,5 @@
+const { arrayContract, contracts, objectContract } = require('../../domain/contracts');
+
 const PARTS_BY_CATEGORY = {
   freios: [
     {
@@ -45,28 +47,6 @@ const PARTS_BY_CATEGORY = {
   ],
 };
 
-const vehicleContract = {
-  type: 'object',
-  required: ['plate', 'brand', 'model', 'year'],
-  properties: {
-    plate: { type: 'string', minLength: 7, maxLength: 7 },
-    brand: { type: 'string', minLength: 1 },
-    model: { type: 'string', minLength: 1 },
-    year: { type: 'integer' },
-  },
-};
-
-const partContract = {
-  type: 'object',
-  required: ['name', 'manufacturer', 'internalCode', 'technicalNotes'],
-  properties: {
-    name: { type: 'string', minLength: 1 },
-    manufacturer: { type: 'string', minLength: 1 },
-    internalCode: { type: 'string', minLength: 1 },
-    technicalNotes: { type: 'string', minLength: 1 },
-  },
-};
-
 module.exports = {
   id: 'vehicle-compatibility',
   name: 'Vehicle Compatibility',
@@ -76,28 +56,22 @@ module.exports = {
     name: 'Vehicle Compatibility',
     version: '0.1.0',
     description: 'Returns locally mocked compatible parts for an identified vehicle and part category.',
-    inputContract: {
-      type: 'object',
-      required: ['vehicle', 'category'],
-      properties: {
-        vehicle: vehicleContract,
-        category: { type: 'string', minLength: 1 },
-      },
-    },
-    resultContract: {
-      type: 'object',
-      required: ['source', 'vehicle', 'category', 'compatibleParts'],
-      properties: {
-        source: { type: 'string', minLength: 1 },
-        vehicle: vehicleContract,
-        category: { type: 'string', minLength: 1 },
-        compatibleParts: {
-          type: 'array',
-          minItems: 1,
-          items: partContract,
-        },
-      },
-    },
+    inputContract: objectContract(
+      ['vehicle', 'category'],
+      {
+        vehicle: contracts.vehicle,
+        category: contracts.category,
+      }
+    ),
+    resultContract: objectContract(
+      ['source', 'vehicle', 'category', 'compatibleParts'],
+      {
+        source: contracts.nonEmptyString,
+        vehicle: contracts.vehicle,
+        category: contracts.category,
+        compatibleParts: arrayContract(contracts.part, { minItems: 1 }),
+      }
+    ),
     outputContract: {
       success: {
         ok: true,

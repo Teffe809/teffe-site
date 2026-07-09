@@ -1,3 +1,5 @@
+const { contracts, objectContract } = require('../../domain/contracts');
+
 const MOCK_VEHICLES = {
   ABC1D23: {
     plate: 'ABC1D23',
@@ -28,36 +30,22 @@ module.exports = {
     name: 'Vehicle Identification Manual',
     version: '0.1.0',
     description: 'Identifies a vehicle from a manually provided Brazilian plate using local mock data.',
-    inputContract: {
-      type: 'object',
-      required: ['plate'],
-      properties: {
-        plate: {
-          type: 'string',
-          description: 'Brazilian vehicle plate with optional hyphen or spaces.',
-        },
-      },
-    },
-    resultContract: {
-      type: 'object',
-      required: ['source', 'vehicle'],
-      properties: {
-        source: { type: 'string', minLength: 1 },
-        vehicle: {
-          type: 'object',
-          required: ['plate', 'brand', 'model', 'year', 'color', 'ownerType', 'status'],
-          properties: {
-            plate: { type: 'string', minLength: 7, maxLength: 7 },
-            brand: { type: 'string', minLength: 1 },
-            model: { type: 'string', minLength: 1 },
-            year: { type: 'integer' },
-            color: { type: 'string', minLength: 1 },
-            ownerType: { type: 'string', minLength: 1 },
-            status: { type: 'string', minLength: 1 },
-          },
-        },
-      },
-    },
+    inputContract: objectContract(['plate'], { plate: contracts.rawPlate }),
+    resultContract: objectContract(
+      ['source', 'vehicle'],
+      {
+        source: contracts.nonEmptyString,
+        vehicle: objectContract(
+          [...contracts.vehicle.required, 'color', 'ownerType', 'status'],
+          {
+            ...contracts.vehicle.properties,
+            color: contracts.nonEmptyString,
+            ownerType: contracts.nonEmptyString,
+            status: contracts.nonEmptyString,
+          }
+        ),
+      }
+    ),
     outputContract: {
       success: {
         ok: true,

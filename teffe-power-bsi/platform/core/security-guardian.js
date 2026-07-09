@@ -211,6 +211,23 @@ class SecurityGuardian {
     };
   }
 
+  validatePricingIntelligenceRequest(input) {
+    if (
+      input?.budget?.source !==
+      'service-intelligence+recommendation-engine+domain-knowledge-engine'
+    ) {
+      return this.denyRequest(
+        'budget_source_invalid',
+        'Budget must originate from Budget Intelligence'
+      );
+    }
+
+    return {
+      allowed: true,
+      normalizedInput: input,
+    };
+  }
+
   normalizeCategory(category) {
     return String(category ?? '')
       .trim()

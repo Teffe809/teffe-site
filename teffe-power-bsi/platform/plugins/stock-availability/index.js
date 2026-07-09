@@ -1,3 +1,5 @@
+const { contracts, objectContract } = require('../../domain/contracts');
+
 const STOCK_BY_INTERNAL_CODE = {
   'TFF-FRE-001': {
     available: true,
@@ -43,28 +45,6 @@ const STOCK_BY_INTERNAL_CODE = {
   },
 };
 
-const vehicleContract = {
-  type: 'object',
-  required: ['plate', 'brand', 'model', 'year'],
-  properties: {
-    plate: { type: 'string', minLength: 7, maxLength: 7 },
-    brand: { type: 'string', minLength: 1 },
-    model: { type: 'string', minLength: 1 },
-    year: { type: 'integer' },
-  },
-};
-
-const partContract = {
-  type: 'object',
-  required: ['name', 'manufacturer', 'internalCode', 'technicalNotes'],
-  properties: {
-    name: { type: 'string', minLength: 1 },
-    manufacturer: { type: 'string', minLength: 1 },
-    internalCode: { type: 'string', minLength: 1 },
-    technicalNotes: { type: 'string', minLength: 1 },
-  },
-};
-
 module.exports = {
   id: 'stock-availability',
   name: 'Stock Availability',
@@ -74,17 +54,15 @@ module.exports = {
     name: 'Stock Availability',
     version: '0.1.0',
     description: 'Returns locally mocked stock availability for a compatible vehicle part.',
-    inputContract: {
-      type: 'object',
-      required: ['vehicle', 'part'],
-      properties: {
-        vehicle: vehicleContract,
-        part: partContract,
-      },
-    },
-    resultContract: {
-      type: 'object',
-      required: [
+    inputContract: objectContract(
+      ['vehicle', 'part'],
+      {
+        vehicle: contracts.vehicle,
+        part: contracts.part,
+      }
+    ),
+    resultContract: objectContract(
+      [
         'source',
         'vehicle',
         'part',
@@ -94,17 +72,17 @@ module.exports = {
         'estimatedDelivery',
         'notes',
       ],
-      properties: {
-        source: { type: 'string', minLength: 1 },
-        vehicle: vehicleContract,
-        part: partContract,
+      {
+        source: contracts.nonEmptyString,
+        vehicle: contracts.vehicle,
+        part: contracts.part,
         available: { type: 'boolean' },
         quantity: { type: 'integer', minimum: 0 },
-        branch: { type: 'string', minLength: 1 },
-        estimatedDelivery: { type: 'string', minLength: 1 },
-        notes: { type: 'string', minLength: 1 },
-      },
-    },
+        branch: contracts.nonEmptyString,
+        estimatedDelivery: contracts.nonEmptyString,
+        notes: contracts.nonEmptyString,
+      }
+    ),
     outputContract: {
       success: {
         ok: true,

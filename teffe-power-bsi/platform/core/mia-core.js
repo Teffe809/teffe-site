@@ -87,6 +87,18 @@ class MiaCore {
       }
     );
   }
+
+  handlePricingIntelligence({ budget, userId = 'capability-validation' }) {
+    return this.workflowEngine.runPricingIntelligence(
+      { budget },
+      {
+        source: 'mia-core',
+        userId,
+        intent: 'pricing.intelligence',
+        ai: false,
+      }
+    );
+  }
 }
 
 module.exports = { MiaCore };

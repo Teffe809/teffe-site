@@ -155,6 +155,25 @@ app.post('/capabilities/budget', (req, res) => {
   }
 });
 
+app.post('/capabilities/pricing', (req, res) => {
+  try {
+    const { budget, userId } = req.body ?? {};
+    const result = platform.engines.miaCore.handlePricingIntelligence({
+      budget,
+      userId,
+    });
+
+    if (!result.ok) {
+      return res.status(400).json(result);
+    }
+
+    return res.json(result);
+  } catch (err) {
+    console.error('[/capabilities/pricing]', err.message);
+    return res.status(500).json({ ok: false, reason: 'internal server error' });
+  }
+});
+
 /* ── POST /auth/pin ───────────────────────────────────────────────────────── */
 app.post('/auth/pin', async (req, res) => {
   try {
@@ -307,5 +326,6 @@ app.listen(PORT, () => {
   console.log(`  POST  /capabilities/service-intelligence`);
   console.log(`  POST  /capabilities/recommendation`);
   console.log(`  POST  /capabilities/budget`);
+  console.log(`  POST  /capabilities/pricing`);
   console.log(`  GET   /health`);
 });

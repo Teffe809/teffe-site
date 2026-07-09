@@ -138,6 +138,25 @@ class WorkflowEngine {
     return this.toBudgetIntelligenceResponse(response);
   }
 
+  runPricingIntelligence(input, context = {}) {
+    const capabilityId = 'pricing.intelligence';
+    const capability = this.capabilityRegistry?.get(capabilityId);
+    const request = createCapabilityRequest({
+      capability: capabilityId,
+      pluginId: capability?.pluginId || 'pricing-intelligence',
+      input,
+      context,
+      inputContract: capability?.inputContract,
+      resultContract: capability?.resultContract,
+    });
+
+    const response = this.capabilityPipeline.run(request, {
+      validate: (requestInput) => this.securityGuardian.validatePricingIntelligenceRequest(requestInput),
+    });
+
+    return this.toPricingIntelligenceResponse(response);
+  }
+
   getDomainSystem(name, context = {}) {
     return this.queryDomainKnowledge(
       'get_system_by_name',
@@ -349,6 +368,33 @@ class WorkflowEngine {
       technicalKits: response.result.technicalKits,
       sellerNotes: response.result.sellerNotes,
       source: response.result.source,
+      auditId: response.auditId,
+      execution: response.execution,
+      audit: response.audit,
+    };
+  }
+
+  toPricingIntelligenceResponse(response) {
+    if (!response.ok) {
+      return {
+        ok: false,
+        error: response.error,
+        auditId: response.auditId,
+        audit: response.audit,
+      };
+    }
+
+    return {
+      ok: true,
+      source: response.result.source,
+      budgetAuditId: response.result.budgetAuditId,
+      items: response.result.items,
+      discounts: response.result.discounts,
+      taxes: response.result.taxes,
+      margin: response.result.margin,
+      validity: response.result.validity,
+      totals: response.result.totals,
+      commercialNotes: response.result.commercialNotes,
       auditId: response.auditId,
       execution: response.execution,
       audit: response.audit,
