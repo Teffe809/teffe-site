@@ -213,6 +213,27 @@ app.post('/capabilities/sales', (req, res) => {
   }
 });
 
+app.post('/workflows/autoparts/full-sales-flow', (req, res) => {
+  try {
+    const { plate, category, partCategory, userId } = req.body ?? {};
+    const result = platform.engines.miaCore.handleAutopartsFullSalesFlow({
+      plate,
+      category,
+      partCategory,
+      userId,
+    });
+
+    if (!result.ok) {
+      return res.status(400).json(result);
+    }
+
+    return res.json(result);
+  } catch (err) {
+    console.error('[/workflows/autoparts/full-sales-flow]', err.message);
+    return res.status(500).json({ ok: false, reason: 'internal server error' });
+  }
+});
+
 /* ── POST /auth/pin ───────────────────────────────────────────────────────── */
 app.post('/auth/pin', async (req, res) => {
   try {
@@ -368,5 +389,6 @@ app.listen(PORT, () => {
   console.log(`  POST  /capabilities/pricing`);
   console.log(`  POST  /capabilities/decision`);
   console.log(`  POST  /capabilities/sales`);
+  console.log(`  POST  /workflows/autoparts/full-sales-flow`);
   console.log(`  GET   /health`);
 });

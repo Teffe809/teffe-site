@@ -135,6 +135,23 @@ class MiaCore {
       }
     );
   }
+
+  handleAutopartsFullSalesFlow({
+    plate,
+    category,
+    partCategory,
+    userId = 'capability-validation',
+  }) {
+    return this.workflowEngine.runAutopartsFullSalesFlow(
+      { plate, category, partCategory },
+      {
+        source: 'mia-core',
+        userId,
+        intent: 'autoparts.full-sales-flow',
+        ai: false,
+      }
+    );
+  }
 }
 
 module.exports = { MiaCore };

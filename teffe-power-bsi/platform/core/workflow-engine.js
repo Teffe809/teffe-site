@@ -202,6 +202,334 @@ class WorkflowEngine {
     return this.toSalesIntelligenceResponse(response);
   }
 
+  runAutopartsFullSalesFlow(input, context = {}) {
+    const workflowId = 'autoparts.full-sales-flow';
+    const validation = this.securityGuardian.validateAutopartsFullSalesFlowRequest(input);
+    const startedAt = new Date().toISOString();
+    const runId = `workflow_${Date.now()}`;
+    const baseContext = {
+      ...context,
+      workflowId,
+      workflow: {
+        id: workflowId,
+        runId,
+      },
+    };
+
+    const startedAudit = this.auditLog.record({
+      type: 'workflow.execution.started',
+      workflow: workflowId,
+      runId,
+      input,
+      executionContext: createExecutionContext(baseContext),
+    });
+
+    if (!validation.allowed) {
+      return this.failWorkflow({
+        workflowId,
+        runId,
+        startedAt,
+        startedAudit,
+        step: 'request.validation',
+        steps: [],
+        error: validation.error,
+        context: baseContext,
+      });
+    }
+
+    const request = validation.normalizedInput;
+    const steps = [];
+    const runStep = (name, execute) => {
+      const response = execute({
+        ...baseContext,
+        workflow: {
+          id: workflowId,
+          runId,
+          step: name,
+        },
+      });
+      steps.push({
+        name,
+        ok: response.ok,
+        auditId: response.auditId ?? null,
+      });
+      return response;
+    };
+
+    const identification = runStep('vehicle-identification', (stepContext) =>
+      this.runVehicleIdentification({ plate: request.plate }, stepContext)
+    );
+    if (!identification.ok) {
+      return this.failWorkflowFromStep({
+        workflowId,
+        runId,
+        startedAt,
+        startedAudit,
+        step: 'vehicle-identification',
+        steps,
+        response: identification,
+        context: baseContext,
+      });
+    }
+
+    const compatibility = runStep('vehicle-compatibility', (stepContext) =>
+      this.runVehicleCompatibility(
+        { vehicle: identification.vehicle, category: request.category },
+        stepContext
+      )
+    );
+    if (!compatibility.ok) {
+      return this.failWorkflowFromStep({
+        workflowId,
+        runId,
+        startedAt,
+        startedAudit,
+        step: 'vehicle-compatibility',
+        steps,
+        response: compatibility,
+        context: baseContext,
+      });
+    }
+
+    const part = compatibility.compatibleParts[0];
+    const stock = runStep('stock-availability', (stepContext) =>
+      this.runStockAvailability({ vehicle: identification.vehicle, part }, stepContext)
+    );
+    if (!stock.ok) {
+      return this.failWorkflowFromStep({
+        workflowId,
+        runId,
+        startedAt,
+        startedAudit,
+        step: 'stock-availability',
+        steps,
+        response: stock,
+        context: baseContext,
+      });
+    }
+
+    const service = runStep('service-intelligence', (stepContext) =>
+      this.runServiceIntelligence(
+        { vehicle: identification.vehicle, part, category: compatibility.category },
+        stepContext
+      )
+    );
+    if (!service.ok) {
+      return this.failWorkflowFromStep({
+        workflowId,
+        runId,
+        startedAt,
+        startedAudit,
+        step: 'service-intelligence',
+        steps,
+        response: service,
+        context: baseContext,
+      });
+    }
+
+    const serviceInput = this.pick(service, [
+      'source',
+      'system',
+      'relatedComponents',
+      'recommendations',
+      'priority',
+      'technicalJustification',
+    ]);
+    const recommendation = runStep('recommendation-engine', (stepContext) =>
+      this.runRecommendation(
+        {
+          vehicle: identification.vehicle,
+          part,
+          category: compatibility.category,
+          serviceIntelligence: serviceInput,
+        },
+        stepContext
+      )
+    );
+    if (!recommendation.ok) {
+      return this.failWorkflowFromStep({
+        workflowId,
+        runId,
+        startedAt,
+        startedAudit,
+        step: 'recommendation-engine',
+        steps,
+        response: recommendation,
+        context: baseContext,
+      });
+    }
+
+    const recommendationInput = this.pick(recommendation, [
+      'source',
+      'complementaryComponents',
+      'suggestedKits',
+      'preventiveRecommendations',
+      'technicalJustification',
+      'priority',
+      'confidence',
+    ]);
+    const budget = runStep('budget-intelligence', (stepContext) =>
+      this.runBudgetIntelligence(
+        {
+          vehicle: identification.vehicle,
+          part,
+          category: compatibility.category,
+          serviceIntelligence: serviceInput,
+          recommendation: recommendationInput,
+        },
+        stepContext
+      )
+    );
+    if (!budget.ok) {
+      return this.failWorkflowFromStep({
+        workflowId,
+        runId,
+        startedAt,
+        startedAudit,
+        step: 'budget-intelligence',
+        steps,
+        response: budget,
+        context: baseContext,
+      });
+    }
+
+    const budgetInput = this.pick(budget, [
+      'source',
+      'vehicle',
+      'category',
+      'mainItem',
+      'complementaryItems',
+      'systemGroups',
+      'technicalKits',
+      'sellerNotes',
+      'auditId',
+    ]);
+    const pricing = runStep('pricing-intelligence', (stepContext) =>
+      this.runPricingIntelligence({ budget: budgetInput }, stepContext)
+    );
+    if (!pricing.ok) {
+      return this.failWorkflowFromStep({
+        workflowId,
+        runId,
+        startedAt,
+        startedAudit,
+        step: 'pricing-intelligence',
+        steps,
+        response: pricing,
+        context: baseContext,
+      });
+    }
+
+    const pricingInput = this.pick(pricing, [
+      'source',
+      'budgetAuditId',
+      'items',
+      'discounts',
+      'taxes',
+      'margin',
+      'validity',
+      'totals',
+      'commercialNotes',
+      'auditId',
+    ]);
+    const decision = runStep('decision-intelligence', (stepContext) =>
+      this.runDecisionIntelligence({ pricing: pricingInput }, stepContext)
+    );
+    if (!decision.ok) {
+      return this.failWorkflowFromStep({
+        workflowId,
+        runId,
+        startedAt,
+        startedAudit,
+        step: 'decision-intelligence',
+        steps,
+        response: decision,
+        context: baseContext,
+      });
+    }
+
+    const decisionInput = this.pick(decision, [
+      'source',
+      'pricingAuditId',
+      'decisions',
+      'summary',
+      'justifications',
+      'auditId',
+    ]);
+    const sales = runStep('sales-intelligence', (stepContext) =>
+      this.runSalesIntelligence({ pricing: pricingInput, decision: decisionInput }, stepContext)
+    );
+    if (!sales.ok) {
+      return this.failWorkflowFromStep({
+        workflowId,
+        runId,
+        startedAt,
+        startedAudit,
+        step: 'sales-intelligence',
+        steps,
+        response: sales,
+        context: baseContext,
+      });
+    }
+
+    const completedAudit = this.auditLog.record({
+      type: 'workflow.execution.completed',
+      workflow: workflowId,
+      runId,
+      steps,
+      executionContext: createExecutionContext(baseContext),
+    });
+    const workflow = this.memoryEngine.persistWorkflow({
+      id: runId,
+      workflow: workflowId,
+      ok: true,
+      startedAt,
+      completedAt: new Date().toISOString(),
+      startedAuditId: startedAudit.id,
+      completedAuditId: completedAudit.id,
+      steps,
+      result: {
+        vehicle: identification.vehicle,
+        category: compatibility.category,
+        part,
+        stock: this.pick(stock, ['available', 'quantity', 'branch', 'estimatedDelivery', 'notes', 'auditId']),
+        serviceIntelligence: serviceInput,
+        recommendation: recommendationInput,
+        budget: budgetInput,
+        pricing: pricingInput,
+        decision: decisionInput,
+        sales: this.pick(sales, [
+          'source',
+          'pricingAuditId',
+          'decisionAuditId',
+          'library',
+          'complementarySaleOpportunity',
+          'commercialPriority',
+          'technicalJustification',
+          'suggestedApproach',
+          'requiresHuman',
+          'commercialRisks',
+          'nextSteps',
+          'auditId',
+        ]),
+      },
+    });
+
+    return {
+      ok: true,
+      workflow: workflowId,
+      runId,
+      steps,
+      result: workflow.result,
+      auditId: completedAudit.id,
+      audit: {
+        started: startedAudit,
+        completed: completedAudit,
+      },
+      memory: workflow,
+    };
+  }
+
   findLibrary(input, context = {}) {
     const validation = this.securityGuardian.validateLibraryDiscoveryRequest(input);
     if (!validation.allowed) {
@@ -320,6 +648,83 @@ class WorkflowEngine {
       auditId: audit.id,
       audit,
     };
+  }
+
+  failWorkflowFromStep({
+    workflowId,
+    runId,
+    startedAt,
+    startedAudit,
+    step,
+    steps,
+    response,
+    context,
+  }) {
+    return this.failWorkflow({
+      workflowId,
+      runId,
+      startedAt,
+      startedAudit,
+      step,
+      steps,
+      error: response.error,
+      failedAuditId: response.auditId ?? null,
+      context,
+    });
+  }
+
+  failWorkflow({
+    workflowId,
+    runId,
+    startedAt,
+    startedAudit,
+    step,
+    steps,
+    error,
+    failedAuditId = null,
+    context,
+  }) {
+    const failedAudit = this.auditLog.record({
+      type: 'workflow.execution.failed',
+      workflow: workflowId,
+      runId,
+      failedStep: step,
+      failedAuditId,
+      error,
+      steps,
+      executionContext: createExecutionContext(context),
+    });
+    const workflow = this.memoryEngine.persistWorkflow({
+      id: runId,
+      workflow: workflowId,
+      ok: false,
+      startedAt,
+      completedAt: new Date().toISOString(),
+      startedAuditId: startedAudit.id,
+      failedAuditId: failedAudit.id,
+      failedStep: step,
+      steps,
+      error,
+    });
+
+    return {
+      ok: false,
+      workflow: workflowId,
+      runId,
+      failedStep: step,
+      steps,
+      error,
+      auditId: failedAudit.id,
+      audit: {
+        started: startedAudit,
+        failed: failedAudit,
+      },
+      memory: workflow,
+    };
+  }
+
+  pick(source, fields) {
+    return Object.fromEntries(fields.map((field) => [field, source[field]]));
   }
 
   toVehicleIdentificationResponse(response) {

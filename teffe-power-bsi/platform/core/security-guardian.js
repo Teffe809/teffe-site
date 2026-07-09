@@ -281,6 +281,28 @@ class SecurityGuardian {
     };
   }
 
+  validateAutopartsFullSalesFlowRequest(input) {
+    const plate = input?.plate == null ? '' : String(input.plate).trim();
+    const category = this.normalizeCategory(input?.category ?? input?.partCategory);
+
+    if (!plate) {
+      return this.denyRequest('vehicle_required', 'vehicle plate is required');
+    }
+
+    if (!category) {
+      return this.denyRequest('part_required', 'part category is required');
+    }
+
+    return {
+      allowed: true,
+      normalizedInput: {
+        ...input,
+        plate,
+        category,
+      },
+    };
+  }
+
   normalizeCategory(category) {
     return String(category ?? '')
       .trim()

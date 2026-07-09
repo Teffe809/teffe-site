@@ -9,7 +9,7 @@ class MemoryEngine {
 
   load() {
     if (!fs.existsSync(this.contextFile)) {
-      return { executions: [], libraryAccesses: [] };
+      return { executions: [], libraryAccesses: [], workflows: [] };
     }
 
     const context = JSON.parse(fs.readFileSync(this.contextFile, 'utf8'));
@@ -17,6 +17,7 @@ class MemoryEngine {
       ...context,
       executions: context.executions || [],
       libraryAccesses: context.libraryAccesses || [],
+      workflows: context.workflows || [],
     };
   }
 
@@ -40,6 +41,17 @@ class MemoryEngine {
 
   latestLibraryAccess() {
     return this.context.libraryAccesses[this.context.libraryAccesses.length - 1] || null;
+  }
+
+  persistWorkflow(workflow) {
+    this.context.workflows.push(workflow);
+    fs.mkdirSync(path.dirname(this.contextFile), { recursive: true });
+    fs.writeFileSync(this.contextFile, JSON.stringify(this.context, null, 2), 'utf8');
+    return workflow;
+  }
+
+  latestWorkflow() {
+    return this.context.workflows[this.context.workflows.length - 1] || null;
   }
 }
 
