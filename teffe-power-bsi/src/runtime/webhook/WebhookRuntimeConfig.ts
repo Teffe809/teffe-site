@@ -5,6 +5,7 @@ function createWebhookRuntimeConfig(input = {}) {
     exposeErrors: input.exposeErrors === true,
     requireSignature: input.requireSignature !== false,
     whatsappSendEnabled: input.whatsappSendEnabled === true || input.whatsappSendEnabled === 'true',
+    inboundDryRun: input.inboundDryRun === true || input.inboundDryRun === 'true',
   };
 }
 

@@ -13,13 +13,18 @@ function checkWebhookReadiness({
   const checks = [];
   const envPath = path.join(cwd, '.env');
   const sendEnabled = String(env.TEFFE_WHATSAPP_SEND_ENABLED ?? '').toLowerCase() === 'true';
+  const dryRunEnabled = String(env.TEFFE_INBOUND_DRY_RUN ?? '').toLowerCase() === 'true';
+  const channelMode = env.TEFFE_CHANNEL_MODE || env.TEFFE_WEBHOOK_MODE || 'sandbox';
   const idempotencyFile = env.TEFFE_IDEMPOTENCY_STORE_FILE || path.join('data', 'idempotency-store.json');
+  const observationFile = env.TEFFE_INBOUND_OBSERVATION_FILE || path.join('data', 'inbound-observations.jsonl');
   const verifyTokenRef = env.TEFFE_WHATSAPP_VERIFY_TOKEN_REF;
   const appSecretRef = env.TEFFE_WHATSAPP_APP_SECRET_REF;
 
   checks.push(check('env_exists_local', fs.existsSync(envPath), '.env must exist locally'));
   checks.push(check('env_not_versioned', !isTracked(cwd, '.env'), '.env must not be versioned'));
   checks.push(check('send_disabled', !sendEnabled, 'TEFFE_WHATSAPP_SEND_ENABLED must be false'));
+  checks.push(check('inbound_dry_run_enabled', dryRunEnabled, 'TEFFE_INBOUND_DRY_RUN must be true'));
+  checks.push(check('channel_mode_sandbox', channelMode === 'sandbox', 'TEFFE_CHANNEL_MODE must be sandbox'));
   checks.push(check('verify_token_ref_present', Boolean(verifyTokenRef), 'verify token ref is required'));
   checks.push(check('app_secret_ref_present', Boolean(appSecretRef), 'app secret ref is required'));
   checks.push(check('webhook_port_present', Boolean(env.TEFFE_WEBHOOK_PORT), 'webhook port is required'));
@@ -27,6 +32,11 @@ function checkWebhookReadiness({
     'idempotency_file_not_versioned',
     !isTracked(cwd, idempotencyFile),
     'idempotency store file must not be versioned'
+  ));
+  checks.push(check(
+    'observation_file_safe',
+    isSafeLocalDataFile(observationFile) && !isTracked(cwd, observationFile),
+    'inbound observation file must stay local under data/ and out of Git'
   ));
 
   let configOk = false;
@@ -42,7 +52,7 @@ function checkWebhookReadiness({
         appSecretRef,
         accessTokenRef: env.TEFFE_WHATSAPP_ACCESS_TOKEN_REF || 'TEFFE_WHATSAPP_ACCESS_TOKEN',
         enabled: env.TEFFE_WEBHOOK_ENABLED !== 'false',
-        mode: env.TEFFE_WEBHOOK_MODE || 'sandbox',
+        mode: channelMode,
       }],
     });
     const secretProvider = new EnvSecretProvider({ env });
@@ -92,7 +102,16 @@ function hasSecretValue(value) {
   return value != null && String(value).trim() !== '';
 }
 
+function isSafeLocalDataFile(filePath) {
+  const normalized = path.normalize(filePath);
+  return !path.isAbsolute(normalized)
+    && normalized.startsWith(`data${path.sep}`)
+    && !normalized.includes(`..${path.sep}`)
+    && !normalized.includes(`${path.sep}.git${path.sep}`);
+}
+
 if (require.main === module) {
+  require('dotenv').config({ path: path.join(process.cwd(), '.env') });
   const logger = new SanitizedLogger();
   const result = checkWebhookReadiness({ logger });
   console.log(JSON.stringify(result, null, 2));

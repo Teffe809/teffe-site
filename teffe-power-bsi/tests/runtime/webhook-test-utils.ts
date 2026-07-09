@@ -14,7 +14,15 @@ const VERIFY_SECRET = 'mock-verify-value';
 const APP_SECRET = 'mock-app-value';
 const ACCESS_SECRET = 'mock-access-value';
 
-function createRuntime({ enabled = true, secrets = null, requireSignature = true } = {}) {
+function createRuntime({
+  enabled = true,
+  secrets = null,
+  requireSignature = true,
+  runtimeConfig = {},
+  idempotencyStore = null,
+  observationService = null,
+  dryRunGuard = null,
+} = {}) {
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'teffe-webhook-test-'));
   const platform = bootPlatform({ dataDir });
   const configLoader = new TenantChannelConfigLoader({
@@ -31,7 +39,10 @@ function createRuntime({ enabled = true, secrets = null, requireSignature = true
       configLoader,
       secretProvider,
       platform,
-      runtimeConfig: { requireSignature },
+      idempotencyStore: idempotencyStore ?? undefined,
+      observationService: observationService ?? undefined,
+      dryRunGuard: dryRunGuard ?? undefined,
+      runtimeConfig: { requireSignature, ...runtimeConfig },
     }),
     dataDir,
     platform,

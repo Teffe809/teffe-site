@@ -16,6 +16,10 @@ const tests = [
   '../tests/runtime/file-idempotency-store.test.ts',
   '../tests/runtime/sanitized-logger.test.ts',
   '../tests/runtime/webhook-readiness-check.test.ts',
+  '../tests/runtime/inbound-observation-store.test.ts',
+  '../tests/runtime/inbound-dry-run-guard.test.ts',
+  '../tests/runtime/first-real-inbound-flow.test.ts',
+  '../tests/runtime/first-inbound-report.test.ts',
 ];
 
 try {

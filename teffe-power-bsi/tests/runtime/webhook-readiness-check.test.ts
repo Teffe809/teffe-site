@@ -11,6 +11,8 @@ function run() {
   const baseEnv = {
     TEFFE_WEBHOOK_PORT: '3100',
     TEFFE_WHATSAPP_SEND_ENABLED: 'false',
+    TEFFE_INBOUND_DRY_RUN: 'true',
+    TEFFE_CHANNEL_MODE: 'sandbox',
     TEFFE_WHATSAPP_VERIFY_TOKEN_REF: 'VERIFY_REF',
     TEFFE_WHATSAPP_APP_SECRET_REF: 'APP_REF',
     TEFFE_WHATSAPP_ACCESS_TOKEN_REF: 'ACCESS_REF',
@@ -18,6 +20,7 @@ function run() {
     APP_REF: 'mock-app-value',
     ACCESS_REF: 'mock-access-value',
     TEFFE_IDEMPOTENCY_STORE_FILE: 'data/idempotency-store.json',
+    TEFFE_INBOUND_OBSERVATION_FILE: 'data/inbound-observations.jsonl',
   };
 
   const ok = checkWebhookReadiness({ cwd, env: baseEnv });
@@ -29,6 +32,13 @@ function run() {
   });
   assert.strictEqual(sendEnabled.ok, false);
   assert(sendEnabled.checks.some((item) => item.name === 'send_disabled' && !item.ok));
+
+  const dryRunDisabled = checkWebhookReadiness({
+    cwd,
+    env: { ...baseEnv, TEFFE_INBOUND_DRY_RUN: 'false' },
+  });
+  assert.strictEqual(dryRunDisabled.ok, false);
+  assert(dryRunDisabled.checks.some((item) => item.name === 'inbound_dry_run_enabled' && !item.ok));
 
   const missingRef = checkWebhookReadiness({
     cwd,
