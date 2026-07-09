@@ -255,6 +255,25 @@ app.post('/tenants/specialization', (req, res) => {
   }
 });
 
+app.post('/gateway/messages', (req, res) => {
+  try {
+    const { userId, ...message } = req.body ?? {};
+    const result = platform.engines.miaCore.handleCommunicationMessage({
+      message,
+      userId,
+    });
+
+    if (!result.ok) {
+      return res.status(400).json(result);
+    }
+
+    return res.json(result);
+  } catch (err) {
+    console.error('[/gateway/messages]', err.message);
+    return res.status(500).json({ ok: false, reason: 'internal server error' });
+  }
+});
+
 /* ── POST /auth/pin ───────────────────────────────────────────────────────── */
 app.post('/auth/pin', async (req, res) => {
   try {
@@ -412,5 +431,6 @@ app.listen(PORT, () => {
   console.log(`  POST  /capabilities/sales`);
   console.log(`  POST  /workflows/autoparts/full-sales-flow`);
   console.log(`  POST  /tenants/specialization`);
+  console.log(`  POST  /gateway/messages`);
   console.log(`  GET   /health`);
 });

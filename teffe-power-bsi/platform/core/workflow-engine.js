@@ -12,6 +12,7 @@ class WorkflowEngine {
     libraryRegistry,
     libraryDiscovery,
     tenantSpecializationRegistry,
+    communicationGateway,
   }) {
     this.securityGuardian = securityGuardian;
     this.capabilityRegistry = capabilityRegistry;
@@ -21,6 +22,7 @@ class WorkflowEngine {
     this.libraryRegistry = libraryRegistry;
     this.libraryDiscovery = libraryDiscovery;
     this.tenantSpecializationRegistry = tenantSpecializationRegistry;
+    this.communicationGateway = communicationGateway;
     this.capabilityPipeline = capabilityPipeline || new CapabilityPipeline({
       pluginEngine,
       memoryEngine,
@@ -689,6 +691,82 @@ class WorkflowEngine {
       auditId: audit.id,
       audit,
       access,
+    };
+  }
+
+  receiveCommunicationMessage(input, context = {}) {
+    const validation = this.securityGuardian.validateCommunicationMessageRequest(input);
+    const executionContext = createExecutionContext({
+      ...context,
+      tenantId: input?.tenant ?? input?.tenantId ?? input?.tenant_id,
+      runtime: {
+        operation: 'communication_message_received',
+      },
+    });
+
+    if (!validation.allowed) {
+      const audit = this.auditLog.record({
+        type: 'communication.message.denied',
+        input,
+        error: validation.error,
+        executionContext,
+      });
+      return {
+        ok: false,
+        error: validation.error,
+        auditId: audit.id,
+        audit,
+      };
+    }
+
+    let message;
+    try {
+      message = this.communicationGateway.normalizeIncoming(validation.normalizedInput);
+    } catch (error) {
+      const gatewayError = {
+        code: 'communication_gateway_error',
+        message: error.message,
+      };
+      const audit = this.auditLog.record({
+        type: 'communication.message.denied',
+        input,
+        error: gatewayError,
+        executionContext,
+      });
+      return {
+        ok: false,
+        error: gatewayError,
+        auditId: audit.id,
+        audit,
+      };
+    }
+
+    const audit = this.auditLog.record({
+      type: 'communication.message.normalized',
+      message,
+      executionContext: createExecutionContext({
+        ...context,
+        tenantId: message.tenant.id,
+        runtime: {
+          operation: 'communication_message_normalized',
+          channel: message.channel,
+          messageType: message.type,
+        },
+      }),
+    });
+    const persisted = this.memoryEngine.persistCommunication({
+      ...message,
+      auditId: audit.id,
+    });
+
+    return {
+      ok: true,
+      message: persisted,
+      tenant: message.tenant,
+      channel: message.channel,
+      type: message.type,
+      auditId: audit.id,
+      audit,
     };
   }
 

@@ -9,7 +9,13 @@ class MemoryEngine {
 
   load() {
     if (!fs.existsSync(this.contextFile)) {
-      return { executions: [], libraryAccesses: [], workflows: [], tenantAccesses: [] };
+      return {
+        executions: [],
+        libraryAccesses: [],
+        workflows: [],
+        tenantAccesses: [],
+        communications: [],
+      };
     }
 
     const context = JSON.parse(fs.readFileSync(this.contextFile, 'utf8'));
@@ -19,6 +25,7 @@ class MemoryEngine {
       libraryAccesses: context.libraryAccesses || [],
       workflows: context.workflows || [],
       tenantAccesses: context.tenantAccesses || [],
+      communications: context.communications || [],
     };
   }
 
@@ -64,6 +71,17 @@ class MemoryEngine {
 
   latestTenantAccess() {
     return this.context.tenantAccesses[this.context.tenantAccesses.length - 1] || null;
+  }
+
+  persistCommunication(message) {
+    this.context.communications.push(message);
+    fs.mkdirSync(path.dirname(this.contextFile), { recursive: true });
+    fs.writeFileSync(this.contextFile, JSON.stringify(this.context, null, 2), 'utf8');
+    return message;
+  }
+
+  latestCommunication() {
+    return this.context.communications[this.context.communications.length - 1] || null;
   }
 }
 

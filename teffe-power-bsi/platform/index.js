@@ -7,6 +7,7 @@ const { MiaCore } = require('./core/mia-core');
 const { PluginEngine } = require('./core/plugin-engine');
 const { SecurityGuardian } = require('./core/security-guardian');
 const { WorkflowEngine } = require('./core/workflow-engine');
+const { CommunicationGateway } = require('./gateway/communication-gateway');
 const { DEFAULT_LIBRARIES } = require('./libraries/default-libraries');
 const {
   CapabilityDiscovery,
@@ -33,6 +34,10 @@ function bootPlatform(options = {}) {
   const libraryDiscovery = new LibraryDiscovery({ registry: libraryRegistry });
   DEFAULT_LIBRARIES.forEach((library) => libraryRegistry.register(library));
   const tenantSpecializationRegistry = new TenantSpecializationRegistry({ libraryRegistry });
+  const communicationGateway = new CommunicationGateway({
+    tenantSpecializationRegistry,
+    libraryRegistry,
+  });
   const pluginEngine = new PluginEngine({ pluginsDir, capabilityRegistry });
   const pluginBoot = pluginEngine.boot();
   const contractValidator = new ContractValidator();
@@ -58,6 +63,7 @@ function bootPlatform(options = {}) {
     libraryRegistry,
     libraryDiscovery,
     tenantSpecializationRegistry,
+    communicationGateway,
   });
   const miaCore = new MiaCore({ workflowEngine });
 
@@ -80,6 +86,7 @@ function bootPlatform(options = {}) {
       libraryRegistry,
       libraryDiscovery,
       tenantSpecializationRegistry,
+      communicationGateway,
     },
     plugins: pluginBoot.loaded,
     capabilities: capabilityRegistry.list(),

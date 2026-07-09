@@ -320,6 +320,72 @@ class SecurityGuardian {
     };
   }
 
+  validateCommunicationMessageRequest(input) {
+    const tenantId = String(input?.tenant ?? input?.tenantId ?? input?.tenant_id ?? '')
+      .trim()
+      .toLowerCase();
+    const channel = String(input?.channel ?? input?.canal ?? '').trim().toLowerCase();
+    const type = String(input?.type ?? input?.tipo ?? '').trim().toLowerCase();
+    const sender = input?.sender ?? input?.remetente;
+    const recipient = input?.recipient ?? input?.destinatario;
+    const payload = input?.payload;
+    const supportedTypes = ['text', 'audio', 'image', 'document'];
+
+    if (!tenantId) {
+      return this.denyRequest('tenant_id_required', 'tenant id is required');
+    }
+
+    if (!/^[a-z0-9_-]+$/.test(tenantId)) {
+      return this.denyRequest('tenant_id_invalid', 'tenant id format is invalid');
+    }
+
+    if (!channel) {
+      return this.denyRequest('channel_required', 'communication channel is required');
+    }
+
+    if (!type) {
+      return this.denyRequest('message_type_required', 'message type is required');
+    }
+
+    if (!supportedTypes.includes(type)) {
+      return this.denyRequest(
+        'message_type_not_supported',
+        `message type must be one of: ${supportedTypes.join(', ')}`
+      );
+    }
+
+    if (!this.hasPartyId(sender)) {
+      return this.denyRequest('sender_required', 'message sender is required');
+    }
+
+    if (!this.hasPartyId(recipient)) {
+      return this.denyRequest('recipient_required', 'message recipient is required');
+    }
+
+    if (!payload || typeof payload !== 'object') {
+      return this.denyRequest('payload_required', 'message payload is required');
+    }
+
+    const payloadValidation = this.validateCommunicationPayload(type, payload);
+    if (!payloadValidation.allowed) {
+      return payloadValidation;
+    }
+
+    if (input?.timestamp && Number.isNaN(Date.parse(input.timestamp))) {
+      return this.denyRequest('timestamp_invalid', 'message timestamp is invalid');
+    }
+
+    return {
+      allowed: true,
+      normalizedInput: {
+        ...input,
+        tenantId,
+        channel,
+        type,
+      },
+    };
+  }
+
   normalizeCategory(category) {
     return String(category ?? '')
       .trim()
@@ -346,6 +412,52 @@ class SecurityGuardian {
         message,
       },
     };
+  }
+
+  validateCommunicationPayload(type, payload) {
+    if (type === 'text' && !String(payload.text ?? payload.body ?? '').trim()) {
+      return this.denyRequest('text_payload_required', 'text payload is required');
+    }
+
+    if (type === 'audio') {
+      if (!String(payload.url ?? '').trim()) {
+        return this.denyRequest('audio_url_required', 'audio url is required');
+      }
+      if (!String(payload.mimeType ?? payload.mime_type ?? '').trim()) {
+        return this.denyRequest('audio_mime_type_required', 'audio mime type is required');
+      }
+    }
+
+    if (type === 'image') {
+      if (!String(payload.url ?? '').trim()) {
+        return this.denyRequest('image_url_required', 'image url is required');
+      }
+      if (!String(payload.mimeType ?? payload.mime_type ?? '').trim()) {
+        return this.denyRequest('image_mime_type_required', 'image mime type is required');
+      }
+    }
+
+    if (type === 'document') {
+      if (!String(payload.url ?? '').trim()) {
+        return this.denyRequest('document_url_required', 'document url is required');
+      }
+      if (!String(payload.mimeType ?? payload.mime_type ?? '').trim()) {
+        return this.denyRequest('document_mime_type_required', 'document mime type is required');
+      }
+      if (!String(payload.fileName ?? payload.file_name ?? '').trim()) {
+        return this.denyRequest('document_file_name_required', 'document file name is required');
+      }
+    }
+
+    return { allowed: true };
+  }
+
+  hasPartyId(party) {
+    if (typeof party === 'string') {
+      return party.trim().length > 0;
+    }
+
+    return String(party?.id ?? '').trim().length > 0;
   }
 }
 
