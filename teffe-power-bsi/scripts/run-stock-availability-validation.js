@@ -87,7 +87,7 @@ async function main() {
   assert(platform.plugins.includes('stock-availability'), 'stock plugin not loaded');
   assert(platform.plugins.includes('vehicle-compatibility'), 'compatibility plugin not loaded');
   assert(platform.plugins.includes('vehicle-identification-manual'), 'identification plugin not loaded');
-  assert(platform.capabilities.length === 3, 'expected three registered capabilities');
+  assert(platform.capabilities.length >= 3, 'expected stock flow capabilities to be registered');
   assert(platform.engines.capabilityRegistry.has('stock.availability'), 'stock capability not registered');
 
   const discovered = platform.engines.capabilityDiscovery.findById('stock.availability');

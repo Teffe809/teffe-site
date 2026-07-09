@@ -6,10 +6,17 @@ const {
 const { ContractValidator } = require('./contract-validator');
 
 class CapabilityPipeline {
-  constructor({ pluginEngine, memoryEngine, auditLog, contractValidator = new ContractValidator() }) {
+  constructor({
+    pluginEngine,
+    memoryEngine,
+    auditLog,
+    domainKnowledgeEngine = null,
+    contractValidator = new ContractValidator(),
+  }) {
     this.pluginEngine = pluginEngine;
     this.memoryEngine = memoryEngine;
     this.auditLog = auditLog;
+    this.domainKnowledgeEngine = domainKnowledgeEngine;
     this.contractValidator = contractValidator;
   }
 
@@ -39,10 +46,25 @@ class CapabilityPipeline {
       executionContext: baseExecutionContext,
     }));
 
-    const executionContext = this.withAuditContext(baseExecutionContext, {
+    let executionContext = this.withAuditContext(baseExecutionContext, {
       startedId: startedAudit.id,
     });
-    const result = this.pluginEngine.execute(request.pluginId, normalizedInput, executionContext);
+    executionContext = this.withRuntimeServices(executionContext, request, startedAudit);
+
+    let result;
+    try {
+      result = this.pluginEngine.execute(request.pluginId, normalizedInput, executionContext);
+    } catch (error) {
+      return this.deny(
+        request,
+        {
+          error: CapabilityError.from(error),
+          normalizedInput,
+        },
+        'execution',
+        executionContext
+      );
+    }
     const resultValidation = this.contractValidator.validateResult(
       result,
       request.contracts?.result
@@ -65,7 +87,7 @@ class CapabilityPipeline {
       auditId: startedAudit.id,
       timestamp: new Date().toISOString(),
       context: request.context,
-      executionContext,
+      executionContext: this.withoutRuntimeServices(executionContext),
     });
 
     const responseCandidate = createCapabilitySuccessResponse({
@@ -171,6 +193,68 @@ class CapabilityPipeline {
       ...executionContext,
       audit: executionContext.audit ?? audit,
     };
+  }
+
+  withRuntimeServices(executionContext, request, startedAudit) {
+    if (!request.requirements?.includes('domainKnowledge')) {
+      return executionContext;
+    }
+
+    if (!this.domainKnowledgeEngine) {
+      throw new Error('Domain Knowledge Engine is not available');
+    }
+
+    const context = { ...executionContext };
+    const domainKnowledge = {
+      getServiceIntelligence: (parameters) => {
+        return this.queryDomainKnowledge(
+          'get_service_intelligence',
+          parameters,
+          request,
+          startedAudit,
+          executionContext
+        );
+      },
+      getRecommendations: (parameters) => {
+        return this.queryDomainKnowledge(
+          'get_recommendations',
+          parameters,
+          request,
+          startedAudit,
+          executionContext
+        );
+      },
+    };
+
+    Object.defineProperty(context, 'services', {
+      value: { domainKnowledge },
+      enumerable: false,
+    });
+    return context;
+  }
+
+  withoutRuntimeServices(executionContext) {
+    return { ...executionContext };
+  }
+
+  queryDomainKnowledge(operation, parameters, request, startedAudit, executionContext) {
+    const methodByOperation = {
+      get_service_intelligence: 'getServiceIntelligence',
+      get_recommendations: 'getRecommendations',
+    };
+    const method = methodByOperation[operation];
+    const result = this.domainKnowledgeEngine[method](parameters);
+    this.auditLog.record({
+      type: 'domain.knowledge.queried',
+      domain: 'autoparts',
+      operation,
+      capability: request.capability,
+      capabilityAuditId: startedAudit.id,
+      parameters,
+      result,
+      executionContext,
+    });
+    return result;
   }
 }
 

@@ -17,6 +17,7 @@ const AUTOPARTS_SYSTEMS = [
       'Componentes do mesmo eixo devem ser inspecionados em conjunto.',
       'Alinhamento deve ser verificado apos intervencoes estruturais.',
     ],
+    servicePriority: 'high',
   },
   {
     id: 'freios',
@@ -36,6 +37,7 @@ const AUTOPARTS_SYSTEMS = [
       'Itens de friccao devem ser avaliados por eixo.',
       'O fluido deve seguir especificacao e intervalo definidos para o sistema.',
     ],
+    servicePriority: 'critical',
   },
   {
     id: 'motor',
@@ -56,6 +58,7 @@ const AUTOPARTS_SYSTEMS = [
       'Sincronismo e torque de montagem devem seguir especificacoes tecnicas.',
       'Falhas de lubrificacao podem comprometer multiplos componentes.',
     ],
+    servicePriority: 'critical',
   },
   {
     id: 'arrefecimento',
@@ -75,6 +78,7 @@ const AUTOPARTS_SYSTEMS = [
       'O sistema deve ser preenchido com fluido compativel e na proporcao adequada.',
       'Ar no circuito pode causar superaquecimento e leitura incorreta de temperatura.',
     ],
+    servicePriority: 'critical',
   },
   {
     id: 'transmissao',
@@ -94,6 +98,7 @@ const AUTOPARTS_SYSTEMS = [
       'O lubrificante deve atender tipo e viscosidade previstos para a transmissao.',
       'Ruido ou vibracao exige avaliacao conjunta de suportes e elementos de acionamento.',
     ],
+    servicePriority: 'high',
   },
   {
     id: 'filtros',
@@ -110,6 +115,7 @@ const AUTOPARTS_SYSTEMS = [
       'Intervalos de substituicao dependem das condicoes de uso e manutencao.',
       'Vedacao e sentido de fluxo devem ser conferidos na instalacao.',
     ],
+    servicePriority: 'medium',
   },
 ];
 

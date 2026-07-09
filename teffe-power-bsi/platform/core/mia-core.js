@@ -38,6 +38,36 @@ class MiaCore {
       }
     );
   }
+
+  handleServiceIntelligence({ vehicle, part, category, userId = 'capability-validation' }) {
+    return this.workflowEngine.runServiceIntelligence(
+      { vehicle, part, category },
+      {
+        source: 'mia-core',
+        userId,
+        intent: 'service.intelligence',
+        ai: false,
+      }
+    );
+  }
+
+  handleRecommendation({
+    vehicle,
+    part,
+    category,
+    serviceIntelligence,
+    userId = 'capability-validation',
+  }) {
+    return this.workflowEngine.runRecommendation(
+      { vehicle, part, category, serviceIntelligence },
+      {
+        source: 'mia-core',
+        userId,
+        intent: 'recommendation.engine',
+        ai: false,
+      }
+    );
+  }
 }
 
 module.exports = { MiaCore };

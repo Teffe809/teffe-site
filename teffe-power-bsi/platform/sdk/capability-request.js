@@ -8,6 +8,7 @@ function createCapabilityRequest({
   metadata = {},
   inputContract = null,
   resultContract = null,
+  requirements = [],
 }) {
   const executionContext = createExecutionContext(context);
 
@@ -18,6 +19,7 @@ function createCapabilityRequest({
     context,
     executionContext,
     metadata,
+    requirements,
     contracts: {
       input: inputContract,
       result: resultContract,

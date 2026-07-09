@@ -27,6 +27,7 @@ function bootPlatform(options = {}) {
     pluginEngine,
     memoryEngine,
     auditLog,
+    domainKnowledgeEngine,
     contractValidator,
   });
   const workflowEngine = new WorkflowEngine({

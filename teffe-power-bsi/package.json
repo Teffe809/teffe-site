@@ -9,7 +9,9 @@
     "validate:vehicle": "node scripts/run-capability-validation.js",
     "validate:compatibility": "node scripts/run-vehicle-compatibility-validation.js",
     "validate:stock": "node scripts/run-stock-availability-validation.js",
-    "validate:dke": "node scripts/run-domain-knowledge-validation.js"
+    "validate:dke": "node scripts/run-domain-knowledge-validation.js",
+    "validate:service": "node scripts/run-service-intelligence-validation.js",
+    "validate:recommendation": "node scripts/run-recommendation-validation.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",

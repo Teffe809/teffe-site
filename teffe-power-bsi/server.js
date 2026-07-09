@@ -82,6 +82,49 @@ app.post('/capabilities/stock-availability', (req, res) => {
   }
 });
 
+app.post('/capabilities/service-intelligence', (req, res) => {
+  try {
+    const { vehicle, part, category, userId } = req.body ?? {};
+    const result = platform.engines.miaCore.handleServiceIntelligence({
+      vehicle,
+      part,
+      category,
+      userId,
+    });
+
+    if (!result.ok) {
+      return res.status(400).json(result);
+    }
+
+    return res.json(result);
+  } catch (err) {
+    console.error('[/capabilities/service-intelligence]', err.message);
+    return res.status(500).json({ ok: false, reason: 'internal server error' });
+  }
+});
+
+app.post('/capabilities/recommendation', (req, res) => {
+  try {
+    const { vehicle, part, category, serviceIntelligence, userId } = req.body ?? {};
+    const result = platform.engines.miaCore.handleRecommendation({
+      vehicle,
+      part,
+      category,
+      serviceIntelligence,
+      userId,
+    });
+
+    if (!result.ok) {
+      return res.status(400).json(result);
+    }
+
+    return res.json(result);
+  } catch (err) {
+    console.error('[/capabilities/recommendation]', err.message);
+    return res.status(500).json({ ok: false, reason: 'internal server error' });
+  }
+});
+
 /* ── POST /auth/pin ───────────────────────────────────────────────────────── */
 app.post('/auth/pin', async (req, res) => {
   try {
@@ -231,5 +274,7 @@ app.listen(PORT, () => {
   console.log(`  POST  /capabilities/vehicle-identification/manual`);
   console.log(`  POST  /capabilities/vehicle-compatibility`);
   console.log(`  POST  /capabilities/stock-availability`);
+  console.log(`  POST  /capabilities/service-intelligence`);
+  console.log(`  POST  /capabilities/recommendation`);
   console.log(`  GET   /health`);
 });

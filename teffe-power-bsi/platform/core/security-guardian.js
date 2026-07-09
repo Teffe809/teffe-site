@@ -105,6 +105,71 @@ class SecurityGuardian {
     };
   }
 
+  validateServiceIntelligenceRequest(input) {
+    if (!input?.vehicle) {
+      return this.denyRequest('vehicle_required', 'identified vehicle is required');
+    }
+
+    if (!input?.part) {
+      return this.denyRequest('part_required', 'main part is required');
+    }
+
+    const category = this.normalizeCategory(input.category);
+    if (!category) {
+      return this.denyRequest('category_required', 'category is required');
+    }
+
+    return {
+      allowed: true,
+      normalizedInput: {
+        ...input,
+        category,
+        part: {
+          ...input.part,
+          name: String(input.part.name).trim(),
+        },
+      },
+    };
+  }
+
+  validateRecommendationRequest(input) {
+    if (!input?.vehicle) {
+      return this.denyRequest('vehicle_required', 'identified vehicle is required');
+    }
+
+    if (!input?.part) {
+      return this.denyRequest('part_required', 'main part is required');
+    }
+
+    if (!input?.serviceIntelligence) {
+      return this.denyRequest('service_intelligence_required', 'Service Intelligence result is required');
+    }
+
+    if (input.serviceIntelligence.source !== 'domain-knowledge-engine') {
+      return this.denyRequest(
+        'service_intelligence_source_invalid',
+        'Service Intelligence must originate from the Domain Knowledge Engine'
+      );
+    }
+
+    const category = this.normalizeCategory(input.category);
+    if (!category) {
+      return this.denyRequest('category_required', 'category is required');
+    }
+
+    return {
+      allowed: true,
+      normalizedInput: {
+        ...input,
+        category,
+        part: {
+          ...input.part,
+          name: String(input.part.name).trim(),
+        },
+      },
+    };
+  }
+
   normalizeCategory(category) {
     return String(category ?? '')
       .trim()

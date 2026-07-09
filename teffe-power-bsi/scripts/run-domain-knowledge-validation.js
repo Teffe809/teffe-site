@@ -17,8 +17,8 @@ function main() {
 
   assert(platform.status === 'ok', 'platform boot failed');
   assert(dke, 'Domain Knowledge Engine missing');
-  assert(platform.capabilities.length === 3, 'capability registry changed unexpectedly');
-  assert(platform.plugins.length === 3, 'plugin engine changed unexpectedly');
+  assert(platform.capabilities.length >= 3, 'capability registry changed unexpectedly');
+  assert(platform.plugins.length >= 3, 'plugin engine changed unexpectedly');
 
   const systems = dke.listSystems();
   const expectedSystems = [
