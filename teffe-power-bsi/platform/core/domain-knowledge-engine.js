@@ -84,6 +84,50 @@ class DomainKnowledgeEngine {
     };
   }
 
+  getBudgetStructure({ category, part, serviceIntelligence, recommendation }) {
+    const categorySystem = this.getSystemByName(category);
+    const intelligenceSystem = this.getSystemByName(serviceIntelligence?.system?.id);
+    if (!categorySystem || !intelligenceSystem || categorySystem.id !== intelligenceSystem.id) {
+      return null;
+    }
+
+    const mainItem = {
+      type: 'main',
+      name: part.name,
+      manufacturer: part.manufacturer,
+      internalCode: part.internalCode,
+      priority: categorySystem.servicePriority,
+      technicalJustification: serviceIntelligence.technicalJustification,
+    };
+    const complementaryItems = (recommendation.complementaryComponents || []).map((component) => ({
+      type: 'complementary',
+      name: component,
+      priority: categorySystem.servicePriority,
+      technicalJustification: recommendation.technicalJustification,
+    }));
+
+    return {
+      mainItem,
+      complementaryItems,
+      systemGroups: [{
+        system: {
+          id: categorySystem.id,
+          name: categorySystem.name,
+        },
+        items: [mainItem.name, ...complementaryItems.map(({ name }) => name)],
+      }],
+      technicalKits: (recommendation.suggestedKits || []).map((kit) => ({
+        name: kit.name,
+        components: [...kit.components],
+        priority: categorySystem.servicePriority,
+      })),
+      sellerNotes: [
+        `Prioridade tecnica ${categorySystem.servicePriority}; confianca ${recommendation.confidence}.`,
+        ...(recommendation.preventiveRecommendations || []),
+      ],
+    };
+  }
+
   listSystems() {
     return this.systems.map((system) => this.copySystem(system));
   }

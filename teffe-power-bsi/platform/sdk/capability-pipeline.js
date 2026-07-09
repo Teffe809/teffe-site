@@ -224,6 +224,15 @@ class CapabilityPipeline {
           executionContext
         );
       },
+      getBudgetStructure: (parameters) => {
+        return this.queryDomainKnowledge(
+          'get_budget_structure',
+          parameters,
+          request,
+          startedAudit,
+          executionContext
+        );
+      },
     };
 
     Object.defineProperty(context, 'services', {
@@ -241,6 +250,7 @@ class CapabilityPipeline {
     const methodByOperation = {
       get_service_intelligence: 'getServiceIntelligence',
       get_recommendations: 'getRecommendations',
+      get_budget_structure: 'getBudgetStructure',
     };
     const method = methodByOperation[operation];
     const result = this.domainKnowledgeEngine[method](parameters);

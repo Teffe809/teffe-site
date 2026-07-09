@@ -118,6 +118,26 @@ class WorkflowEngine {
     return this.toRecommendationResponse(response);
   }
 
+  runBudgetIntelligence(input, context = {}) {
+    const capabilityId = 'budget.intelligence';
+    const capability = this.capabilityRegistry?.get(capabilityId);
+    const request = createCapabilityRequest({
+      capability: capabilityId,
+      pluginId: capability?.pluginId || 'budget-intelligence',
+      input,
+      context,
+      inputContract: capability?.inputContract,
+      resultContract: capability?.resultContract,
+      requirements: capability?.requirements,
+    });
+
+    const response = this.capabilityPipeline.run(request, {
+      validate: (requestInput) => this.securityGuardian.validateBudgetIntelligenceRequest(requestInput),
+    });
+
+    return this.toBudgetIntelligenceResponse(response);
+  }
+
   getDomainSystem(name, context = {}) {
     return this.queryDomainKnowledge(
       'get_system_by_name',
@@ -302,6 +322,32 @@ class WorkflowEngine {
       technicalJustification: response.result.technicalJustification,
       priority: response.result.priority,
       confidence: response.result.confidence,
+      source: response.result.source,
+      auditId: response.auditId,
+      execution: response.execution,
+      audit: response.audit,
+    };
+  }
+
+  toBudgetIntelligenceResponse(response) {
+    if (!response.ok) {
+      return {
+        ok: false,
+        error: response.error,
+        auditId: response.auditId,
+        audit: response.audit,
+      };
+    }
+
+    return {
+      ok: true,
+      vehicle: response.result.vehicle,
+      category: response.result.category,
+      mainItem: response.result.mainItem,
+      complementaryItems: response.result.complementaryItems,
+      systemGroups: response.result.systemGroups,
+      technicalKits: response.result.technicalKits,
+      sellerNotes: response.result.sellerNotes,
       source: response.result.source,
       auditId: response.auditId,
       execution: response.execution,

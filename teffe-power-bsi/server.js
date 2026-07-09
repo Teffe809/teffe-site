@@ -125,6 +125,36 @@ app.post('/capabilities/recommendation', (req, res) => {
   }
 });
 
+app.post('/capabilities/budget', (req, res) => {
+  try {
+    const {
+      vehicle,
+      part,
+      category,
+      serviceIntelligence,
+      recommendation,
+      userId,
+    } = req.body ?? {};
+    const result = platform.engines.miaCore.handleBudgetIntelligence({
+      vehicle,
+      part,
+      category,
+      serviceIntelligence,
+      recommendation,
+      userId,
+    });
+
+    if (!result.ok) {
+      return res.status(400).json(result);
+    }
+
+    return res.json(result);
+  } catch (err) {
+    console.error('[/capabilities/budget]', err.message);
+    return res.status(500).json({ ok: false, reason: 'internal server error' });
+  }
+});
+
 /* ── POST /auth/pin ───────────────────────────────────────────────────────── */
 app.post('/auth/pin', async (req, res) => {
   try {
@@ -276,5 +306,6 @@ app.listen(PORT, () => {
   console.log(`  POST  /capabilities/stock-availability`);
   console.log(`  POST  /capabilities/service-intelligence`);
   console.log(`  POST  /capabilities/recommendation`);
+  console.log(`  POST  /capabilities/budget`);
   console.log(`  GET   /health`);
 });

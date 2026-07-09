@@ -68,6 +68,25 @@ class MiaCore {
       }
     );
   }
+
+  handleBudgetIntelligence({
+    vehicle,
+    part,
+    category,
+    serviceIntelligence,
+    recommendation,
+    userId = 'capability-validation',
+  }) {
+    return this.workflowEngine.runBudgetIntelligence(
+      { vehicle, part, category, serviceIntelligence, recommendation },
+      {
+        source: 'mia-core',
+        userId,
+        intent: 'budget.intelligence',
+        ai: false,
+      }
+    );
+  }
 }
 
 module.exports = { MiaCore };
