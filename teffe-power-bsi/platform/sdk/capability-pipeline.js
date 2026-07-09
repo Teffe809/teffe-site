@@ -11,12 +11,14 @@ class CapabilityPipeline {
     memoryEngine,
     auditLog,
     domainKnowledgeEngine = null,
+    decisionRulesEngine = null,
     contractValidator = new ContractValidator(),
   }) {
     this.pluginEngine = pluginEngine;
     this.memoryEngine = memoryEngine;
     this.auditLog = auditLog;
     this.domainKnowledgeEngine = domainKnowledgeEngine;
+    this.decisionRulesEngine = decisionRulesEngine;
     this.contractValidator = contractValidator;
   }
 
@@ -196,47 +198,73 @@ class CapabilityPipeline {
   }
 
   withRuntimeServices(executionContext, request, startedAudit) {
-    if (!request.requirements?.includes('domainKnowledge')) {
+    const requirements = request.requirements || [];
+    if (requirements.length === 0) {
       return executionContext;
     }
 
-    if (!this.domainKnowledgeEngine) {
-      throw new Error('Domain Knowledge Engine is not available');
+    const context = { ...executionContext };
+    const services = {};
+
+    if (requirements.includes('domainKnowledge')) {
+      if (!this.domainKnowledgeEngine) {
+        throw new Error('Domain Knowledge Engine is not available');
+      }
+
+      services.domainKnowledge = {
+        getServiceIntelligence: (parameters) => {
+          return this.queryDomainKnowledge(
+            'get_service_intelligence',
+            parameters,
+            request,
+            startedAudit,
+            executionContext
+          );
+        },
+        getRecommendations: (parameters) => {
+          return this.queryDomainKnowledge(
+            'get_recommendations',
+            parameters,
+            request,
+            startedAudit,
+            executionContext
+          );
+        },
+        getBudgetStructure: (parameters) => {
+          return this.queryDomainKnowledge(
+            'get_budget_structure',
+            parameters,
+            request,
+            startedAudit,
+            executionContext
+          );
+        },
+      };
     }
 
-    const context = { ...executionContext };
-    const domainKnowledge = {
-      getServiceIntelligence: (parameters) => {
-        return this.queryDomainKnowledge(
-          'get_service_intelligence',
-          parameters,
-          request,
-          startedAudit,
-          executionContext
-        );
-      },
-      getRecommendations: (parameters) => {
-        return this.queryDomainKnowledge(
-          'get_recommendations',
-          parameters,
-          request,
-          startedAudit,
-          executionContext
-        );
-      },
-      getBudgetStructure: (parameters) => {
-        return this.queryDomainKnowledge(
-          'get_budget_structure',
-          parameters,
-          request,
-          startedAudit,
-          executionContext
-        );
-      },
-    };
+    if (requirements.includes('decisionRules')) {
+      if (!this.decisionRulesEngine) {
+        throw new Error('Decision Rules Engine is not available');
+      }
+
+      services.decisionRules = {
+        evaluate: (pricing) => {
+          const result = this.decisionRulesEngine.evaluate(pricing);
+          this.auditLog.record({
+            type: 'decision.rules.evaluated',
+            capability: request.capability,
+            capabilityAuditId: startedAudit.id,
+            pricing,
+            result,
+            executionContext,
+          });
+          return result;
+        },
+      };
+    }
 
     Object.defineProperty(context, 'services', {
-      value: { domainKnowledge },
+      value: services,
       enumerable: false,
     });
     return context;

@@ -14,7 +14,9 @@
     "validate:recommendation": "node scripts/run-recommendation-validation.js",
     "validate:budget": "node scripts/run-budget-intelligence-validation.js",
     "validate:contracts": "node scripts/run-shared-domain-contracts-validation.js",
-    "validate:pricing": "node scripts/run-pricing-intelligence-validation.js"
+    "validate:pricing": "node scripts/run-pricing-intelligence-validation.js",
+    "validate:decision": "node scripts/run-decision-intelligence-validation.js",
+    "validate:decision-rules": "node scripts/run-decision-rules-validation.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",

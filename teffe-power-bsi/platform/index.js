@@ -1,6 +1,7 @@
 const path = require('path');
 const { AuditLog } = require('./core/audit-log');
 const { DomainKnowledgeEngine } = require('./core/domain-knowledge-engine');
+const { DecisionRulesEngine } = require('./engines/decision-rules-engine');
 const { MemoryEngine } = require('./core/memory-engine');
 const { MiaCore } = require('./core/mia-core');
 const { PluginEngine } = require('./core/plugin-engine');
@@ -18,6 +19,7 @@ function bootPlatform(options = {}) {
   const memoryEngine = new MemoryEngine({ dataDir });
   const securityGuardian = new SecurityGuardian();
   const domainKnowledgeEngine = new DomainKnowledgeEngine();
+  const decisionRulesEngine = new DecisionRulesEngine();
   const capabilityRegistry = new CapabilityRegistry();
   const capabilityDiscovery = new CapabilityDiscovery({ registry: capabilityRegistry });
   const pluginEngine = new PluginEngine({ pluginsDir, capabilityRegistry });
@@ -28,6 +30,7 @@ function bootPlatform(options = {}) {
     memoryEngine,
     auditLog,
     domainKnowledgeEngine,
+    decisionRulesEngine,
     contractValidator,
   });
   const workflowEngine = new WorkflowEngine({
@@ -38,6 +41,7 @@ function bootPlatform(options = {}) {
     capabilityPipeline,
     capabilityRegistry,
     domainKnowledgeEngine,
+    decisionRulesEngine,
   });
   const miaCore = new MiaCore({ workflowEngine });
 
@@ -56,6 +60,7 @@ function bootPlatform(options = {}) {
       capabilityDiscovery,
       contractValidator,
       domainKnowledgeEngine,
+      decisionRulesEngine,
     },
     plugins: pluginBoot.loaded,
     capabilities: capabilityRegistry.list(),

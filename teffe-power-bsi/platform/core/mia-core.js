@@ -99,6 +99,18 @@ class MiaCore {
       }
     );
   }
+
+  handleDecisionIntelligence({ pricing, userId = 'capability-validation' }) {
+    return this.workflowEngine.runDecisionIntelligence(
+      { pricing },
+      {
+        source: 'mia-core',
+        userId,
+        intent: 'decision.intelligence',
+        ai: false,
+      }
+    );
+  }
 }
 
 module.exports = { MiaCore };

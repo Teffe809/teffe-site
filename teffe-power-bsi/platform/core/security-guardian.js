@@ -228,6 +228,20 @@ class SecurityGuardian {
     };
   }
 
+  validateDecisionIntelligenceRequest(input) {
+    if (input?.pricing?.source !== 'budget-intelligence') {
+      return this.denyRequest(
+        'pricing_source_invalid',
+        'Decision input must originate from Pricing Intelligence'
+      );
+    }
+
+    return {
+      allowed: true,
+      normalizedInput: input,
+    };
+  }
+
   normalizeCategory(category) {
     return String(category ?? '')
       .trim()

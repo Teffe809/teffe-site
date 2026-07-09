@@ -89,6 +89,14 @@ class ContractValidator {
       return;
     }
 
+    if (contract.enum && !contract.enum.includes(value)) {
+      errors.push({
+        path,
+        rule: 'enum',
+        message: `Expected one of: ${contract.enum.join(', ')}`,
+      });
+    }
+
     if (typeof value === 'string') {
       if (contract.minLength != null && value.length < contract.minLength) {
         errors.push({ path, rule: 'minLength', message: `Minimum length is ${contract.minLength}` });

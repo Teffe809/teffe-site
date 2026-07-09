@@ -157,6 +157,26 @@ class WorkflowEngine {
     return this.toPricingIntelligenceResponse(response);
   }
 
+  runDecisionIntelligence(input, context = {}) {
+    const capabilityId = 'decision.intelligence';
+    const capability = this.capabilityRegistry?.get(capabilityId);
+    const request = createCapabilityRequest({
+      capability: capabilityId,
+      pluginId: capability?.pluginId || 'decision-intelligence',
+      input,
+      context,
+      inputContract: capability?.inputContract,
+      resultContract: capability?.resultContract,
+      requirements: capability?.requirements,
+    });
+
+    const response = this.capabilityPipeline.run(request, {
+      validate: (requestInput) => this.securityGuardian.validateDecisionIntelligenceRequest(requestInput),
+    });
+
+    return this.toDecisionIntelligenceResponse(response);
+  }
+
   getDomainSystem(name, context = {}) {
     return this.queryDomainKnowledge(
       'get_system_by_name',
@@ -395,6 +415,29 @@ class WorkflowEngine {
       validity: response.result.validity,
       totals: response.result.totals,
       commercialNotes: response.result.commercialNotes,
+      auditId: response.auditId,
+      execution: response.execution,
+      audit: response.audit,
+    };
+  }
+
+  toDecisionIntelligenceResponse(response) {
+    if (!response.ok) {
+      return {
+        ok: false,
+        error: response.error,
+        auditId: response.auditId,
+        audit: response.audit,
+      };
+    }
+
+    return {
+      ok: true,
+      source: response.result.source,
+      pricingAuditId: response.result.pricingAuditId,
+      decisions: response.result.decisions,
+      summary: response.result.summary,
+      justifications: response.result.justifications,
       auditId: response.auditId,
       execution: response.execution,
       audit: response.audit,

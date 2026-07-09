@@ -253,6 +253,53 @@ const pricingIntelligence = objectContract(
   }
 );
 
+const decisionType = {
+  type: 'string',
+  enum: [
+    'suggest_complementary_sale',
+    'suggest_kit',
+    'request_more_information',
+    'route_to_human',
+    'await_stock',
+    'proceed_to_budget',
+  ],
+};
+
+const decision = objectContract(
+  ['id', 'type', 'priority', 'reason', 'nextAction', 'relatedItemIds'],
+  {
+    id: nonEmptyString,
+    type: decisionType,
+    priority: {
+      type: 'string',
+      enum: ['low', 'medium', 'high', 'critical'],
+    },
+    reason: nonEmptyString,
+    nextAction: nonEmptyString,
+    relatedItemIds: arrayContract(nonEmptyString),
+  }
+);
+
+const decisionIntelligence = objectContract(
+  ['source', 'pricingAuditId', 'decisions', 'summary', 'justifications'],
+  {
+    source: nonEmptyString,
+    pricingAuditId: nullableString,
+    decisions: arrayContract(decision, { minItems: 1 }),
+    summary: objectContract(
+      ['canProceed', 'requiresHuman', 'awaitingInformation', 'awaitingStock', 'decisionCount'],
+      {
+        canProceed: { type: 'boolean' },
+        requiresHuman: { type: 'boolean' },
+        awaitingInformation: { type: 'boolean' },
+        awaitingStock: { type: 'boolean' },
+        decisionCount: { type: 'integer', minimum: 1 },
+      }
+    ),
+    justifications: arrayContract(nonEmptyString, { minItems: 1 }),
+  }
+);
+
 const contracts = deepFreeze({
   nonEmptyString,
   rawPlate,
@@ -272,6 +319,9 @@ const contracts = deepFreeze({
   commercialAdjustment,
   pricingItem,
   pricingIntelligence,
+  decisionType,
+  decision,
+  decisionIntelligence,
 });
 
 module.exports = {
