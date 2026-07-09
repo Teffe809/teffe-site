@@ -139,7 +139,10 @@ async function main() {
   assert(invalidMessage.error?.code === 'payload_required', 'invalid message code mismatch');
 
   const missingWorkflowInput = miaCore.handleWorkflowDispatch({
-    message: dispatchMessage({ metadata: { correlationId: 'missing-input' } }),
+    message: dispatchMessage({
+      payload: { text: 'Preciso de ajuda' },
+      metadata: { correlationId: 'missing-input' },
+    }),
   });
   assert(missingWorkflowInput.ok === false, 'missing workflow input must fail');
   assert(missingWorkflowInput.error?.code === 'workflow_input_required', 'missing workflow input code mismatch');

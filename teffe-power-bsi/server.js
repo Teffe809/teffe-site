@@ -11,7 +11,11 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_KEY
 );
 
-const platform = bootPlatform();
+const platform = bootPlatform(
+  process.env.TEFFE_DATA_DIR
+    ? { dataDir: process.env.TEFFE_DATA_DIR }
+    : undefined
+);
 
 /* ── GET /health ──────────────────────────────────────────────────────────── */
 app.get('/health', (_req, res) => {
@@ -274,6 +278,25 @@ app.post('/gateway/messages', (req, res) => {
   }
 });
 
+app.post('/gateway/understand', (req, res) => {
+  try {
+    const { userId, ...message } = req.body ?? {};
+    const result = platform.engines.miaCore.handleMessageUnderstanding({
+      message,
+      userId,
+    });
+
+    if (!result.ok) {
+      return res.status(400).json(result);
+    }
+
+    return res.json(result);
+  } catch (err) {
+    console.error('[/gateway/understand]', err.message);
+    return res.status(500).json({ ok: false, reason: 'internal server error' });
+  }
+});
+
 app.post('/gateway/dispatch', (req, res) => {
   try {
     const { userId, ...message } = req.body ?? {};
@@ -451,6 +474,7 @@ app.listen(PORT, () => {
   console.log(`  POST  /workflows/autoparts/full-sales-flow`);
   console.log(`  POST  /tenants/specialization`);
   console.log(`  POST  /gateway/messages`);
+  console.log(`  POST  /gateway/understand`);
   console.log(`  POST  /gateway/dispatch`);
   console.log(`  GET   /health`);
 });

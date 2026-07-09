@@ -189,7 +189,7 @@ class CapabilityPipeline {
     return {
       ...context,
       memory: context.memory ?? {
-        latestExecution: this.memoryEngine.latestExecution(),
+        latestExecution: this.memoryEngine.latestExecutionReference(),
       },
     };
   }

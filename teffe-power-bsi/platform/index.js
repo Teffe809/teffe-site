@@ -2,6 +2,7 @@ const path = require('path');
 const { AuditLog } = require('./core/audit-log');
 const { DomainKnowledgeEngine } = require('./core/domain-knowledge-engine');
 const { DecisionRulesEngine } = require('./engines/decision-rules-engine');
+const { MessageUnderstandingEngine } = require('./engines/message-understanding-engine');
 const { MemoryEngine } = require('./core/memory-engine');
 const { MiaCore } = require('./core/mia-core');
 const { PluginEngine } = require('./core/plugin-engine');
@@ -29,6 +30,7 @@ function bootPlatform(options = {}) {
   const securityGuardian = new SecurityGuardian();
   const domainKnowledgeEngine = new DomainKnowledgeEngine();
   const decisionRulesEngine = new DecisionRulesEngine();
+  const messageUnderstandingEngine = new MessageUnderstandingEngine();
   const capabilityRegistry = new CapabilityRegistry();
   const capabilityDiscovery = new CapabilityDiscovery({ registry: capabilityRegistry });
   const libraryRegistry = new LibraryRegistry();
@@ -42,6 +44,7 @@ function bootPlatform(options = {}) {
   const workflowDispatcher = new WorkflowDispatcher({
     tenantSpecializationRegistry,
     libraryRegistry,
+    messageUnderstandingEngine,
   });
   const pluginEngine = new PluginEngine({ pluginsDir, capabilityRegistry });
   const pluginBoot = pluginEngine.boot();
@@ -70,6 +73,7 @@ function bootPlatform(options = {}) {
     tenantSpecializationRegistry,
     communicationGateway,
     workflowDispatcher,
+    messageUnderstandingEngine,
   });
   const miaCore = new MiaCore({ workflowEngine });
 
@@ -94,6 +98,7 @@ function bootPlatform(options = {}) {
       tenantSpecializationRegistry,
       communicationGateway,
       workflowDispatcher,
+      messageUnderstandingEngine,
     },
     plugins: pluginBoot.loaded,
     capabilities: capabilityRegistry.list(),

@@ -16,6 +16,7 @@ class MemoryEngine {
         tenantAccesses: [],
         communications: [],
         dispatches: [],
+        understandings: [],
       };
     }
 
@@ -28,6 +29,7 @@ class MemoryEngine {
       tenantAccesses: context.tenantAccesses || [],
       communications: context.communications || [],
       dispatches: context.dispatches || [],
+      understandings: context.understandings || [],
     };
   }
 
@@ -40,6 +42,21 @@ class MemoryEngine {
 
   latestExecution() {
     return this.context.executions[this.context.executions.length - 1] || null;
+  }
+
+  latestExecutionReference() {
+    const latest = this.latestExecution();
+
+    if (!latest) {
+      return null;
+    }
+
+    return {
+      id: latest.id,
+      capability: latest.capability,
+      auditId: latest.auditId,
+      timestamp: latest.timestamp,
+    };
   }
 
   persistLibraryAccess(access) {
@@ -95,6 +112,17 @@ class MemoryEngine {
 
   latestDispatch() {
     return this.context.dispatches[this.context.dispatches.length - 1] || null;
+  }
+
+  persistUnderstanding(understanding) {
+    this.context.understandings.push(understanding);
+    fs.mkdirSync(path.dirname(this.contextFile), { recursive: true });
+    fs.writeFileSync(this.contextFile, JSON.stringify(this.context, null, 2), 'utf8');
+    return understanding;
+  }
+
+  latestUnderstanding() {
+    return this.context.understandings[this.context.understandings.length - 1] || null;
   }
 }
 

@@ -47,7 +47,11 @@ async function validateHttp(pricing) {
   const port = 38000 + (process.pid % 1000);
   const child = spawn(process.execPath, ['server.js'], {
     cwd: path.join(__dirname, '..'),
-    env: { ...process.env, PORT: String(port) },
+    env: {
+      ...process.env,
+      PORT: String(port),
+      TEFFE_DATA_DIR: fs.mkdtempSync(path.join(os.tmpdir(), 'teffe-http-decision-')),
+    },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
 

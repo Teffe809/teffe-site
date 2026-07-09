@@ -181,6 +181,19 @@ class MiaCore {
     );
   }
 
+  handleMessageUnderstanding({ message, userId = 'capability-validation' }) {
+    return this.workflowEngine.understandCommunicationMessage(
+      message,
+      {
+        source: 'mia-core',
+        userId,
+        tenantId: message?.tenant ?? message?.tenantId ?? message?.tenant_id,
+        intent: 'message.understanding',
+        ai: false,
+      }
+    );
+  }
+
   handleWorkflowDispatch({ message, userId = 'capability-validation' }) {
     return this.workflowEngine.dispatchCommunicationMessage(
       message,

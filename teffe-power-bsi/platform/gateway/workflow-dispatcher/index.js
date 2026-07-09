@@ -1,9 +1,10 @@
 const SUPPORTED_WORKFLOWS = ['autoparts.full-sales-flow'];
 
 class WorkflowDispatcher {
-  constructor({ tenantSpecializationRegistry, libraryRegistry }) {
+  constructor({ tenantSpecializationRegistry, libraryRegistry, messageUnderstandingEngine }) {
     this.tenantSpecializationRegistry = tenantSpecializationRegistry;
     this.libraryRegistry = libraryRegistry;
+    this.messageUnderstandingEngine = messageUnderstandingEngine;
   }
 
   dispatch(message, workflowEngine, context = {}) {
@@ -22,12 +23,21 @@ class WorkflowDispatcher {
       );
     }
 
-    const workflowInput = this.extractWorkflowInput(message);
+    const understanding = this.messageUnderstandingEngine.understand(message);
+    const workflowInput = this.extractWorkflowInput(message) ?? understanding.workflowInput;
     if (!workflowInput) {
       return this.failure(
         'workflow_input_required',
         'dispatch message metadata must include workflowInput',
-        { workflow }
+        { workflow, understanding }
+      );
+    }
+
+    if (!workflowInput.plate || !workflowInput.category) {
+      return this.failure(
+        'workflow_input_incomplete',
+        'dispatch workflowInput must include plate and category',
+        { workflow, understanding }
       );
     }
 
@@ -49,6 +59,7 @@ class WorkflowDispatcher {
         ok: result.ok,
         workflow,
         workflowInput,
+        understanding,
         result,
       };
     }

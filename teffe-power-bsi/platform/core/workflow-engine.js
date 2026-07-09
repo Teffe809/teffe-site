@@ -14,6 +14,7 @@ class WorkflowEngine {
     tenantSpecializationRegistry,
     communicationGateway,
     workflowDispatcher,
+    messageUnderstandingEngine,
   }) {
     this.securityGuardian = securityGuardian;
     this.capabilityRegistry = capabilityRegistry;
@@ -25,6 +26,7 @@ class WorkflowEngine {
     this.tenantSpecializationRegistry = tenantSpecializationRegistry;
     this.communicationGateway = communicationGateway;
     this.workflowDispatcher = workflowDispatcher;
+    this.messageUnderstandingEngine = messageUnderstandingEngine;
     this.capabilityPipeline = capabilityPipeline || new CapabilityPipeline({
       pluginEngine,
       memoryEngine,
@@ -772,6 +774,52 @@ class WorkflowEngine {
     };
   }
 
+  understandCommunicationMessage(input, context = {}) {
+    const received = this.receiveCommunicationMessage(input, context);
+    if (!received.ok) {
+      return received;
+    }
+
+    const understanding = this.messageUnderstandingEngine.understand(received.message);
+    const audit = this.auditLog.record({
+      type: 'message.understanding.completed',
+      messageId: received.message.id,
+      tenant: received.message.tenant,
+      understanding,
+      executionContext: createExecutionContext({
+        ...context,
+        tenantId: received.message.tenant.id,
+        runtime: {
+          operation: 'message_understanding_completed',
+          channel: received.message.channel,
+          messageType: received.message.type,
+        },
+      }),
+    });
+    const persisted = this.memoryEngine.persistUnderstanding({
+      id: `understanding_${Date.now()}`,
+      messageId: received.message.id,
+      tenantId: received.message.tenant.id,
+      channel: received.message.channel,
+      understanding,
+      communicationAuditId: received.auditId,
+      auditId: audit.id,
+      timestamp: new Date().toISOString(),
+    });
+
+    return {
+      ok: true,
+      message: received.message,
+      understanding,
+      auditId: audit.id,
+      audit: {
+        communication: received.audit,
+        understanding: audit,
+      },
+      memory: persisted,
+    };
+  }
+
   dispatchCommunicationMessage(input, context = {}) {
     const received = this.receiveCommunicationMessage(input, context);
     const dispatchId = `dispatch_${Date.now()}`;
@@ -834,6 +882,35 @@ class WorkflowEngine {
         userId: context.userId,
       }
     );
+    if (dispatchResult.understanding) {
+      const understandingAudit = this.auditLog.record({
+        type: 'message.understanding.completed',
+        messageId: message.id,
+        tenant: message.tenant,
+        understanding: dispatchResult.understanding,
+        dispatchId,
+        executionContext: createExecutionContext({
+          ...context,
+          tenantId: message.tenant.id,
+          runtime: {
+            operation: 'message_understanding_completed',
+            channel: message.channel,
+            messageType: message.type,
+          },
+        }),
+      });
+      this.memoryEngine.persistUnderstanding({
+        id: `understanding_${Date.now()}`,
+        messageId: message.id,
+        tenantId: message.tenant.id,
+        channel: message.channel,
+        understanding: dispatchResult.understanding,
+        communicationAuditId: received.auditId,
+        dispatchId,
+        auditId: understandingAudit.id,
+        timestamp: new Date().toISOString(),
+      });
+    }
 
     if (!dispatchResult.ok) {
       const failedAudit = this.auditLog.record({
