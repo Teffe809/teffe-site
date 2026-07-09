@@ -1003,6 +1003,69 @@ class WorkflowEngine {
     };
   }
 
+  processChannelInboundMessage(channelMessage, channelAdapter, context = {}) {
+    const rawMessage = {
+      id: channelMessage.id,
+      tenantId: channelMessage.tenantIdentity?.tenantId,
+      channel: channelMessage.channel,
+      type: channelMessage.type,
+      sender: channelMessage.sender,
+      recipient: channelMessage.recipient,
+      timestamp: channelMessage.timestamp,
+      payload: channelMessage.payload,
+      metadata: {
+        ...(channelMessage.metadata ?? {}),
+        channelMessageId: channelMessage.id,
+        channelTenantIdentity: channelMessage.tenantIdentity,
+      },
+    };
+    const dispatch = this.dispatchCommunicationMessage(rawMessage, {
+      ...context,
+      source: 'channel-adapter',
+      tenantId: channelMessage.tenantIdentity?.tenantId,
+      channel: channelMessage.channel,
+      channelMessageId: channelMessage.id,
+      intent: 'channel.inbound.dispatch',
+      ai: false,
+    });
+
+    if (!dispatch.ok) {
+      return dispatch;
+    }
+
+    const outbound = this.communicationGateway.createChannelOutbound({
+      inboundMessage: dispatch.message,
+      workflowResult: dispatch,
+    });
+    const delivery = channelAdapter.sendOutbound(outbound);
+    const audit = this.auditLog.record({
+      type: delivery.ok ? 'channel.outbound.sent' : 'channel.outbound.failed',
+      channel: channelMessage.channel,
+      inboundMessageId: channelMessage.id,
+      outboundMessageId: outbound.id,
+      workflow: dispatch.workflow,
+      delivery,
+      executionContext: createExecutionContext({
+        ...context,
+        tenantId: channelMessage.tenantIdentity?.tenantId,
+        runtime: {
+          operation: 'channel_outbound_delivery',
+          channel: channelMessage.channel,
+        },
+      }),
+    });
+
+    return {
+      ok: delivery.ok,
+      inbound: channelMessage,
+      dispatch,
+      outbound,
+      delivery,
+      auditId: audit.id,
+      audit,
+    };
+  }
+
   getDomainSystem(name, context = {}) {
     return this.queryDomainKnowledge(
       'get_system_by_name',

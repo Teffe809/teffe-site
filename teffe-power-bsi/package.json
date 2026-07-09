@@ -4,6 +4,7 @@
   "description": "Teffe Power — Badge/PIN System Interface Server",
   "main": "server.js",
   "scripts": {
+    "test": "node scripts/run-channel-adapter-tests.js",
     "start": "node server.js",
     "dev": "node --watch server.js",
     "validate:vehicle": "node scripts/run-capability-validation.js",

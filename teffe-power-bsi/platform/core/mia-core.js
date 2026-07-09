@@ -206,6 +206,20 @@ class MiaCore {
       }
     );
   }
+
+  handleChannelInbound({ channelMessage, channelAdapter, userId = 'capability-validation' }) {
+    return this.workflowEngine.processChannelInboundMessage(
+      channelMessage,
+      channelAdapter,
+      {
+        source: 'mia-core',
+        userId,
+        tenantId: channelMessage?.tenantIdentity?.tenantId,
+        intent: 'channel.inbound',
+        ai: false,
+      }
+    );
+  }
 }
 
 module.exports = { MiaCore };

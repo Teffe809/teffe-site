@@ -45,8 +45,56 @@ class CommunicationGateway {
     return this.normalizeMessage(input, 'inbound');
   }
 
+  normalizeChannelInbound(channelMessage) {
+    return this.normalizeIncoming({
+      id: channelMessage.id,
+      tenantId: channelMessage.tenantIdentity?.tenantId,
+      channel: channelMessage.channel,
+      type: channelMessage.type,
+      sender: channelMessage.sender,
+      recipient: channelMessage.recipient,
+      timestamp: channelMessage.timestamp,
+      payload: channelMessage.payload,
+      metadata: {
+        ...(channelMessage.metadata ?? {}),
+        channelMessageId: channelMessage.id,
+        channelTenantIdentity: channelMessage.tenantIdentity,
+        rawChannelMessage: channelMessage.raw ? { available: true } : null,
+      },
+    });
+  }
+
   normalizeOutgoing(input) {
     return this.normalizeMessage(input, 'outbound');
+  }
+
+  createChannelOutbound({ inboundMessage, workflowResult, text = null, metadata = {} }) {
+    const result = workflowResult?.workflowResult?.result ?? workflowResult?.result ?? {};
+    const responseText = text ?? this.defaultOutboundText(result);
+
+    return {
+      id: `channel_out_${Date.now()}`,
+      channel: inboundMessage.channel,
+      type: 'text',
+      direction: 'outbound',
+      tenantIdentity: inboundMessage.metadata?.channelTenantIdentity ?? {
+        tenantId: inboundMessage.tenant.id,
+        displayName: inboundMessage.tenant.specialistName,
+        segment: inboundMessage.tenant.segment,
+      },
+      sender: inboundMessage.recipient,
+      recipient: inboundMessage.sender,
+      timestamp: new Date().toISOString(),
+      payload: {
+        text: responseText,
+      },
+      metadata: {
+        ...metadata,
+        workflow: workflowResult?.workflow ?? null,
+        workflowRunId: workflowResult?.workflowResult?.runId ?? workflowResult?.runId ?? null,
+        source: 'communication-gateway',
+      },
+    };
   }
 
   normalizeMessage(input, direction) {
@@ -131,17 +179,32 @@ class CommunicationGateway {
 
   normalizeParty(party) {
     if (typeof party === 'string') {
-      return { id: party.trim(), name: null };
+      return { id: party.trim(), name: null, address: party.trim() };
     }
 
+    const id = String(party?.id ?? '').trim();
     return {
-      id: String(party?.id ?? '').trim(),
+      id,
       name: party?.name == null ? null : String(party.name).trim(),
+      address: party?.address ?? party?.phone ?? party?.email ?? id,
     };
   }
 
   normalizeTenantId(tenantId) {
     return String(tenantId ?? '').trim().toLowerCase();
+  }
+
+  defaultOutboundText(result) {
+    const vehicle = result.vehicle?.plate ?? result.vehicle ?? null;
+    const category = result.category ?? null;
+    const salesPriority = result.sales?.commercialPriority ?? result.salesPriority ?? null;
+
+    return [
+      'Atendimento processado pela TEFFE Platform.',
+      vehicle ? `Veiculo: ${vehicle}.` : null,
+      category ? `Categoria: ${category}.` : null,
+      salesPriority ? `Prioridade comercial: ${salesPriority}.` : null,
+    ].filter(Boolean).join(' ');
   }
 }
 
