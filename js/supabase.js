@@ -496,8 +496,8 @@ function imprimirOS(c){
   .os-section-title{font-size:11px;font-weight:700;color:#E07820;text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;border-bottom:1px solid #f0d0a0;padding-bottom:4px;}
   .os-text-block{border:1px solid #dde3ee;border-radius:4px;padding:10px 12px;min-height:60px;line-height:1.6;background:#fafbfd;white-space:pre-wrap;}
   .os-resolucao{width:100%;min-height:100px;border:1px solid #bbb;border-radius:4px;padding:10px 12px;font-family:Arial,sans-serif;font-size:13px;line-height:1.6;resize:vertical;background:#fafbfd;color:#222;}
-  .os-assinaturas{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:40px;}
-  .os-assinatura{border-top:1px solid #888;padding-top:8px;text-align:center;font-size:12px;color:#555;}
+  .os-assinaturas{display:flex;justify-content:center;margin-top:40px;}
+  .os-assinatura{border-top:1px solid #888;padding-top:8px;text-align:center;font-size:12px;color:#555;width:320px;max-width:100%;}
   .os-assinatura-cliente{border-top:none;padding-top:0;}
   .os-assinatura-cliente img{max-width:100%;height:70px;object-fit:contain;display:block;margin:0 auto 6px;border:1px solid #dde3ee;border-radius:4px;background:#fff;padding:4px;}
   .os-assinatura-cliente .os-assinatura-nome{border-top:1px solid #888;padding-top:8px;font-weight:700;color:#333;}
@@ -520,7 +520,7 @@ function imprimirOS(c){
   <button class="os-btn os-btn-print" onclick="window.print()">Imprimir</button>
 </div>
 <div class="os-header">
-  <img src="https://teffe.com.br/assets/images/logo-teffe.png" alt="Teffe Tecnologia"/>
+  <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1ODAgMTc1Ij4KICA8cG9seWdvbiBwb2ludHM9Ijk1LDMxIDE0MCw1NyAxNDAsMTA5IDk1LDEzNSA1MCwxMDkgNTAsNTciIGZpbGw9Im5vbmUiIHN0cm9rZT0iI0UwNzgyMCIgc3Ryb2tlLXdpZHRoPSI1IiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+CiAgPHBvbHlnb24gcG9pbnRzPSI5NSwzNyAxMzUsNjAgMTM1LDEwNiA5NSwxMjkgNTUsMTA2IDU1LDYwIiBmaWxsPSIjZmZmZmZmIi8+CiAgPHBvbHlnb24gcG9pbnRzPSI5NSw0MyAxMzAsNjMgMTMwLDEwMyA5NSwxMjMgNjAsMTAzIDYwLDYzIiBmaWxsPSIjMUEyRTVBIi8+CiAgPHJlY3QgeD0iNzgiIHk9IjYyIiB3aWR0aD0iMzQiIGhlaWdodD0iNiIgcng9IjIuNSIgZmlsbD0iI0UwNzgyMCIvPgogIDxyZWN0IHg9IjkxIiB5PSI2MiIgd2lkdGg9IjciIGhlaWdodD0iMzAiIHJ4PSIyLjUiIGZpbGw9IiNFMDc4MjAiLz4KICA8bGluZSB4MT0iMTQwIiB5MT0iNTciIHgyPSIxNjMiIHkyPSI0NCIgc3Ryb2tlPSIjRTA3ODIwIiBzdHJva2Utd2lkdGg9IjEuOCIvPgogIDxjaXJjbGUgY3g9IjE2NiIgY3k9IjQyIiByPSIzLjgiIGZpbGw9IiNFMDc4MjAiLz4KICA8bGluZSB4MT0iMTQwIiB5MT0iMTA5IiB4Mj0iMTYzIiB5Mj0iMTIyIiBzdHJva2U9IiNFMDc4MjAiIHN0cm9rZS13aWR0aD0iMS44Ii8+CiAgPGNpcmNsZSBjeD0iMTY2IiBjeT0iMTI0IiByPSIzLjgiIGZpbGw9IiNFMDc4MjAiLz4KICA8bGluZSB4MT0iOTUiIHkxPSIxMzUiIHgyPSI5NSIgeTI9IjE1OCIgc3Ryb2tlPSIjRTA3ODIwIiBzdHJva2Utd2lkdGg9IjEuOCIvPgogIDxjaXJjbGUgY3g9Ijk1IiBjeT0iMTYxIiByPSIzLjgiIGZpbGw9IiNFMDc4MjAiLz4KICA8bGluZSB4MT0iNTAiIHkxPSIxMDkiIHgyPSIyNyIgeTI9IjEyMiIgc3Ryb2tlPSIjRTA3ODIwIiBzdHJva2Utd2lkdGg9IjEuOCIvPgogIDxjaXJjbGUgY3g9IjI0IiBjeT0iMTI0IiByPSIzLjgiIGZpbGw9IiNFMDc4MjAiLz4KICA8bGluZSB4MT0iNTAiIHkxPSI1NyIgeDI9IjI3IiB5Mj0iNDQiIHN0cm9rZT0iI0UwNzgyMCIgc3Ryb2tlLXdpZHRoPSIxLjgiLz4KICA8Y2lyY2xlIGN4PSIyNCIgY3k9IjQyIiByPSIzLjgiIGZpbGw9IiNFMDc4MjAiLz4KICA8dGV4dCBmb250LWZhbWlseT0iQXJpYWwgQmxhY2ssIEFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXdlaWdodD0iOTAwIiBmb250LXNpemU9Ijc2IiB4PSIyMDAiIHk9IjEwMyI+CiAgICA8dHNwYW4gZmlsbD0iIzFBMkU1QSI+VEU8L3RzcGFuPjx0c3BhbiBmaWxsPSIjRTA3ODIwIj5GRkU8L3RzcGFuPgogIDwvdGV4dD4KICA8cmVjdCB4PSIyMDAiIHk9IjExMSIgd2lkdGg9IjMxMCIgaGVpZ2h0PSIzIiByeD0iMS41IiBmaWxsPSIjRTA3ODIwIi8+CiAgPHRleHQgeD0iMjAyIiB5PSIxMzkiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC13ZWlnaHQ9IjcwMCIgZm9udC1zaXplPSIxNSIgZmlsbD0iI0UwNzgyMCIgbGV0dGVyLXNwYWNpbmc9IjYiPlRFQ05PTE9HSUE8L3RleHQ+Cjwvc3ZnPgo=" alt="Teffe Tecnologia"/>
   <div class="os-header-text">
     <h1>O.S. ${num}</h1>
     <p>Teffe Tecnologia — Suporte e Assistência Técnica</p>
@@ -556,7 +556,6 @@ ${isAssistencia?`<div class="os-section">
   <textarea class="os-resolucao" placeholder="Descreva a solução aplicada...">${resolucaoEscapada}</textarea>
 </div>`:''}
 <div class="os-assinaturas">
-  <div class="os-assinatura">Assinatura do Técnico</div>
   ${temAssinaturaCliente?`<div class="os-assinatura os-assinatura-cliente">
     <img src="${c.assinatura_cliente}"/>
     <div class="os-assinatura-nome">${nomeAssinaturaEscapado||'Assinatura do Cliente'}</div>
