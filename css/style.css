@@ -509,12 +509,14 @@ body:has(.orca-bg.open),body:has(.modal-bg.open){overflow:hidden;}
 .ep-equip-mini h5 { font-family:var(--font-h); font-size:13px; font-weight:700; color:var(--azul); margin-bottom:4px; }
 .ep-equip-mini p { font-size:11.5px; color:var(--gray-text); font-weight:300; line-height:1.4; }
 
-.ep-vantagens { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:56px; }
+.ep-vantagens { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:56px; align-items:stretch; }
 .ep-vant {
   background:var(--azul); border-radius:12px; padding:24px 20px;
-  display:flex; flex-direction:column; gap:8px;
+  display:flex; flex-direction:column; gap:8px; height:100%;
 }
-.ep-vant-icon { font-size:26px; }
+/* Altura fixa (não só font-size) garante que o título comece sempre na mesma
+   posição vertical em todos os cards, mesmo que um ícone falhe ao carregar. */
+.ep-vant-icon { font-size:26px; line-height:1; height:26px; color:var(--gold); }
 .ep-vant h5 { font-family:var(--font-h); font-size:14px; font-weight:700; color:#fff; }
 .ep-vant p { font-size:12.5px; color:rgba(255,255,255,.6); font-weight:300; line-height:1.5; }
 
