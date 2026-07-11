@@ -18,6 +18,14 @@
 html{scroll-behavior:smooth;}
 body{font-family:var(--font-b);color:var(--azul);background:#fff;overflow-x:hidden;}
 
+/* ── OVERLAY DE RESTAURAÇÃO DE SESSÃO (evita flash da home pública ao dar F5
+   em #cliente/* ou #portaltecnico/* com sessão salva — ver index.html) ── */
+#tt-loading-overlay{display:none;position:fixed;inset:0;z-index:99999;background:#F5F7FA;align-items:center;justify-content:center;flex-direction:column;gap:16px;}
+html.tt-restaurando-sessao #tt-loading-overlay{display:flex;}
+html.tt-restaurando-sessao body>*:not(#tt-loading-overlay){visibility:hidden;}
+.tt-loading-spinner{width:40px;height:40px;border:4px solid var(--gray-light);border-top-color:var(--azul);border-radius:50%;animation:tt-spin .8s linear infinite;}
+@keyframes tt-spin{to{transform:rotate(360deg);}}
+
 /* ── NAVBAR fundo branco ── */
 .navbar{
   position:fixed;top:0;left:0;right:0;z-index:2000;

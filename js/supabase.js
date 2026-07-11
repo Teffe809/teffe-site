@@ -12,6 +12,12 @@ let _equipsAC=[];
 let _tecHistData=[],_tecHistPage=0,_tecHistEquip=null;
 const TEC_HIST_PG=10;
 
+// ── OVERLAY DE RESTAURAÇÃO DE SESSÃO (ver script inline no topo do <body>,
+// index.html) — removido assim que carregarArea()/tecInit() decidem a tela final.
+function _tirarOverlayCarregamento(){
+  document.documentElement.classList.remove('tt-restaurando-sessao');
+}
+
 // ── TIMER DE INATIVIDADE (5 min) ──
 const INATIVIDADE_MS=5*60*1000;
 let _timerInatividade=null;
@@ -207,23 +213,64 @@ async function confirmarAlterarSenha(){
 }
 
 // ── CARREGAR ÁREA ──
+// Cache curto (sessionStorage, sobrevive a F5) da última validação de sessão
+// bem-sucedida: evita repetir a chamada /auth/v1/user a cada F5 dado em
+// sequência rápida — vários F5 em <1s cada um dispara uma leva de requests
+// (auth + chamados + equipamentos + contratos...) e, sob rate limit/instabilidade
+// transitória do Supabase, uma resposta não-2xx dessas era tratada como sessão
+// inválida e apagava o token à toa (ver _carregandoArea/SESSAO_CACHE_MS abaixo).
+const SESSAO_CACHE_MS=20000;
+let _carregandoArea=false;
+
 async function carregarArea(){
-  // Valida sessão antes de mostrar qualquer dado
+  // Trava contra chamadas concorrentes (ex: DOMContentLoaded + hashchange
+  // disparando quase juntos, ou F5 repetido antes da chamada anterior terminar).
+  if(_carregandoArea) return;
   if(!_tok||!_uid){
     document.getElementById('modal').classList.add('open');
+    _tirarOverlayCarregamento();
     return;
   }
-  const _sessCheck=await fetch(SURL+'/auth/v1/user',{
-    headers:{'apikey':SKEY,'Authorization':'Bearer '+_tok}
-  }).catch(()=>null);
-  if(!_sessCheck||!_sessCheck.ok){
-    _tok=null;_uid=null;_cid=null;_email=null;
-    localStorage.clear();sessionStorage.clear();
-    document.getElementById('modal').classList.add('open');
-    return;
+  _carregandoArea=true;
+  try{
+    const _cacheValido=sessionStorage.getItem('sess_ok_tok')===_tok &&
+      (Date.now()-Number(sessionStorage.getItem('sess_ok_at')||0))<SESSAO_CACHE_MS;
+    let sessaoValida=_cacheValido;
+    if(!_cacheValido){
+      const _sessCheck=await fetch(SURL+'/auth/v1/user',{
+        headers:{'apikey':SKEY,'Authorization':'Bearer '+_tok}
+      }).catch(()=>null);
+      if(_sessCheck&&_sessCheck.ok){
+        sessaoValida=true;
+        sessionStorage.setItem('sess_ok_tok',_tok);
+        sessionStorage.setItem('sess_ok_at',String(Date.now()));
+      } else if(_sessCheck&&(_sessCheck.status===401||_sessCheck.status===403)){
+        // Credencial de fato rejeitada pelo servidor — sessão realmente inválida.
+        sessaoValida=false;
+      } else {
+        // Erro de rede (fetch rejeitado) ou resposta transitória (429/5xx/etc,
+        // comum sob F5 repetido) — não é prova de sessão inválida. Segue com o
+        // token que já temos em vez de derrubar a sessão por uma falha passageira.
+        sessaoValida=true;
+      }
+    }
+    if(!sessaoValida){
+      _tok=null;_uid=null;_cid=null;_email=null;
+      localStorage.clear();sessionStorage.clear();
+      document.getElementById('modal').classList.add('open');
+      _tirarOverlayCarregamento();
+      return;
+    }
+    await _carregarAreaConteudo();
+  } finally {
+    _carregandoArea=false;
   }
+}
+
+async function _carregarAreaConteudo(){
   document.documentElement.classList.add('no-scroll');
   document.getElementById('area-cliente').style.display='flex';
+  _tirarOverlayCarregamento();
   // Preserva a sub-tela do hash atual (ex: #cliente/historico) para restaurar
   // a mesma view num F5, em vez de sempre voltar para o dashboard.
   const _viewInicial=(typeof cpViewFromHash==='function')?cpViewFromHash(location.hash):'dash';
@@ -1080,6 +1127,7 @@ async function tecInit(){
     document.documentElement.classList.add('no-scroll','mia-oculta');
     if(typeof miaFecharChat==='function') miaFecharChat();
     document.getElementById('portal-tecnico').style.display='block';
+    _tirarOverlayCarregamento();
     // Preserva a sub-tela do hash atual (ex: #portaltecnico/historico) para
     // restaurar a mesma view num F5, em vez de sempre voltar para "Meus Chamados".
     const _tecViewInicial=location.hash==='#portaltecnico/historico'?'historico':'chamados';
@@ -1088,6 +1136,7 @@ async function tecInit(){
   } else {
     document.getElementById('tec-login-bg').classList.add('open');
     history.replaceState(null,'','#portaltecnico');
+    _tirarOverlayCarregamento();
   }
 }
 

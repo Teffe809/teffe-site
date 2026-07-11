@@ -19,6 +19,27 @@
 </head>
 <body>
 
+<script>
+// Evita o "flash" da home pública ao dar F5 em #cliente/* ou #portaltecnico/*
+// com sessão salva: esconde o conteúdo e mostra um loading até carregarArea()/
+// tecInit() decidirem a tela final (ver _tirarOverlayCarregamento em js/supabase.js).
+// Timeout de segurança: nunca deixa o overlay preso caso algo falhe adiante.
+(function(){
+  try{
+    var h=location.hash||'';
+    var isCliente=h.indexOf('#cliente')===0;
+    var isTecnico=h.indexOf('#portaltecnico')===0;
+    var temSessCliente=isCliente&&localStorage.getItem('tt')&&localStorage.getItem('tu');
+    var temSessTecnico=isTecnico&&localStorage.getItem('tec_tok')&&localStorage.getItem('tec_uid');
+    if(temSessCliente||temSessTecnico){
+      document.documentElement.classList.add('tt-restaurando-sessao');
+      setTimeout(function(){document.documentElement.classList.remove('tt-restaurando-sessao');},8000);
+    }
+  }catch(e){}
+})();
+</script>
+<div id="tt-loading-overlay"><div class="tt-loading-spinner"></div></div>
+
 <!-- NAVBAR fundo branco -->
 <nav class="navbar">
   <a href="#" class="nav-logo" onclick="closeAllPages()">
