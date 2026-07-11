@@ -1589,6 +1589,7 @@ async function tecAbrirDetalhe(id){
     <label class="tec-btn-foto">Anexar Foto <input type="file" accept="image/*" style="display:none;" onchange="tecAnexarFoto(this)"/></label>
   </div>`;
   const obsEscaped=(c.observacoes_internas||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const solucaoEscapada=(c.resolucao||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   document.getElementById('tec-modal-conteudo').innerHTML=`
     <div class="tec-modal-header">
       <h2>Chamado O.S. ${c.numero||c.id.slice(0,6).toUpperCase()}</h2>
@@ -1613,9 +1614,12 @@ async function tecAbrirDetalhe(id){
     ${fotosHtml}
     ${historicoHtml}
     <div class="tec-fotos-section">
-      <div class="tec-det-lbl-standalone" style="color:#92400E">⚠️ Observações Internas (uso interno)</div>
-      <textarea id="tec-obs-interna-ta" class="ac-input" rows="3" style="margin-top:6px" placeholder="Anotações internas sobre este chamado — NÃO visível ao cliente...">${obsEscaped}</textarea>
-      <button class="tec-btn tec-btn-cinza" id="tec-obs-interna-btn" style="margin-top:8px;font-size:12px;min-height:36px" onclick="tecSalvarObsInterna('${c.id}')"><i class="ti ti-device-floppy"></i> Salvar observação</button>
+      <div class="tec-det-lbl-standalone">Solução / Resolução</div>
+      <textarea id="tec-solucao-detalhe" class="ac-input" rows="3" style="margin-top:6px" placeholder="Ex: Troquei o fusor, limpei o sensor de papel..." onblur="tecAutosalvarCampos('${c.id}')">${solucaoEscapada}</textarea>
+    </div>
+    <div class="tec-fotos-section">
+      <div class="tec-det-lbl-standalone" style="color:#92400E">⚠️ Observações Internas</div>
+      <textarea id="tec-obs-interna-ta" class="ac-input" rows="3" style="margin-top:6px" placeholder="Anotações internas sobre este chamado..." onblur="tecAutosalvarCampos('${c.id}')">${obsEscaped}</textarea>
     </div>
   `;
   tecRenderAcoes(st);
@@ -1624,16 +1628,26 @@ async function tecAbrirDetalhe(id){
 
 function tecFecharDetalhe(){document.getElementById('tec-chamado-modal').classList.remove('open');}
 
-async function tecSalvarObsInterna(id){
-  const ta=document.getElementById('tec-obs-interna-ta');
-  if(!ta) return;
-  const val=ta.value.trim();
-  const btn=document.getElementById('tec-obs-interna-btn');
-  if(btn){btn.disabled=true;btn.innerHTML='<i class="ti ti-loader"></i> Salvando...';}
-  const {ok}=await sfTec('/rest/v1/chamados?id=eq.'+id,{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify({observacoes_internas:val||null})});
-  if(!ok){alert('Erro ao salvar observação.');if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-device-floppy"></i> Salvar observação';}return;}
-  if(_tecChamadosData[id]) _tecChamadosData[id].observacoes_internas=val||null;
-  if(btn){btn.innerHTML='<i class="ti ti-check"></i> Salvo';setTimeout(()=>{btn.disabled=false;btn.innerHTML='<i class="ti ti-device-floppy"></i> Salvar observação';},1800);}
+// Autosave dos campos de texto do modal de detalhe (solução + observações
+// internas) — sem botão manual: dispara no blur de qualquer um dos dois
+// campos, e também é chamado ao abrir os modais de ação (Pendente, Solicitar
+// Peças, Encerrar) para não perder texto ainda não salvo nesse momento.
+async function tecAutosalvarCampos(id){
+  const c=_tecChamadosData[id];
+  if(!c) return;
+  const taSol=document.getElementById('tec-solucao-detalhe');
+  const taObs=document.getElementById('tec-obs-interna-ta');
+  if(!taSol&&!taObs) return;
+  const solVal=taSol?taSol.value.trim():c.resolucao;
+  const obsVal=taObs?taObs.value.trim():c.observacoes_internas;
+  if((solVal||null)===(c.resolucao||null)&&(obsVal||null)===(c.observacoes_internas||null)) return;
+  const payload={};
+  if(taSol) payload.resolucao=solVal||null;
+  if(taObs) payload.observacoes_internas=obsVal||null;
+  const {ok}=await sfTec('/rest/v1/chamados?id=eq.'+id,{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify(payload)});
+  if(!ok) return; // autosave falho não deve travar o fluxo do técnico
+  if(taSol) c.resolucao=solVal||null;
+  if(taObs) c.observacoes_internas=obsVal||null;
 }
 
 function tecRenderAcoes(st){
@@ -1677,6 +1691,7 @@ async function tecEnAtendimento(){
 }
 
 function tecAbrirModalPendente(){
+  if(_tecChamadoAtual) tecAutosalvarCampos(_tecChamadoAtual.id);
   document.getElementById('tec-pend-motivo').value='';
   document.getElementById('tec-pend-erro').style.display='none';
   document.getElementById('tec-pend-modal').classList.add('open');
@@ -1717,8 +1732,12 @@ async function tecRetomar(){
 let _tecSignaturePad=null;
 
 function tecAbrirEncerrar(){
+  if(_tecChamadoAtual) tecAutosalvarCampos(_tecChamadoAtual.id);
   document.getElementById('tec-desc-defeito').value='';
-  document.getElementById('tec-solucao').value='';
+  // Reaproveita o que já estiver salvo em chamados.resolucao (preenchido a
+  // qualquer momento pelo campo "Solução / Resolução" do modal de detalhe),
+  // em vez de sempre começar em branco.
+  document.getElementById('tec-solucao').value=(_tecChamadoAtual&&_tecChamadoAtual.resolucao)||'';
   document.getElementById('tec-pecas-lista').innerHTML='';
   document.getElementById('tec-encerrar-nome-cliente').value='';
   document.getElementById('tec-encerrar-erro').style.display='none';
@@ -1794,15 +1813,33 @@ async function tecConfirmarEncerramento(){
 
 // ── SOLICITAR PEÇAS ──
 function tecAbrirPecaModal(){
+  if(_tecChamadoAtual) tecAutosalvarCampos(_tecChamadoAtual.id);
   document.getElementById('tec-peca-desc').value='';
+  document.getElementById('tec-peca-desc').style.display='none';
+  const link=document.getElementById('tec-peca-nao-cad-link');
+  if(link) link.textContent='+ Peça não cadastrada?';
   document.getElementById('tec-peca-erro').style.display='none';
   document.getElementById('tec-peca-modal').classList.add('open');
   tecCarregarPecasDisponiveis();
 }
 function tecFecharPecaModal(){document.getElementById('tec-peca-modal').classList.remove('open');}
 
+// Campo de texto livre para peça fora do catálogo — oculto por padrão,
+// revelado só quando o técnico clica no link (ver index.html, modal
+// #tec-peca-modal).
+function tecTogglePecaNaoCadastrada(){
+  const ta=document.getElementById('tec-peca-desc');
+  const link=document.getElementById('tec-peca-nao-cad-link');
+  if(!ta) return;
+  const showing=ta.style.display!=='none';
+  ta.style.display=showing?'none':'block';
+  if(link) link.textContent=showing?'+ Peça não cadastrada?':'− Ocultar peça não cadastrada';
+  if(!showing) ta.focus();
+}
+
 // Lista as peças cadastradas (equipamento_pecas) para o modelo do equipamento
-// do chamado atual — o técnico nunca vê insumos aqui, só peças.
+// do chamado atual — o técnico nunca vê insumos aqui, só peças. Cada linha
+// tem checkbox + campo de quantidade próprio (carrinho, ver tecConfirmarPeca).
 async function tecCarregarPecasDisponiveis(){
   const wrap=document.getElementById('tec-peca-lista-disponivel');
   if(!wrap) return;
@@ -1832,39 +1869,61 @@ async function tecCarregarPecasDisponiveis(){
 
   wrap.innerHTML=pecas.map(p=>{
     const label=(p.codigo?'['+p.codigo+'] ':'')+p.descricao;
-    const labelAttr=label.replace(/"/g,'&quot;');
-    return `<label class="tec-peca-check"><input type="checkbox" data-label="${labelAttr}" onchange="tecTogglePecaDisponivel(this)"/> ${label}</label>`;
+    return `<div class="tec-peca-check-row">
+      <label class="tec-peca-check">
+        <input type="checkbox" data-peca-id="${p.id}" onchange="tecTogglePecaDisponivel(this)"/>
+        <span>${label}</span>
+      </label>
+      <input type="number" min="1" value="1" class="tec-peca-qtd-input" id="tec-peca-qtd-${p.id}" disabled/>
+    </div>`;
   }).join('');
 }
 
-// Ao marcar/desmarcar uma peça da lista, adiciona/remove a linha correspondente
-// no textarea de descrição (mantém o fluxo de gravação em pecas_solicitadas).
+// Ao marcar/desmarcar uma peça da lista, habilita/desabilita o campo de
+// quantidade correspondente.
 function tecTogglePecaDisponivel(checkbox){
-  const ta=document.getElementById('tec-peca-desc');
-  if(!ta) return;
-  const label=checkbox.getAttribute('data-label');
-  const linhas=ta.value.split('\n').filter(l=>l.trim()!=='');
-  if(checkbox.checked){
-    if(linhas.indexOf(label)===-1) linhas.push(label);
-  }else{
-    const idx=linhas.indexOf(label);
-    if(idx!==-1) linhas.splice(idx,1);
-  }
-  ta.value=linhas.join('\n');
+  const pecaId=checkbox.getAttribute('data-peca-id');
+  const qtdInput=document.getElementById('tec-peca-qtd-'+pecaId);
+  if(qtdInput) qtdInput.disabled=!checkbox.checked;
 }
 
 async function tecConfirmarPeca(){
   const c=_tecChamadoAtual;if(!c) return;
   const statusAnterior=c.status_tecnico||c.status||'aberto';
-  const desc=document.getElementById('tec-peca-desc').value.trim();
   const erroEl=document.getElementById('tec-peca-erro');
-  if(!desc){erroEl.style.display='block';erroEl.textContent='Descreva as peças necessárias.';return;}
+
+  const itens=[];
+  document.querySelectorAll('#tec-peca-lista-disponivel input[type=checkbox]:checked').forEach(chk=>{
+    const pecaId=chk.getAttribute('data-peca-id');
+    const qtdInput=document.getElementById('tec-peca-qtd-'+pecaId);
+    const qtd=Math.max(1,parseInt(qtdInput&&qtdInput.value)||1);
+    itens.push({peca_id:pecaId,quantidade:qtd});
+  });
+  const descLivre=document.getElementById('tec-peca-desc').value.trim();
+
+  if(!itens.length&&!descLivre){
+    erroEl.style.display='block';
+    erroEl.textContent='Selecione ao menos uma peça ou descreva uma peça não cadastrada.';
+    return;
+  }
   erroEl.style.display='none';
+
   const {ok}=await sfTec('/rest/v1/chamados?id=eq.'+c.id,{method:'PATCH',
     headers:{'Prefer':'return=minimal'},
-    body:JSON.stringify({status_tecnico:'aguardando_peca',pecas_status:'solicitado',pecas_solicitadas:desc,sla_pausado:true,sla_pausa_inicio:new Date().toISOString()})});
+    body:JSON.stringify({status_tecnico:'aguardando_peca',pecas_status:'solicitado',pecas_solicitadas:descLivre||null,sla_pausado:true,sla_pausa_inicio:new Date().toISOString()})});
   if(!ok){erroEl.style.display='block';erroEl.textContent='Erro ao atualizar status.';return;}
-  c.status_tecnico='aguardando_peca';c.pecas_status='solicitado';c.pecas_solicitadas=desc;c.sla_pausado=true;
+
+  // Cada peça marcada vira sua própria linha em chamado_pecas_pendentes —
+  // mesma lógica de carrinho do fluxo de suprimento do cliente (spAdicionarItem/
+  // enviarSuprimento), adaptada: aqui o chamado_id já existe, então é só 1
+  // insert por item, sem número compartilhado a coordenar.
+  for(const item of itens){
+    await sfTec('/rest/v1/chamado_pecas_pendentes',{method:'POST',headers:{'Prefer':'return=minimal'},
+      body:JSON.stringify({chamado_id:c.id,peca_id:item.peca_id,quantidade:item.quantidade,status:'solicitado'})});
+  }
+
+  c.status_tecnico='aguardando_peca';c.pecas_status='solicitado';c.pecas_solicitadas=descLivre||null;c.sla_pausado=true;
+  if(itens.length) c._pecaPendenteStatus='solicitado';
   registrarHistoricoStatus({httpFn:sfTec,chamadoId:c.id,statusAnterior:statusAnterior,statusNovo:'aguardando_peca',usuario:_tecNome});
   tecFecharPecaModal();tecFecharDetalhe();await tecCarregarChamados();
 }

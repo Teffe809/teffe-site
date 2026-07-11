@@ -2624,15 +2624,14 @@
 <div class="modal-bg" id="tec-peca-modal" style="z-index:5400;" onclick="if(event.target===this)tecFecharPecaModal()">
   <div class="modal" style="max-width:440px;text-align:left;">
     <button class="modal-x" onclick="tecFecharPecaModal()">✕</button>
-    <h2 style="margin-bottom:6px;">Solicitar Peças</h2>
-    <p style="font-size:13px;color:#6B7280;margin-bottom:18px;">O chamado ficará em <strong>Aguardando Peças</strong> e o SLA será pausado.</p>
+    <h2 style="margin-bottom:14px;">Solicitar Peças</h2>
     <div class="ac-fg">
       <label class="ac-label">Peças cadastradas para este modelo</label>
       <div id="tec-peca-lista-disponivel" class="tec-peca-disponivel-wrap"><div class="tec-loading">Carregando peças...</div></div>
     </div>
     <div class="ac-fg">
-      <label class="ac-label">Descreva as peças necessárias *</label>
-      <textarea id="tec-peca-desc" class="ac-input" rows="4" placeholder="Ex: 1x Toner HP 85A, 2x Cabo USB tipo-B..."></textarea>
+      <a href="#" id="tec-peca-nao-cad-link" onclick="event.preventDefault();tecTogglePecaNaoCadastrada()" style="font-size:13px;color:#2563C4;text-decoration:none;font-weight:600;">+ Peça não cadastrada?</a>
+      <textarea id="tec-peca-desc" class="ac-input" rows="3" style="margin-top:8px;display:none;" placeholder="Ex: código do manual do fabricante, peça não listada acima..."></textarea>
     </div>
     <div id="tec-peca-erro" class="adm-err" style="margin-top:12px;display:none;"></div>
     <button class="adm-btn" style="margin-top:16px;width:100%;" onclick="tecConfirmarPeca()">Solicitar Peças</button>
