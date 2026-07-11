@@ -1509,7 +1509,7 @@ function _tecSlaDecorrido(c){
   const tipoRaw=c.tipo_servico||c.tipo_chamado||'';
   const slaMin=TEC_SLA_MAP[tipoRaw]||720;
   let pausado=c.sla_tempo_pausado||0;
-  if(c.sla_pausado&&c.sla_pausa_inicio) pausado+=Math.floor((new Date()-new Date(c.sla_pausa_inicio))/60000);
+  if(c.sla_pausado&&c.sla_pausa_inicio) pausado+=calcularSLAUtil(c.sla_pausa_inicio,0);
   const dec=calcularSLAUtil(c.created_at,pausado);
   const h=Math.floor(dec/60),m=dec%60;
   return{hhmm:h+':'+String(m).padStart(2,'0'),atrasado:dec>slaMin};
@@ -1718,7 +1718,7 @@ async function tecRetomar(){
   const c=_tecChamadoAtual;if(!c) return;
   const statusAnterior=c.status_tecnico||c.status||'aberto';
   let totalPausado=c.sla_tempo_pausado||0;
-  if(c.sla_pausa_inicio) totalPausado+=Math.floor((new Date()-new Date(c.sla_pausa_inicio))/60000);
+  if(c.sla_pausa_inicio) totalPausado+=calcularSLAUtil(c.sla_pausa_inicio,0);
   const {ok}=await sfTec('/rest/v1/chamados?id=eq.'+c.id,{method:'PATCH',
     headers:{'Prefer':'return=minimal'},
     body:JSON.stringify({status_tecnico:'despachado',sla_pausado:false,sla_pausa_inicio:null,sla_tempo_pausado:totalPausado})});
@@ -1931,10 +1931,15 @@ async function tecConfirmarPeca(){
 async function tecReceberPecas(id){
   const c=_tecChamadosData[id];if(!c) return;
   const statusAnterior=c.status_tecnico||c.status||'aberto';
-  const totalDecorrido=calcularSLAUtil(c.created_at,0);
+  // Era calcularSLAUtil(c.created_at,0) — gravava o tempo ÚTIL TOTAL desde a
+  // abertura como se fosse o tempo pausado, descontando de mais o SLA todo
+  // resumo seguinte. O que deve ir pro bucket de pausa é só a duração
+  // (em minutos úteis) desta pausa específica, somada ao que já tinha.
+  let totalPausado=c.sla_tempo_pausado||0;
+  if(c.sla_pausa_inicio) totalPausado+=calcularSLAUtil(c.sla_pausa_inicio,0);
   const {ok}=await sfTec('/rest/v1/chamados?id=eq.'+id,{method:'PATCH',
     headers:{'Prefer':'return=minimal'},
-    body:JSON.stringify({status_tecnico:'despachado',pecas_status:null,sla_pausado:false,sla_pausa_inicio:null,sla_tempo_pausado:totalDecorrido})});
+    body:JSON.stringify({status_tecnico:'despachado',pecas_status:null,sla_pausado:false,sla_pausa_inicio:null,sla_tempo_pausado:totalPausado})});
   if(!ok){alert('Erro ao confirmar recebimento de peças.');return;}
   registrarHistoricoStatus({httpFn:sfTec,chamadoId:id,statusAnterior:statusAnterior,statusNovo:'despachado',usuario:_tecNome});
   await tecCarregarChamados();tecMostrarView('chamados');
@@ -1959,12 +1964,22 @@ async function tecAnexarFoto(input){
 }
 
 // ── SLA (horas úteis: seg-sex, 8-12h e 13-18h) ──
+// BUG (causa raiz de "SLA travado em 0:00"): todo lugar que acumulava pausa
+// (tecRetomar/tecReceberPecas, e depois erpPecaMarcarEntregue no ERP) somava
+// minutos CORRIDOS (Date.now() - sla_pausa_inicio em ms/60000) direto num
+// bucket que é subtraído de um total calculado em minutos ÚTEIS. Qualquer
+// pausa que atravessa noite/fim de semana (o caso comum de "aguardando
+// peça") gera um valor corrido MUITO maior que o total útil já decorrido —
+// Math.max(0, total-pausado) satura em 0 e fica assim indefinidamente.
+// Fix: medir a pausa com a MESMA régua (minutos úteis), chamando
+// calcularSLAUtil(sla_pausa_inicio, 0) em vez do diff bruto em ms.
 function calcularSLAUtil(dataAbertura,minutesPausados){
   const IM=8*60,FM=12*60,IT=13*60,FT=18*60;
   let total=0,cur=new Date(dataAbertura);
   const agora=new Date();
   if(cur>=agora) return 0;
-  while(cur<agora){
+  let iter=100000; // trava de segurança contra data inválida (evita loop infinito)
+  while(cur<agora&&iter-->0){
     const dia=cur.getDay();
     if(dia===0){const n=new Date(cur);n.setDate(n.getDate()+1);n.setHours(8,0,0,0);cur=n;continue;}
     if(dia===6){const n=new Date(cur);n.setDate(n.getDate()+2);n.setHours(8,0,0,0);cur=n;continue;}
@@ -1989,7 +2004,7 @@ function tecFormatarSLA(c){
   const tipoRaw=c.tipo_servico||c.tipo_chamado||'assistencia';
   const slaMin=TEC_SLA_MAP[tipoRaw]||720;
   let pausado=c.sla_tempo_pausado||0;
-  if(c.sla_pausado&&c.sla_pausa_inicio) pausado+=Math.floor((new Date()-new Date(c.sla_pausa_inicio))/60000);
+  if(c.sla_pausado&&c.sla_pausa_inicio) pausado+=calcularSLAUtil(c.sla_pausa_inicio,0);
   const decorrido=calcularSLAUtil(c.created_at,pausado);
   const restante=slaMin-decorrido;
   if(restante<=0) return {texto:'ATRASADO',atrasado:true};
