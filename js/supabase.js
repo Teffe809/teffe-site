@@ -224,7 +224,10 @@ async function carregarArea(){
   }
   document.documentElement.classList.add('no-scroll');
   document.getElementById('area-cliente').style.display='flex';
-  history.pushState(null,'','#cliente');
+  // Preserva a sub-tela do hash atual (ex: #cliente/historico) para restaurar
+  // a mesma view num F5, em vez de sempre voltar para o dashboard.
+  const _viewInicial=(typeof cpViewFromHash==='function')?cpViewFromHash(location.hash):'dash';
+  history.pushState(null,'',(location.hash&&location.hash.indexOf('#cliente')===0)?location.hash:'#cliente');
   _iniciarInatividade();
   const {data:cl}=await sf('/rest/v1/clientes?user_id=eq.'+_uid+'&limit=1&select=*');
   const c=cl&&cl[0];
@@ -247,7 +250,7 @@ async function carregarArea(){
   document.getElementById('ac-nome').textContent=primeiroNome;
   document.getElementById('ac-empresa').textContent=c?c.empresa:'Minha Área';
   if(typeof miaIniciarSupporte==='function') setTimeout(function(){miaIniciarSupporte(primeiroNome);},1500);
-  acMostrarView('dash');
+  acMostrarView(_viewInicial);
   if(_cpTemPermissaoCliente('chamados')){ carregarChamados(); }
   if(_cpTemPermissaoCliente('equipamentos')){ carregarEquips(); }
   carregarContratos();
@@ -1040,8 +1043,14 @@ function equipAcSelecionar(p,eq){
 
 window.addEventListener('DOMContentLoaded',function(){
   const t=localStorage.getItem('tt'),u=localStorage.getItem('tu');
-  if(t&&u){_tok=t;_uid=u;_email=localStorage.getItem('te')||null;} // Restaura tokens mas NÃO abre área do cliente automaticamente
+  if(t&&u){_tok=t;_uid=u;_email=localStorage.getItem('te')||null;}
   initPasswordToggles();
+  // Sessão restaurada + veio de uma URL da área do cliente (ex: #cliente/historico
+  // após F5): valida a sessão e restaura a tela, sem passar pela home pública.
+  if(_tok&&_uid&&location.hash.indexOf('#cliente')===0) carregarArea();
+});
+window.addEventListener('hashchange',function(){
+  if(_tok&&_uid&&location.hash.indexOf('#cliente')===0) carregarArea();
 });
 
 // ═══════════════════════════════════════════════════
@@ -1071,8 +1080,11 @@ async function tecInit(){
     document.documentElement.classList.add('no-scroll','mia-oculta');
     if(typeof miaFecharChat==='function') miaFecharChat();
     document.getElementById('portal-tecnico').style.display='block';
-    history.replaceState(null,'','#portaltecnico');
+    // Preserva a sub-tela do hash atual (ex: #portaltecnico/historico) para
+    // restaurar a mesma view num F5, em vez de sempre voltar para "Meus Chamados".
+    const _tecViewInicial=location.hash==='#portaltecnico/historico'?'historico':'chamados';
     await tecCarregarChamados();
+    tecMostrarView(_tecViewInicial);
   } else {
     document.getElementById('tec-login-bg').classList.add('open');
     history.replaceState(null,'','#portaltecnico');
@@ -1230,6 +1242,7 @@ function tecMostrarView(v){
     if(view) view.style.display=v===n?'':'none';
     if(tab) tab.classList.toggle('active',v===n);
   });
+  history.replaceState(null,'','#portaltecnico'+(v==='historico'?'/historico':''));
 }
 
 // ── HISTÓRICO DE EQUIPAMENTO ──
@@ -1930,5 +1943,5 @@ async function tecEnviarEmailEncerramento(c){
 }
 
 // ── ROTEAMENTO ──
-window.addEventListener('hashchange',()=>{if(location.hash==='#portaltecnico') tecInit();});
-window.addEventListener('DOMContentLoaded',()=>{if(location.hash==='#portaltecnico') tecInit();});
+window.addEventListener('hashchange',()=>{if(location.hash.indexOf('#portaltecnico')===0) tecInit();});
+window.addEventListener('DOMContentLoaded',()=>{if(location.hash.indexOf('#portaltecnico')===0) tecInit();});

@@ -71,7 +71,7 @@ function cpOnAreaLoad(){
     acoes.insertAdjacentElement('afterend', grid);
   }
 
-  cpSetNavAtivo('dash');
+  cpSetNavAtivo(cpViewFromHash(location.hash));
   cpCarregarBoletosResumo();
 }
 
@@ -83,6 +83,19 @@ var _CP_VIEW_MODULO_CLIENTE = {
   assist:'chamados', suprim:'chamados', historico:'chamados',
   contratos:'financeiro', financeiro:'financeiro'
 };
+
+// Hash da URL por view — usado tanto para escrever (cpNavegar) quanto para
+// restaurar a tela correta em carregarArea() num F5 (ver cpViewFromHash).
+var _CP_HASH_POR_VIEW = {
+  dash:'cliente', assist:'cliente/assistencia', suprim:'cliente/suprimentos',
+  contratos:'cliente/contratos', financeiro:'cliente/financeiro', historico:'cliente/historico'
+};
+
+function cpViewFromHash(hash){
+  var h = (hash || '').replace(/^#/, '');
+  for(var id in _CP_HASH_POR_VIEW){ if(_CP_HASH_POR_VIEW[id] === h) return id; }
+  return 'dash';
+}
 
 function cpNavegar(id){
   var modulo = _CP_VIEW_MODULO_CLIENTE[id];
@@ -96,11 +109,7 @@ function cpNavegar(id){
   if(view) view.classList.add('ac-view-active');
   var main = document.getElementById('cp-main');
   if(main) main.scrollTop = 0;
-  var hashes = {
-    dash:'cliente', assist:'cliente/assistencia', suprim:'cliente/suprimentos',
-    contratos:'cliente/contratos', financeiro:'cliente/financeiro', historico:'cliente/historico'
-  };
-  history.replaceState(null, '', '#' + (hashes[id] || 'cliente'));
+  history.replaceState(null, '', '#' + (_CP_HASH_POR_VIEW[id] || 'cliente'));
   cpFecharSidebar();
   if(id === 'financeiro') cpCarregarFinanceiro();
   else if(id === 'contratos') cpCarregarContratosView();
