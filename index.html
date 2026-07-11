@@ -2294,7 +2294,23 @@
   </div>
 </div>
 
-<!-- PAINEL ADMINISTRATIVO -->
+<!-- ADMIN: PAINEL DESCONTINUADO — o painel administrativo antigo (login +
+     tudo que vem depois dele, incluindo #admin-panel logo abaixo) não é mais
+     usado; o ERP real está em erp.teffe.com.br (repositório teffe-erp). A
+     rota #admin foi desligada em js/admin.js (admInit() mostra este aviso em
+     vez do login antigo) — ver comentário lá para detalhes de o que ainda
+     pode ser removido com segurança num cleanup futuro. -->
+<div class="modal-bg" id="adm-descontinuado-bg" onclick="if(event.target===this)admFecharDescontinuado()">
+  <div class="modal" style="max-width:420px;text-align:center;">
+    <button class="modal-x" onclick="admFecharDescontinuado()">✕</button>
+    <i class="ti ti-alert-triangle" style="font-size:32px;color:#F59E0B;margin-bottom:12px;display:block;"></i>
+    <h2 style="margin-bottom:8px;">Painel descontinuado</h2>
+    <p class="msub" style="margin-bottom:20px;">Este painel administrativo não é mais utilizado. Acesse o sistema atual em:</p>
+    <a href="https://erp.teffe.com.br" target="_blank" rel="noopener" class="btn-login" style="display:block;text-decoration:none;">Ir para o ERP →</a>
+  </div>
+</div>
+
+<!-- PAINEL ADMINISTRATIVO (código legado, não mais alcançável — ver aviso acima) -->
 <div id="admin-panel" style="display:none;position:fixed;inset:0;z-index:5100;background:#F5F7FA;overflow-y:auto;">
 
   <div class="adm-navbar">

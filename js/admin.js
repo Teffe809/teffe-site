@@ -133,11 +133,31 @@ function admFecharLogin(){
   history.replaceState(null,'',location.pathname);
 }
 
-// Ponto de entrada: sempre faz signOut e limpa estado antes de mostrar login
-async function admInit(){
-  await _supabase.auth.signOut();
-  _admUid=null;_admNome='';_admTecs=[];
-  admMostrarLogin();
+// Ponto de entrada da rota #admin — DESCONTINUADO. Este painel (login,
+// dashboard, gestão de chamados/técnicos/clientes e o fluxo legado de peças
+// admFaturarPecas/admDespacharPecas/admConfirmarEntregaPecas, que lia
+// chamados.pecas_status) não é mais usado: o ERP real em erp.teffe.com.br
+// (repositório teffe-erp) assumiu tudo isso, incluindo o fluxo de peças
+// correto (tabela chamado_pecas_pendentes, já consumida pelo portal do
+// técnico — ver _tecEnriquecerPecasPendentes em js/supabase.js).
+//
+// Ninguém no site linka para #admin (confirmado: nenhuma ocorrência em
+// index.html fora deste próprio arquivo) e nenhuma outra parte ativa do site
+// depende de código deste arquivo rodando — todas as chamadas cruzadas
+// (js/admin.js → outros arquivos) são guardadas com `typeof x==='function'`,
+// e a única chamada no sentido inverso (confirmarAlterarSenha() em
+// js/supabase.js, branch `portal==='adm'`) só é alcançada a partir daqui
+// mesmo. Por isso é seguro remover o resto deste arquivo e o bloco
+// #admin-panel/#adm-login-bg de index.html num cleanup futuro; por ora só a
+// rota foi desligada (login antigo trocado por um aviso com link pro ERP),
+// para não deixar a URL simplesmente quebrada.
+function admInit(){
+  document.getElementById('adm-descontinuado-bg').classList.add('open');
+  history.replaceState(null,'','#admin');
+}
+function admFecharDescontinuado(){
+  document.getElementById('adm-descontinuado-bg').classList.remove('open');
+  history.replaceState(null,'',location.pathname);
 }
 
 // ── NAVEGAÇÃO ──
