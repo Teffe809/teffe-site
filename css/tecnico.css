@@ -74,6 +74,7 @@
 .tec-st-em_deslocamento{background:#FEF3C7;color:#92400E;}
 .tec-st-em_atendimento,.tec-st-andamento{background:#FFEDD5;color:#C2410C;}
 .tec-st-aguardando_peca{background:#FFE4E6;color:#BE123C;}
+.tec-st-peca_entregue{background:#DCFCE7;color:#16A34A;}
 .tec-st-pendente{background:#E5E7EB;color:#374151;}
 .tec-st-encerrado{background:#DCFCE7;color:#166534;}
 
@@ -93,6 +94,9 @@
 .tec-pecas-faturado{background:#DBEAFE;color:#0A4B8D;}
 .tec-pecas-despachado{background:#FFEDD5;color:#F97316;}
 .tec-pecas-entregue{background:#DCFCE7;color:#16A34A;}
+/* Badge simplificado (2 estados) em cima de chamado_pecas_pendentes.status,
+   exibido no card de "Meus Chamados" — ver _tecPecaBadgeHtml. */
+.tec-pecas-aguardando{background:#FFE4E6;color:#BE123C;}
 
 /* ── MODAL DO CHAMADO ── */
 .tec-modal-header{display:flex;align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap;}

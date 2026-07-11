@@ -1240,6 +1240,33 @@ async function _tecEnriquecerEquipamentos(chamados){
   }catch(e){console.warn('[_tecEnriquecerEquipamentos]',e);}
 }
 
+// Status mais recente de peça pendente de cada chamado — tabela nova do
+// teffe-erp (chamado_pecas_pendentes), substitui o campo legado
+// chamados.pecas_status. Ver _tecPecaBadgeHtml para a simplificação em 2
+// estados exibida ao técnico.
+async function _tecEnriquecerPecasPendentes(chamados){
+  if(!chamados||!chamados.length) return;
+  try{
+    const ids=[...new Set(chamados.map(c=>c.id).filter(Boolean))];
+    if(!ids.length) return;
+    const {data:rows,ok}=await sfTec('/rest/v1/chamado_pecas_pendentes?chamado_id=in.('+ids.join(',')+')'+'&select=chamado_id,status&order=created_at.desc');
+    if(!ok||!Array.isArray(rows)) return;
+    const map={};
+    rows.forEach(r=>{ if(!(r.chamado_id in map)) map[r.chamado_id]=r.status; }); // já ordenado desc: 1ª ocorrência = mais recente
+    chamados.forEach(c=>{c._pecaPendenteStatus=map[c.id]||null;});
+  }catch(e){console.warn('[_tecEnriquecerPecasPendentes]',e);}
+}
+
+// Simplifica o status granular de chamado_pecas_pendentes para os 2 estados
+// que importam ao técnico: a peça ainda não chegou, ou já chegou.
+const TEC_PECA_STATUS_ENTREGUE='entregue';
+function _tecPecaBadgeHtml(status){
+  if(!status) return '';
+  return status===TEC_PECA_STATUS_ENTREGUE
+    ?'<span class="tec-pecas-badge tec-pecas-entregue">✅ Peça Entregue</span>'
+    :'<span class="tec-pecas-badge tec-pecas-aguardando">⏳ Aguardando Peça</span>';
+}
+
 // ── CHAMADOS ──
 async function tecCarregarChamados(){
   if(!_tecId) return;
@@ -1247,7 +1274,7 @@ async function tecCarregarChamados(){
   el.innerHTML='<div class="tec-loading">Carregando chamados...</div>';
   const {data,ok,status:httpSt}=await sfTec('/rest/v1/chamados?tecnico_id=eq.'+_tecId+'&status=neq.encerrado&order=created_at.asc&select=*');
   if(!ok){el.innerHTML='<div class="tec-empty">Erro ao carregar chamados ('+httpSt+'). Verifique o console.</div>';return;}
-  await Promise.all([_tecEnriquecerClientes(data||[]),_tecEnriquecerEquipamentos(data||[])]);
+  await Promise.all([_tecEnriquecerClientes(data||[]),_tecEnriquecerEquipamentos(data||[]),_tecEnriquecerPecasPendentes(data||[])]);
   _tecChamadosData={};
   (data||[]).forEach(c=>{_tecChamadosData[c.id]=c;});
   if(!data||!data.length){el.innerHTML='<div class="tec-empty">Nenhum chamado atribuído a você.</div>';}
@@ -1471,7 +1498,7 @@ async function tecHistAbrirDetalhe(idx){
 function tecHistFecharDetalhe(){document.getElementById('tec-hist-modal').classList.remove('open');}
 
 function tecStatusLabel(s){
-  const l={aberto:'Despachado',despachado:'Despachado',em_deslocamento:'Em Deslocamento',em_atendimento:'Em Atendimento',aguardando_peca:'Aguard. Peça',pendente:'Pendente',encerrado:'Encerrado',andamento:'Em Andamento'};
+  const l={aberto:'Despachado',despachado:'Despachado',em_deslocamento:'Em Deslocamento',em_atendimento:'Em Atendimento',aguardando_peca:'Aguard. Peça',peca_entregue:'Peça Entregue',pendente:'Pendente',encerrado:'Encerrado',andamento:'Em Andamento'};
   return l[s]||s||'–';
 }
 
@@ -1516,6 +1543,7 @@ function tecRenderCard(c,idx){
           <span style="font-size:10px;color:#9CA3AF">O.S. ${num}</span>
           <span class="tec-tipo-badge tec-tipo-${tipoRaw||'assistencia'}">${tipo}</span>
           <span class="tec-badge-st tec-st-${st}">${tecStatusLabel(st)}</span>
+          ${_tecPecaBadgeHtml(c._pecaPendenteStatus)}
         </div>
       </div>
       <div class="tec-card-r">
@@ -1616,7 +1644,8 @@ function tecRenderAcoes(st){
     despachado:despachadoBtns,
     em_deslocamento:`<button class="tec-btn tec-btn-laranja" onclick="tecEnAtendimento()"><i class="ti ti-tool"></i> Iniciar Atendimento</button>`,
     em_atendimento:`<button class="tec-btn tec-btn-verde" onclick="tecAbrirEncerrar()"><i class="ti ti-check"></i> Encerrar Chamado</button><button class="tec-btn tec-btn-vermelho" onclick="tecAbrirPecaModal()"><i class="ti ti-package"></i> Solicitar Peças</button><button class="tec-btn tec-btn-cinza" onclick="tecAbrirModalPendente()"><i class="ti ti-pause"></i> Colocar Pendente</button>`,
-    pendente:`<button class="tec-btn tec-btn-laranja" onclick="tecRetomar()"><i class="ti ti-play"></i> Retomar</button>`
+    pendente:`<button class="tec-btn tec-btn-laranja" onclick="tecRetomar()"><i class="ti ti-play"></i> Retomar</button>`,
+    peca_entregue:`<button class="tec-btn tec-btn-verde" onclick="tecAbrirEncerrar()"><i class="ti ti-check"></i> Encerrar Chamado</button><button class="tec-btn tec-btn-vermelho" onclick="tecAbrirPecaModal()"><i class="ti ti-package"></i> Solicitar Peça</button>`
   };
   el.innerHTML=btns[st]||'';
 }
