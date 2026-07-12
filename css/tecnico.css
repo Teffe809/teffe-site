@@ -45,7 +45,13 @@
 
 /* Linhas do card */
 .tec-card-l1{font-size:14px;font-weight:700;color:#1A202C;margin-bottom:3px;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;}
-.tec-card-num{font-family:'Syne',sans-serif;font-size:13px;font-weight:900;color:#1A3F80;flex-shrink:0;}
+/* Era 'Syne' (fonte de destaque/título do portal) a peso 900 — os
+   numerais dessa fonte são estilizados/geométricos, difíceis de ler rápido
+   num número de O.S.. Troca pra --font-b ('DM Sans', a fonte de TEXTO do
+   design system — ver css/style.css :root), que é a mesma usada no corpo
+   do site inteiro; mantém negrito e sobe 1px o tamanho pra continuar tendo
+   destaque sem depender da fonte estilizada. */
+.tec-card-num{font-family:var(--font-b);font-size:14px;font-weight:700;color:#1A3F80;flex-shrink:0;}
 .tec-card-cliente-nome{font-size:14px;font-weight:700;color:#1A202C;}
 .tec-card-cod{font-size:11px;color:#9CA3AF;font-weight:400;}
 .tec-card-l2{font-size:12px;color:#6B7280;margin-bottom:3px;}
