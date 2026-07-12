@@ -1107,7 +1107,14 @@ window.addEventListener('hashchange',function(){
 let _tecTok=null,_tecUid=null,_tecId=null,_tecNome='';
 let _tecChamadoAtual=null,_tecChamadosData={},_tecPecasCatalogo=null;
 // Prazo padrão: 12h úteis (720min) — antes 8h (480min).
-const TEC_SLA_MAP={corretiva:720,assistencia:720,instalacao:720,desinstalacao:720,troca_pecas:720,troca_de_pecas:720,manutencao:1440,manutencao_preventiva:1440,vistoria:1440,visita_tecnica:1440};
+const TEC_SLA_MAP={corretiva:720,assistencia:720,instalacao:720,desinstalacao:720,troca_pecas:720,troca_de_pecas:720,manutencao:1440,manutencao_preventiva:1440,preventiva:1440,vistoria:1440,visita_tecnica:1440};
+// SLA (contagem regressiva) só faz sentido pra Corretiva/Assistência e
+// Instalação — os demais tipos não têm prazo de atendimento cobrado dessa
+// forma. Ver _tecSlaVisivel(), usado tanto no card da lista quanto no modal.
+const TEC_SLA_TIPOS_VISIVEIS=['assistencia','corretiva','instalacao'];
+function _tecSlaVisivel(tipoRaw){
+  return TEC_SLA_TIPOS_VISIVEIS.indexOf(tipoRaw)!==-1;
+}
 
 async function sfTec(path,opts){
   const h={'apikey':SKEY,'Content-Type':'application/json'};
@@ -1449,8 +1456,7 @@ async function tecHistAbrirDetalhe(idx){
   const c=_tecHistData[idx];
   if(!c) return;
   const st=c.status_tecnico||c.status||'aberto';
-  const tipoMap={assistencia:'Assistência Técnica',instalacao:'Instalação',desinstalacao:'Desinstalação',vistoria:'Vistoria',visita_tecnica:'Visita Técnica'};
-  const tipo=tipoMap[c.tipo_servico]||tipoMap[c.tipo_chamado]||c.tipo_servico||c.tipo_chamado||'–';
+  const tipo=_TEC_TIPO_MAP[c.tipo_chamado||c.tipo_servico]||c.tipo_chamado||c.tipo_servico||'–';
   const cliente=c.clientes?(c.clientes.empresa||c.clientes.nome||'–'):'–';
   const cidade=c.clientes?c.clientes.cidade||'–':'–';
   const enderecoCompleto=_tecEnderecoCompleto(c.clientes);
@@ -1502,7 +1508,9 @@ function tecStatusLabel(s){
   return l[s]||s||'–';
 }
 
-const _TEC_TIPO_MAP={assistencia:'Assistência Técnica',corretiva:'Corretiva',manutencao:'Manutenção',manutencao_preventiva:'Manut. Preventiva',instalacao:'Instalação',desinstalacao:'Desinstalação',vistoria:'Vistoria',visita_tecnica:'Visita Técnica',troca_pecas:'Troca de Peças',troca_de_pecas:'Troca de Peças'};
+// Mapeamento único de tipo → label, usado em toda a área do técnico (card da
+// lista, modal de detalhe, histórico de equipamento) — ver tipoRaw abaixo.
+const _TEC_TIPO_MAP={assistencia:'Assistência Técnica',corretiva:'Corretiva',manutencao:'Manutenção',manutencao_preventiva:'Manutenção Preventiva',preventiva:'Manutenção Preventiva',instalacao:'Instalação',desinstalacao:'Desinstalação',vistoria:'Vistoria',visita_tecnica:'Visita Técnica',troca_pecas:'Troca de Peças',troca_de_pecas:'Troca de Peças'};
 
 // Mostra tempo RESTANTE (contagem regressiva de slaMin até 0), não mais
 // decorrido — chamado recém-aberto mostra o prazo cheio (ex.: 12:00) e vai
@@ -1515,7 +1523,11 @@ const _TEC_TIPO_MAP={assistencia:'Assistência Técnica',corretiva:'Corretiva',m
 // sem valor.
 function _tecSlaDecorrido(c){
   if(!c.created_at) return{hhmm:'–',atrasado:false};
-  const tipoRaw=c.tipo_servico||c.tipo_chamado||'';
+  // tipo_chamado é o tipo específico (instalacao/preventiva/etc.);
+  // tipo_servico é uma categoria mais genérica que vem preenchida em todo
+  // chamado do técnico (normalmente 'assistencia') — por isso tipo_chamado
+  // tem prioridade aqui, senão o tipo específico nunca aparece.
+  const tipoRaw=c.tipo_chamado||c.tipo_servico||'';
   const slaMin=TEC_SLA_MAP[tipoRaw]||720;
   let pausado=c.sla_tempo_pausado||0;
   if(c.sla_pausado&&c.sla_pausa_inicio) pausado+=calcularSLAUtil(c.sla_pausa_inicio,0);
@@ -1529,7 +1541,7 @@ function _tecSlaDecorrido(c){
 
 function tecRenderCard(c,idx){
   const st=c.status_tecnico||c.status||'aberto';
-  const tipoRaw=c.tipo_servico||c.tipo_chamado||'';
+  const tipoRaw=c.tipo_chamado||c.tipo_servico||'';
   const tipo=_TEC_TIPO_MAP[tipoRaw]||tipoRaw||'–';
   const cli=c.clientes||{};
   const cliente=cli.empresa||cli.nome||'–';
@@ -1559,8 +1571,9 @@ function tecRenderCard(c,idx){
         </div>
       </div>
       <div class="tec-card-r">
-        <div class="tec-card-sla-val${sla.atrasado?' tec-sla-atrasado':''}">${sla.hhmm}</div>
-        <div class="tec-card-sla-unit">${sla.atrasado?'hrs atraso':'hrs restante'}</div>
+        ${_tecSlaVisivel(tipoRaw)?`<div class="tec-card-sla-val${sla.atrasado?' tec-sla-atrasado':''}">${sla.hhmm}</div>
+        <div class="tec-card-sla-unit">${sla.atrasado?'hrs atraso':'hrs restante'}</div>`:`<div class="tec-card-sla-val" style="color:#CBD5E1;">—</div>
+        <div class="tec-card-sla-unit">sem SLA</div>`}
         <div class="tec-card-idx">#${(idx||0)+1}</div>
       </div>
     </div>
@@ -1573,8 +1586,7 @@ async function tecAbrirDetalhe(id){
   if(!c) return;
   _tecChamadoAtual=c;
   const st=c.status_tecnico||c.status||'aberto';
-  const tipoMap={assistencia:'Assistência Técnica',instalacao:'Instalação',desinstalacao:'Desinstalação',vistoria:'Vistoria',visita_tecnica:'Visita Técnica'};
-  const tipo=tipoMap[c.tipo_servico]||tipoMap[c.tipo_chamado]||c.tipo_servico||c.tipo_chamado||'–';
+  const tipo=_TEC_TIPO_MAP[c.tipo_chamado||c.tipo_servico]||c.tipo_chamado||c.tipo_servico||'–';
   const cliente=c.clientes?(c.clientes.empresa||c.clientes.nome||'–'):'–';
   const cidade=c.clientes?c.clientes.cidade||'–':'–';
   const enderecoCompleto=_tecEnderecoCompleto(c.clientes);
@@ -2013,7 +2025,8 @@ function calcularSLAUtil(dataAbertura,minutesPausados){
 function tecFormatarSLA(c){
   const st=c.status_tecnico||c.status;
   if(st==='encerrado') return {texto:'Encerrado',atrasado:false};
-  const tipoRaw=c.tipo_servico||c.tipo_chamado||'assistencia';
+  const tipoRaw=c.tipo_chamado||c.tipo_servico||'assistencia';
+  if(!_tecSlaVisivel(tipoRaw)) return {texto:'Sem SLA para este tipo de chamado',atrasado:false};
   const slaMin=TEC_SLA_MAP[tipoRaw]||720;
   let pausado=c.sla_tempo_pausado||0;
   if(c.sla_pausado&&c.sla_pausa_inicio) pausado+=calcularSLAUtil(c.sla_pausa_inicio,0);
