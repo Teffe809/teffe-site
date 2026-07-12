@@ -21,7 +21,7 @@
 
 /* ── CARD — novo layout horizontal ── */
 .tec-card{
-  background:#fff;
+  background:#F3F4F6;
   border-radius:0;
   padding:14px 16px 14px 0;
   cursor:pointer;
@@ -73,6 +73,23 @@
 .tec-tipo-brd-troca_pecas,.tec-tipo-brd-troca_de_pecas{border-left-color:#CA8A04;}
 .tec-tipo-brd-assistencia{border-left-color:#6B7280;}
 .tec-tipo-brd-aguardando_peca{border-left-color:#BE123C;}
+
+/* Fundo pastel por TIPO (mesma classe tec-tipo-brd-*, já aplicada em todo
+   card — cor de fundo suave, além do accent da borda esquerda acima).
+   corretiva/assistencia dividem o mesmo tom porque, na prática, são o
+   mesmo balde de "atendimento corretivo" (tipo_servico='corretiva' só
+   aparece em alguns registros; a maioria usa 'assistencia' — sondagem em
+   produção: hoje 100% dos chamados reais estão como tipo_chamado=
+   tipo_servico='assistencia', 'corretiva' nunca foi usado ainda, mas o
+   rótulo existe em _TEC_TIPO_MAP como valor distinto). Tipos sem regra
+   própria (vistoria, visita_tecnica, troca_pecas, troca_de_pecas,
+   suprimento, avulso, outro, e qualquer valor futuro não mapeado) caem no
+   cinza neutro herdado da base .tec-card acima — não precisam de regra
+   dedicada, é o comportamento padrão do card.  */
+.tec-tipo-brd-corretiva,.tec-tipo-brd-assistencia{background:#FEE2E2;}
+.tec-tipo-brd-instalacao{background:#DBEAFE;}
+.tec-tipo-brd-desinstalacao{background:#FEF9C3;}
+.tec-tipo-brd-manutencao,.tec-tipo-brd-manutencao_preventiva,.tec-tipo-brd-preventiva{background:#DCFCE7;}
 
 /* ── BADGES DE STATUS ── */
 .tec-badge-st{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap;}
