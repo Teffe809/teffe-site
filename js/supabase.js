@@ -1504,6 +1504,15 @@ function tecStatusLabel(s){
 
 const _TEC_TIPO_MAP={assistencia:'Assistência Técnica',corretiva:'Corretiva',manutencao:'Manutenção',manutencao_preventiva:'Manut. Preventiva',instalacao:'Instalação',desinstalacao:'Desinstalação',vistoria:'Vistoria',visita_tecnica:'Visita Técnica',troca_pecas:'Troca de Peças',troca_de_pecas:'Troca de Peças'};
 
+// Mostra tempo RESTANTE (contagem regressiva de slaMin até 0), não mais
+// decorrido — chamado recém-aberto mostra o prazo cheio (ex.: 12:00) e vai
+// descontando. Congela sozinho fora do expediente: calcularSLAUtil já para
+// de acumular minutos quando "agora" cai fora de seg-sex 8-12h/13-18h (o
+// loop interno só soma enquanto cur<agora dentro de uma janela útil), então
+// não precisa de nenhuma lógica extra de "pausar exibição" — é decorrência
+// direta de como o cálculo de minutos úteis já funciona. Estourou o prazo
+// (restante<0) mostra negativo (ex. "-3:00") em vez de só sinalizar atraso
+// sem valor.
 function _tecSlaDecorrido(c){
   if(!c.created_at) return{hhmm:'–',atrasado:false};
   const tipoRaw=c.tipo_servico||c.tipo_chamado||'';
@@ -1511,8 +1520,11 @@ function _tecSlaDecorrido(c){
   let pausado=c.sla_tempo_pausado||0;
   if(c.sla_pausado&&c.sla_pausa_inicio) pausado+=calcularSLAUtil(c.sla_pausa_inicio,0);
   const dec=calcularSLAUtil(c.created_at,pausado);
-  const h=Math.floor(dec/60),m=dec%60;
-  return{hhmm:h+':'+String(m).padStart(2,'0'),atrasado:dec>slaMin};
+  const restante=slaMin-dec;
+  const atrasado=restante<0;
+  const abs=Math.abs(restante);
+  const h=Math.floor(abs/60),m=abs%60;
+  return{hhmm:(atrasado?'-':'')+h+':'+String(m).padStart(2,'0'),atrasado:atrasado};
 }
 
 function tecRenderCard(c,idx){
@@ -1548,7 +1560,7 @@ function tecRenderCard(c,idx){
       </div>
       <div class="tec-card-r">
         <div class="tec-card-sla-val${sla.atrasado?' tec-sla-atrasado':''}">${sla.hhmm}</div>
-        <div class="tec-card-sla-unit">${sla.atrasado?'hrs (atraso)':'hrs decorrido'}</div>
+        <div class="tec-card-sla-unit">${sla.atrasado?'hrs atraso':'hrs restante'}</div>
         <div class="tec-card-idx">#${(idx||0)+1}</div>
       </div>
     </div>
@@ -2007,9 +2019,11 @@ function tecFormatarSLA(c){
   if(c.sla_pausado&&c.sla_pausa_inicio) pausado+=calcularSLAUtil(c.sla_pausa_inicio,0);
   const decorrido=calcularSLAUtil(c.created_at,pausado);
   const restante=slaMin-decorrido;
-  if(restante<=0) return {texto:'ATRASADO',atrasado:true};
-  const h=Math.floor(restante/60),m=restante%60;
-  return {texto:`SLA: ${h}h ${String(m).padStart(2,'0')}m restantes`,atrasado:false};
+  const atrasado=restante<0;
+  const abs=Math.abs(restante);
+  const h=Math.floor(abs/60),m=abs%60;
+  const txt=(atrasado?'-':'')+h+'h '+String(m).padStart(2,'0')+'m';
+  return {texto: atrasado ? `SLA: ${txt} (ATRASADO)` : `SLA: ${txt} restantes`, atrasado:atrasado};
 }
 
 // ── E-MAILS via Supabase Edge Function ──
