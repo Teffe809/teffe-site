@@ -4,7 +4,8 @@
 ═══════════════════════════════════════════════ */
 
 var _MIA_EDGE      = 'https://hlfjcpgrxiktgctozilk.supabase.co/functions/v1/mia-chat';
-var _MIA_EDGE_LEAD = 'https://hlfjcpgrxiktgctozilk.supabase.co/functions/v1/mia-salvar-lead';
+var _MIA_PRIVACY   = 'https://teffe.com.br/politica-de-privacidade.html';
+var _MIA_CONVERSATION_KEY = 'teffe_mia_site_conversation_v2';
 
 /* ── Estado ── */
 var _miaAberto    = false;
@@ -13,7 +14,40 @@ var _miaEtapa     = 'inicio';  // inicio | aguardando-nome | conversa
 var _miaNome      = '';
 var _miaHistorico = []; // [{role, content}] enviado à Claude API
 var _miaLeadSalvo = false;
+var _miaLeadState = null;
+var _miaConversationId = _miaGetConversationId();
 var _MIA_MODO     = 'vendas'; // 'vendas' | 'suporte'
+
+function _miaUuid() {
+  if (window.crypto && typeof window.crypto.randomUUID === 'function') return window.crypto.randomUUID();
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    var r = Math.random() * 16 | 0;
+    var v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
+function _miaGetConversationId() {
+  var now = Date.now();
+  try {
+    if (window.__MIA_HML_CONFIG__ && window.__MIA_HML_CONFIG__.freshConversationOnLoad) {
+      var freshId = _miaUuid();
+      localStorage.setItem(_MIA_CONVERSATION_KEY, JSON.stringify({ id: freshId, updated_at: now }));
+      return freshId;
+    }
+    var saved = JSON.parse(localStorage.getItem(_MIA_CONVERSATION_KEY) || 'null');
+    if (saved && typeof saved.id === 'string' && /^[a-f0-9-]{20,80}$/i.test(saved.id) && now - Number(saved.updated_at || 0) < 24 * 60 * 60 * 1000) {
+      saved.updated_at = now;
+      localStorage.setItem(_MIA_CONVERSATION_KEY, JSON.stringify(saved));
+      return saved.id;
+    }
+    var id = _miaUuid();
+    localStorage.setItem(_MIA_CONVERSATION_KEY, JSON.stringify({ id: id, updated_at: now }));
+    return id;
+  } catch (_) {
+    return _miaUuid();
+  }
+}
 
 /* ── Verifica se Mia deve operar neste contexto ── */
 function _miaContextoValido() {
@@ -60,6 +94,7 @@ function miaIniciarSupporte(nomeCliente) {
   _miaEtapa    = 'inicio';
   _miaHistorico = [];
   _miaLeadSalvo = false;
+  _miaLeadState = null;
   var wrap = document.getElementById('mia-messages');
   if (wrap) wrap.innerHTML = '';
   // Não abre o chat automaticamente — Mia fica só como o ícone/bolha; a
@@ -80,8 +115,9 @@ function _miaBoasVindas() {
 
 function _miaBoasVindasVendas() {
   _miaInputEnabled(false);
-  var msg1 = 'Olá! Eu sou a Mia, assistente inteligente da Teffe. Vamos descobrir juntos o que podemos fazer para sua empresa crescer mais? 😊';
-  var msg2 = 'Antes de começar, como posso te chamar?';
+  var msg1 = 'Olá! Eu sou a Mia, assistente inteligente da Teffe. É muito bom ter você aqui! 😊';
+  var msg2 = 'Vamos descobrir juntos o que podemos fazer para sua empresa crescer mais?';
+  var msg3 = 'Antes de começarmos, como posso te chamar?';
 
   _miaShowTyping();
   setTimeout(function() {
@@ -92,12 +128,22 @@ function _miaBoasVindasVendas() {
       setTimeout(function() {
         _miaRemoveTyping();
         _miaAddMsg('bot', msg2);
-        _miaEtapa = 'aguardando-nome';
-        _miaInputEnabled(true);
-        var inp = document.getElementById('mia-input');
-        if (inp) { inp.placeholder = 'Digite seu nome...'; inp.focus(); }
-      }, 1000);
-    }, 700);
+        setTimeout(function() {
+          _miaShowTyping();
+          setTimeout(function() {
+            _miaRemoveTyping();
+            _miaAddMsg('bot', msg3);
+            _miaHistorico = [
+              { role: 'assistant', content: [msg1.replace(/<[^>]+>/g, ''), msg2, msg3].join('\n\n') }
+            ];
+            _miaEtapa = 'aguardando-nome';
+            _miaInputEnabled(true);
+            var inp = document.getElementById('mia-input');
+            if (inp) { inp.placeholder = 'Digite seu nome...'; inp.focus(); }
+          }, 850);
+        }, 500);
+      }, 850);
+    }, 500);
   }, 1300);
 }
 
@@ -120,6 +166,52 @@ function _miaBoasVindasSupporte() {
   }, 900);
 }
 
+function _miaEhSomenteNome(texto) {
+  var valor = String(texto || '').trim();
+  if (valor.length < 2 || valor.length > 80 || /[,;:!?@\d]/u.test(valor)) return false;
+  if (!/^[\p{L}][\p{L}'’-]*(?:\s+[\p{L}][\p{L}'’-]*){0,3}$/u.test(valor)) return false;
+  var normalizado = valor.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  return !/\b(?:bom|boa|dia|tarde|noite|oi|ola|sou|meu|minha|nome|preciso|quero|gostaria|empresa|trabalho|notebook|desktop|computador|impressora|multifuncional|locacao|alugar|whatsapp|telefone|email|ia|suporte|ti)\b/u.test(normalizado);
+}
+
+function _miaUltimaMensagemPediuNome() {
+  var ultima = _miaHistorico[_miaHistorico.length - 1];
+  return Boolean(ultima && ultima.role === 'assistant' && /(?:como posso te chamar|qual (?:e|é) (?:o )?seu nome|como voce (?:se chama|gostaria de ser chamado))/iu.test(ultima.content || ''));
+}
+
+function _miaPodeUsarFastPathNome(texto) {
+  return _MIA_MODO === 'vendas' && _miaEtapa === 'aguardando-nome' && _miaUltimaMensagemPediuNome() && _miaEhSomenteNome(texto);
+}
+
+function _miaSaudacaoHorario(data) {
+  var hora = (data instanceof Date ? data : new Date()).getHours();
+  return hora >= 5 && hora < 12 ? 'Bom dia' : hora >= 12 && hora < 18 ? 'Boa tarde' : 'Boa noite';
+}
+
+function _miaResponderNomeLocal(nome) {
+  _miaNome = nome;
+  _miaLeadState = Object.assign({}, _miaLeadState || {}, {
+    version: 2,
+    conversation_id: _miaConversationId,
+    nome: nome,
+    saudacao_realizada: true
+  });
+  _miaHistorico.push({ role: 'user', content: nome });
+  _miaInputEnabled(false);
+  _miaShowTyping();
+
+  var periodo = _miaSaudacaoHorario();
+  var resposta = periodo + ', ' + nome + '! 😊 Qual solução da Teffe você gostaria de conhecer melhor?';
+  setTimeout(function() {
+    _miaRemoveTyping();
+    _miaAddMsg('bot', _miaEsc(resposta));
+    _miaHistorico.push({ role: 'assistant', content: resposta });
+    _miaInputEnabled(true);
+    var input = document.getElementById('mia-input');
+    if (input) input.focus();
+  }, 1100);
+}
+
 /* ── Enviar mensagem ── */
 function miaSend() {
   var input = document.getElementById('mia-input');
@@ -131,28 +223,15 @@ function miaSend() {
   _miaAddMsg('user', _miaEsc(texto));
 
   if (_miaEtapa === 'aguardando-nome') {
-    _miaNome  = texto.split(' ')[0];
+    var usarFastPathNome = _miaPodeUsarFastPathNome(texto);
     _miaEtapa = 'conversa';
-    _miaInputEnabled(false);
     var inp = document.getElementById('mia-input');
     if (inp) inp.placeholder = 'Digite sua mensagem...';
-
-    var respostaNome = 'Prazer, ' + _miaNome + '! O que sua empresa mais precisa nesse momento?';
-
-    _miaHistorico = [
-      { role: 'assistant', content: 'Olá! Eu sou a Mia, assistente inteligente da Teffe. Vamos descobrir juntos o que podemos fazer para sua empresa crescer mais?' },
-      { role: 'user',      content: texto },
-      { role: 'assistant', content: respostaNome }
-    ];
-
-    _miaShowTyping();
-    setTimeout(function() {
-      _miaRemoveTyping();
-      _miaAddMsg('bot', 'Prazer, <strong>' + _miaEsc(_miaNome) + '</strong>! O que sua empresa mais precisa nesse momento?');
-      _miaInputEnabled(true);
-      var inp2 = document.getElementById('mia-input');
-      if (inp2) inp2.focus();
-    }, 1000);
+    if (usarFastPathNome) {
+      _miaResponderNomeLocal(texto);
+      return;
+    }
+    _miaResponder(texto);
     return;
   }
 
@@ -168,10 +247,17 @@ async function _miaResponder(msg) {
   _miaShowTyping();
 
   try {
-    var payload = { messages: _miaHistorico };
+    var payload;
     if (_MIA_MODO === 'suporte') {
+      payload = { messages: _miaHistorico };
       payload.modo = 'suporte';
       payload.cliente_nome = _miaNome;
+    } else {
+      payload = {
+        conversation_id: _miaConversationId,
+        message: msg,
+        lead_state: _miaLeadState
+      };
     }
 
     var res = await fetch(_MIA_EDGE, {
@@ -193,17 +279,16 @@ async function _miaResponder(msg) {
 
     var resposta = data.text || '';
     _miaHistorico.push({ role: 'assistant', content: resposta });
-    _miaExibirBlocos(_miaQuebrarBlocos(resposta));
-
-    // Salvar lead apenas no modo vendas
-    if (_MIA_MODO === 'vendas' && data.salvar_lead && !_miaLeadSalvo) {
-      _miaLeadSalvo = true;
-      fetch(_MIA_EDGE_LEAD, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nome: _miaNome, historico: _miaHistorico })
-      }).catch(function(e) { console.error('[Mia] lead save error:', e); });
+    if (_miaHistorico.length > 24) _miaHistorico = _miaHistorico.slice(-24);
+    if (_MIA_MODO === 'vendas' && data.lead_state) {
+      _miaLeadState = data.lead_state;
+      if (data.lead_state.nome) _miaNome = data.lead_state.nome;
+      _miaLeadSalvo = Boolean(data.lead_saved || data.lead_status === 'salvo');
+      try {
+        localStorage.setItem(_MIA_CONVERSATION_KEY, JSON.stringify({ id: _miaConversationId, updated_at: Date.now() }));
+      } catch (_) { /* armazenamento local pode estar bloqueado */ }
     }
+    _miaExibirBlocos(_miaQuebrarBlocos(resposta));
 
   } catch(e) {
     console.error('[Mia] fetch error:', e);
@@ -215,6 +300,47 @@ async function _miaResponder(msg) {
 }
 
 /* ── Divide resposta em blocos para exibição gradual ── */
+function _miaAdicionarBlocoLegivel(blocos, parte) {
+  parte = String(parte || '').trim();
+  if (!parte) return;
+  if (parte.length <= 300) {
+    blocos.push(parte);
+    return;
+  }
+
+  var frases = parte.split(/(?<=[.!?])\s+/);
+  var atual = '';
+  frases.forEach(function(f) {
+    if (atual && (atual + ' ' + f).length > 300) {
+      blocos.push(atual.trim());
+      atual = f;
+    } else {
+      atual = atual ? atual + ' ' + f : f;
+    }
+  });
+  if (atual.trim()) blocos.push(atual.trim());
+}
+
+function _miaExtrairPrivacidadeAtomica(parte) {
+  var policyIndex = parte.indexOf(_MIA_PRIVACY);
+  if (policyIndex < 0) return null;
+
+  var questionEnd = parte.lastIndexOf('?', policyIndex);
+  if (questionEnd < 0) return { prefixo: '', atomico: parte.trim() };
+
+  var beforeQuestion = parte.slice(0, questionEnd);
+  var sentenceBoundary = Math.max(
+    beforeQuestion.lastIndexOf('. '),
+    beforeQuestion.lastIndexOf('! '),
+    beforeQuestion.lastIndexOf('? ')
+  );
+  var start = sentenceBoundary >= 0 ? sentenceBoundary + 2 : 0;
+  return {
+    prefixo: parte.slice(0, start).trim(),
+    atomico: parte.slice(start).trim()
+  };
+}
+
 function _miaQuebrarBlocos(texto) {
   var partes = texto.split(/\n\n+/);
   var blocos = [];
@@ -223,25 +349,38 @@ function _miaQuebrarBlocos(texto) {
     parte = parte.trim();
     if (!parte) return;
 
-    if (parte.length <= 300) {
-      blocos.push(parte);
+    var privacidade = _miaExtrairPrivacidadeAtomica(parte);
+    if (privacidade) {
+      _miaAdicionarBlocoLegivel(blocos, privacidade.prefixo);
+      blocos.push(privacidade.atomico);
       return;
     }
 
-    var frases = parte.split(/(?<=[.!?])\s+/);
-    var atual = '';
-    frases.forEach(function(f) {
-      if (atual && (atual + ' ' + f).length > 300) {
-        blocos.push(atual.trim());
-        atual = f;
-      } else {
-        atual = atual ? atual + ' ' + f : f;
-      }
-    });
-    if (atual.trim()) blocos.push(atual.trim());
+    _miaAdicionarBlocoLegivel(blocos, parte);
   });
 
   return blocos.filter(Boolean);
+}
+
+function _miaNormalizarReferenciaPrivacidade(texto) {
+  var normalizado = String(texto || '');
+  var urlEscapada = _MIA_PRIVACY.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  var markdown = new RegExp('\\[[^\\]\\n]{1,160}\\]\\s*\\\\?\\(\\s*' + urlEscapada + '\\s*\\\\?\\)', 'gi');
+  for (var i = 0; i < 3; i++) normalizado = normalizado.replace(markdown, _MIA_PRIVACY);
+  return normalizado.replace(new RegExp('(' + urlEscapada + ')(?:\\s*[),.;:]*\\s*' + urlEscapada + ')+', 'gi'), '$1');
+}
+
+/* Ritmo de leitura baseado no texto que realmente aparece no balão. */
+function _miaCalcularDelayBalao(texto) {
+  var visivel = _miaNormalizarReferenciaPrivacidade(texto)
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(_MIA_PRIVACY, 'Política de Privacidade da TEFFE')
+    .replace(/\*\*/g, '')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&(?:amp|lt|gt|quot|#39);/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return Math.round(Math.min(5000, Math.max(1600, 1600 + visivel.length * 12)));
 }
 
 /* ── Exibe blocos um a um com pausa de leitura entre eles ── */
@@ -266,7 +405,9 @@ function _miaExibirBlocos(blocos) {
       _miaInputEnabled(true);
       return;
     }
-    var readTime = Math.min(4000, Math.max(1500, blocos[i - 1].length * 50));
+    var totalDelay = _miaCalcularDelayBalao(blocos[i - 1]);
+    var typingTime = 800;
+    var readingTime = Math.max(0, totalDelay - typingTime);
     setTimeout(function() {
       _miaShowTyping();
       setTimeout(function() {
@@ -274,17 +415,19 @@ function _miaExibirBlocos(blocos) {
         _miaAddMsg('bot', _miaFormatMsg(blocos[i]));
         i++;
         _proximo();
-      }, 800);
-    }, readTime);
+      }, typingTime);
+    }, readingTime);
   }
   _proximo();
 }
 
 /* ── Formata texto da API para HTML ── */
 function _miaFormatMsg(text) {
-  return text
+  var ancoraPrivacidade = '<a href="' + _MIA_PRIVACY + '" target="_blank" rel="noopener noreferrer">Política de Privacidade</a>';
+  return _miaNormalizarReferenciaPrivacidade(text)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(_MIA_PRIVACY, ancoraPrivacidade)
     .replace(/\n/g, '<br>');
 }
 
