@@ -17,6 +17,11 @@ var _miaLeadSalvo = false;
 var _miaLeadState = null;
 var _miaConversationId = _miaGetConversationId();
 var _MIA_MODO     = 'vendas'; // 'vendas' | 'suporte'
+// Espelha #mia-input a cada tecla digitada (evento 'input'). O site (fora deste widget) aplica
+// reformatação global a campos <input> via atribuição direta de `.value` — o que NÃO dispara um
+// novo evento 'input' — então este rastreador sempre guarda o texto exatamente como o visitante
+// digitou, mesmo que o próprio <input> seja alterado depois por um script externo antes do envio.
+var _miaTextoDigitado = '';
 
 function _miaUuid() {
   if (window.crypto && typeof window.crypto.randomUUID === 'function') return window.crypto.randomUUID();
@@ -216,9 +221,10 @@ function _miaResponderNomeLocal(nome) {
 function miaSend() {
   var input = document.getElementById('mia-input');
   if (!input || input.disabled) return;
-  var texto = input.value.trim();
+  var texto = (_miaTextoDigitado || input.value).trim();
   if (!texto) return;
   input.value = '';
+  _miaTextoDigitado = '';
 
   _miaAddMsg('user', _miaEsc(texto));
 
@@ -495,6 +501,12 @@ function _miaEsc(str) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
 }
+
+/* ── Observa a digitação original em #mia-input (ver _miaTextoDigitado acima) ── */
+(function _miaObservarDigitacaoOriginal() {
+  var inp = document.getElementById('mia-input');
+  if (inp) inp.addEventListener('input', function() { _miaTextoDigitado = inp.value; });
+})();
 
 /* ── Pulso no botão após 5s (apenas modo vendas, chat não aberto) ── */
 setTimeout(function() {
