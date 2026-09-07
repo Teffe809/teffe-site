@@ -264,12 +264,15 @@
   padding: 9px 12px;
   outline: none;
   transition: border-color .2s;
+  /* O site aplica uppercase global aos inputs. Conversa livre deve preservar
+     exatamente a capitalização digitada pelo visitante. */
+  text-transform: none !important;
 }
 .mia-input-area input:focus {
   border-color: #2563C4;
   background: #fff;
 }
-.mia-input-area input::placeholder { color: #8896AB; }
+.mia-input-area input::placeholder { color: #8896AB; text-transform: none !important; }
 .mia-input-area input:disabled { opacity: .5; cursor: not-allowed; }
 
 .mia-send {
