@@ -32,26 +32,24 @@ function _miaUuid() {
   });
 }
 
+// Sempre gera um conversation_id novo a cada carregamento de página. Antes, um id salvo em
+// localStorage era reaproveitado por até 24h -- mas nada na UI restaura a conversa anterior
+// nesse caso (_miaHistorico, _miaLeadState e _miaNome sempre começam vazios/nulos a cada
+// carregamento; só o conversation_id era reaproveitado silenciosamente). Esse descompasso
+// (a MIA pede o nome de novo, como se fosse uma conversa nova, mas o backend reconhecia o MESMO
+// conversation_id e recuperava todo o estado comercial da conversa anterior) foi a causa raiz de
+// um vazamento real de contexto entre visitantes/sessões distintas. Gerar sempre um id novo
+// elimina esse vazamento na origem, sem tocar em nenhuma regra de captura/estado dentro de uma
+// mesma conversa (que continua sendo identificada pelo mesmo conversation_id do início ao fim).
 function _miaGetConversationId() {
-  var now = Date.now();
+  var id = _miaUuid();
   try {
-    if (window.__MIA_HML_CONFIG__ && window.__MIA_HML_CONFIG__.freshConversationOnLoad) {
-      var freshId = _miaUuid();
-      localStorage.setItem(_MIA_CONVERSATION_KEY, JSON.stringify({ id: freshId, updated_at: now }));
-      return freshId;
-    }
-    var saved = JSON.parse(localStorage.getItem(_MIA_CONVERSATION_KEY) || 'null');
-    if (saved && typeof saved.id === 'string' && /^[a-f0-9-]{20,80}$/i.test(saved.id) && now - Number(saved.updated_at || 0) < 24 * 60 * 60 * 1000) {
-      saved.updated_at = now;
-      localStorage.setItem(_MIA_CONVERSATION_KEY, JSON.stringify(saved));
-      return saved.id;
-    }
-    var id = _miaUuid();
-    localStorage.setItem(_MIA_CONVERSATION_KEY, JSON.stringify({ id: id, updated_at: now }));
-    return id;
+    localStorage.setItem(_MIA_CONVERSATION_KEY, JSON.stringify({ id: id, updated_at: Date.now() }));
   } catch (_) {
-    return _miaUuid();
+    // localStorage indisponível (ex.: navegação privada restrita): segue com o id gerado em
+    // memória, sem persistência entre recarregamentos -- nunca um problema de isolamento.
   }
+  return id;
 }
 
 /* ── Verifica se Mia deve operar neste contexto ── */
