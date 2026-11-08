@@ -2270,229 +2270,24 @@
 </div>
 <script src="js/supabase.js"></script>
 
-<!-- ADMIN LOGIN MODAL -->
-<div class="modal-bg" id="adm-login-bg">
-  <div class="modal" style="max-width:420px;">
-    <button class="modal-x" onclick="admFecharLogin()">✕</button>
-    <div id="adm-login-panel">
-    <h2>Painel Administrativo</h2>
-    <p class="msub">Acesso restrito a administradores.</p>
-    <div id="adm-login-erro" class="adm-err"></div>
-    <div class="fg"><label>E-mail</label><input id="adm-email" type="email" placeholder="admin@teffe.com.br"/></div>
-    <div class="fg" style="margin-top:12px;"><label>Senha</label><input id="adm-senha" type="password" placeholder="••••••••"/></div>
-    <button class="btn-login" id="adm-btn-entrar" onclick="admFazerLogin()">Entrar →</button>
-    <div class="modal-links"><a href="#" onclick="esqueciMinhaSenha('adm');return false;">Esqueci minha senha</a></div>
-    </div>
-    <div id="adm-rec-panel" style="display:none;">
-    <h2>Recuperar senha</h2>
-    <p class="msub">Informe seu e-mail para receber o link de redefinição.</p>
-    <div id="adm-rec-msg" class="rec-msg"></div>
-    <div class="fg"><label>E-mail</label><input id="adm-rec-email" type="email" placeholder="admin@teffe.com.br"/></div>
-    <button class="btn-login" id="adm-rec-btn" onclick="enviarLinkRecuperacao('adm')" style="margin-top:16px;">Enviar link →</button>
-    <div class="modal-links"><a href="#" onclick="voltarAoLogin('adm');return false;">← Voltar ao login</a></div>
-    </div>
-  </div>
-</div>
-
-<!-- ADMIN: PAINEL DESCONTINUADO — o painel administrativo antigo (login +
-     tudo que vem depois dele, incluindo #admin-panel logo abaixo) não é mais
-     usado; o ERP real está em erp.teffe.com.br (repositório teffe-erp). A
-     rota #admin foi desligada em js/admin.js (admInit() mostra este aviso em
-     vez do login antigo) — ver comentário lá para detalhes de o que ainda
-     pode ser removido com segurança num cleanup futuro. -->
-<div class="modal-bg" id="adm-descontinuado-bg" onclick="if(event.target===this)admFecharDescontinuado()">
+<!-- Aviso para links antigos do painel administrativo -->
+<div class="modal-bg" id="painel-movido" onclick="if(event.target===this)fecharPainelMovido()">
   <div class="modal" style="max-width:420px;text-align:center;">
-    <button class="modal-x" onclick="admFecharDescontinuado()">✕</button>
-    <i class="ti ti-alert-triangle" style="font-size:32px;color:#F59E0B;margin-bottom:12px;display:block;"></i>
-    <h2 style="margin-bottom:8px;">Painel descontinuado</h2>
-    <p class="msub" style="margin-bottom:20px;">Este painel administrativo não é mais utilizado. Acesse o sistema atual em:</p>
-    <a href="https://erp.teffe.com.br" target="_blank" rel="noopener" class="btn-login" style="display:block;text-decoration:none;">Ir para o ERP →</a>
+    <button class="modal-x" onclick="fecharPainelMovido()" aria-label="Fechar">✕</button>
+    <h2>Painel movido para <a href="https://erp.teffe.com.br">erp.teffe.com.br</a></h2>
   </div>
 </div>
-
-<!-- PAINEL ADMINISTRATIVO (código legado, não mais alcançável — ver aviso acima) -->
-<div id="admin-panel" style="display:none;position:fixed;inset:0;z-index:5100;background:#F5F7FA;overflow-y:auto;">
-
-  <div class="adm-navbar">
-    <div class="adm-navbar-left">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="198 26 314 120" style="height:34px;width:auto;">
-        <text font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="76" x="200" y="103"><tspan fill="#fff">TE</tspan><tspan fill="#E07820">FFE</tspan></text>
-        <rect x="200" y="111" width="310" height="3" rx="1.5" fill="#E07820"/>
-        <text x="202" y="139" font-family="Arial,sans-serif" font-weight="700" font-size="15" fill="#E07820" letter-spacing="6">TECNOLOGIA</text>
-      </svg>
-      <span class="adm-navbar-tag">Painel Admin</span>
-    </div>
-    <div class="adm-navbar-right">
-      <i class="ti ti-user-circle" style="font-size:20px;"></i>
-      <span id="adm-nome-display"></span>
-      <button class="adm-sair-btn" onclick="admAbrirAlterarSenha()"><i class="ti ti-lock"></i> Alterar senha</button>
-      <button class="adm-sair-btn" onclick="admFazerLogout()"><i class="ti ti-logout"></i> Sair</button>
-    </div>
-  </div>
-
-  <div class="adm-layout">
-
-    <div class="adm-sidebar">
-      <div class="adm-sidebar-label">Menu</div>
-      <button class="adm-nav-item" data-adm-view="dash" onclick="admMostrarView('dash')"><i class="ti ti-layout-dashboard"></i> Dashboard</button>
-      <button class="adm-nav-item" data-adm-view="tecnicos" onclick="admMostrarView('tecnicos')"><i class="ti ti-users"></i> Técnicos</button>
-      <button class="adm-nav-item" data-adm-view="clientes" onclick="admMostrarView('clientes')"><i class="ti ti-building"></i> Clientes</button>
-      <button class="adm-nav-item" data-adm-view="chamados" onclick="admMostrarView('chamados')"><i class="ti ti-ticket"></i> Chamados</button>
-    </div>
-
-    <div class="adm-content">
-
-      <!-- DASHBOARD -->
-      <div id="adm-view-dash" class="adm-view">
-        <h1 class="adm-pg-title">Dashboard</h1>
-        <p class="adm-pg-sub">Visão geral do painel administrativo Teffe</p>
-        <div class="adm-stat-cards">
-          <div class="adm-stat-card" onclick="admMostrarView('tecnicos')">
-            <i class="ti ti-users"></i>
-            <div class="adm-stat-num" id="adm-n-tecs">–</div>
-            <div class="adm-stat-label">Técnicos cadastrados</div>
-          </div>
-          <div class="adm-stat-card" onclick="admMostrarView('clientes')">
-            <i class="ti ti-building"></i>
-            <div class="adm-stat-num" id="adm-n-cli">–</div>
-            <div class="adm-stat-label">Clientes</div>
-          </div>
-          <div class="adm-stat-card" onclick="admMostrarView('chamados')">
-            <i class="ti ti-ticket"></i>
-            <div class="adm-stat-num" id="adm-n-cham">–</div>
-            <div class="adm-stat-label">Chamados abertos</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- TÉCNICOS -->
-      <div id="adm-view-tecnicos" class="adm-view">
-        <h1 class="adm-pg-title">Técnicos</h1>
-        <div class="adm-form-card">
-          <h3><i class="ti ti-user-plus"></i> Novo Técnico</h3>
-          <div id="adm-tec-erro" class="adm-err"></div>
-          <div class="adm-grid-3">
-            <div class="ac-fg"><label class="ac-label">Nome *</label><input type="text" id="adm-tec-nome" class="ac-input" placeholder="Nome completo"/></div>
-            <div class="ac-fg"><label class="ac-label">E-mail *</label><input type="email" id="adm-tec-email" class="ac-input" placeholder="tecnico@empresa.com.br"/></div>
-            <div class="ac-fg"><label class="ac-label">Senha temporária *</label><input type="password" id="adm-tec-senha" class="ac-input" placeholder="Senha para primeiro acesso"/></div>
-          </div>
-          <div class="adm-grid-2">
-            <div class="ac-fg"><label class="ac-label">Telefone</label><input type="tel" id="adm-tec-tel" class="ac-input" placeholder="(14) 9 0000-0000" oninput="maskPhone(event)"/></div>
-            <div class="ac-fg"><label class="ac-label">Matrícula</label><input type="text" id="adm-tec-mat" class="ac-input" placeholder="Ex: TEC-001"/></div>
-          </div>
-          <button class="adm-btn" id="adm-btn-criar-tec" onclick="admCriarTecnico()"><i class="ti ti-plus"></i> Criar Técnico</button>
-        </div>
-        <div class="ac-section">
-          <div class="ac-section-header"><h2>Técnicos cadastrados</h2></div>
-          <div id="adm-lista-tecs"><div class="ac-empty">Carregando...</div></div>
-        </div>
-      </div>
-
-      <!-- CLIENTES -->
-      <div id="adm-view-clientes" class="adm-view">
-        <h1 class="adm-pg-title">Clientes</h1>
-        <p class="adm-pg-sub">Vincule cada cliente ao técnico responsável pelo atendimento.</p>
-        <div class="ac-section">
-          <div class="ac-section-header"><h2>Vínculo cliente × técnico</h2></div>
-          <div id="adm-lista-clientes"><div class="ac-empty">Carregando...</div></div>
-        </div>
-      </div>
-
-      <!-- CHAMADOS -->
-      <div id="adm-view-chamados" class="adm-view">
-        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:8px;">
-          <h1 class="adm-pg-title" style="margin:0;">Chamados</h1>
-          <button class="adm-btn" onclick="admAbrirNovoChamado()"><i class="ti ti-plus"></i> Novo Chamado</button>
-        </div>
-        <div class="adm-filters">
-          <label>Status</label>
-          <select id="adm-filtro-status" onchange="admCarregarChamados()">
-            <option value="">Todos</option>
-            <option value="aberto">Aberto</option>
-            <option value="andamento">Em andamento</option>
-            <option value="encerrado">Encerrado</option>
-          </select>
-          <label>Técnico</label>
-          <select id="adm-filtro-tec" onchange="admCarregarChamados()">
-            <option value="">Todos</option>
-          </select>
-          <button class="adm-btn adm-btn-outline" onclick="admCarregarChamados()"><i class="ti ti-refresh"></i> Atualizar</button>
-        </div>
-        <div class="ac-section">
-          <div id="adm-lista-chamados"><div class="ac-empty">Carregando...</div></div>
-        </div>
-      </div>
-
-    </div>
-  </div>
-
-  <!-- MODAL NOVO CHAMADO (admin) -->
-  <div class="modal-bg" id="adm-novo-cham-bg" style="z-index:6000;">
-    <div class="modal" style="max-width:560px;">
-      <button class="modal-x" onclick="admFecharNovoChamado()">✕</button>
-      <h2 style="margin-bottom:20px;"><i class="ti ti-plus"></i> Novo Chamado</h2>
-      <div id="adm-novo-cham-erro" class="adm-err" style="display:none;margin-bottom:12px;"></div>
-      <div class="adm-grid-2" style="margin-bottom:12px;">
-        <div class="ac-fg"><label class="ac-label">Tipo *</label>
-          <select id="adm-nc-tipo" class="ac-input">
-            <option value="instalacao">Instalação</option>
-            <option value="desinstalacao">Desinstalação</option>
-            <option value="vistoria">Vistoria</option>
-            <option value="manutencao">Manutenção</option>
-          </select>
-        </div>
-        <div class="ac-fg"><label class="ac-label">Prioridade</label>
-          <select id="adm-nc-prio" class="ac-input">
-            <option value="normal">Normal</option>
-            <option value="alta">Alta</option>
-            <option value="urgente">Urgente</option>
-          </select>
-        </div>
-      </div>
-      <div class="ac-fg" style="margin-bottom:12px;"><label class="ac-label">Cliente *</label>
-        <select id="adm-nc-cliente" class="ac-input" onchange="admNcOnClienteChange()">
-          <option value="">Selecione o cliente...</option>
-        </select>
-      </div>
-      <div class="ac-fg" style="margin-bottom:12px;"><label class="ac-label">Equipamento</label>
-        <select id="adm-nc-equip" class="ac-input">
-          <option value="">Selecione o cliente primeiro...</option>
-        </select>
-      </div>
-      <div class="adm-grid-2" style="margin-bottom:12px;">
-        <div class="ac-fg"><label class="ac-label">Técnico responsável</label>
-          <select id="adm-nc-tec" class="ac-input">
-            <option value="">Sem técnico atribuído</option>
-          </select>
-        </div>
-        <div class="ac-fg"><label class="ac-label">Data prevista</label>
-          <input type="date" id="adm-nc-data" class="ac-input"/>
-        </div>
-      </div>
-      <div class="ac-fg" style="margin-bottom:16px;"><label class="ac-label">Descrição *</label>
-        <textarea id="adm-nc-desc" class="ac-input" rows="4" placeholder="Descreva o serviço a ser realizado..." style="resize:vertical;"></textarea>
-      </div>
-      <div style="display:flex;gap:10px;justify-content:flex-end;">
-        <button class="adm-btn adm-btn-outline" onclick="admFecharNovoChamado()">Cancelar</button>
-        <button class="adm-btn" id="adm-nc-btn-salvar" onclick="admSalvarNovoChamado()"><i class="ti ti-check"></i> Criar Chamado</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- MODAL DETALHE CHAMADO (admin) -->
-  <div class="modal-bg" id="adm-detalhe-bg" style="z-index:6000;">
-    <div class="modal" style="max-width:600px;max-height:85vh;overflow-y:auto;">
-      <button class="modal-x" onclick="admFecharDetalhe()">✕</button>
-      <h2 style="margin-bottom:16px;">Detalhes do Chamado</h2>
-      <div id="adm-detalhe-corpo"></div>
-      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;border-top:1px solid #eee;padding-top:16px;">
-        <button id="adm-detalhe-btn-os" class="adm-btn adm-btn-outline"><i class="ti ti-printer"></i> Imprimir OS</button>
-        <button class="adm-btn" onclick="admFecharDetalhe()">Fechar</button>
-      </div>
-    </div>
-  </div>
-
-</div>
+<script>
+function fecharPainelMovido(){
+  document.getElementById('painel-movido').classList.remove('open');
+  if(location.hash==='#admin') history.replaceState(null,'',location.pathname+location.search);
+}
+function atualizarAvisoPainel(){
+  document.getElementById('painel-movido').classList.toggle('open',location.hash==='#admin');
+}
+window.addEventListener('hashchange',atualizarAvisoPainel);
+window.addEventListener('DOMContentLoaded',atualizarAvisoPainel);
+</script>
 
 <!-- ═══════════════════════════════════
      PORTAL DO TÉCNICO
@@ -2654,9 +2449,6 @@
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="js/admin-keys.js"></script>
-<script src="js/admin.js"></script>
 
 <!-- MIA — Assistente Virtual -->
 <div id="mia-btn" class="mia-btn" onclick="miaToggle()" title="Fale com a Mia"
