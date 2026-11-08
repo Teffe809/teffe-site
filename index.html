@@ -16,6 +16,26 @@
 <link rel="stylesheet" href="css/mia.css"/>
 <link rel="stylesheet" href="css/cliente-portal.css"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/signature_pad/4.1.7/signature_pad.umd.min.js"></script>
+<script>
+function openModal(e){
+  e&&e.preventDefault();
+  const t=localStorage.getItem('tt'),u=localStorage.getItem('tu');
+  if(t&&u&&typeof carregarArea==='function'){
+    carregarArea(); // Já logado: vai direto para a área do cliente
+  } else {
+    document.getElementById('modal').classList.add('open');
+  }
+}
+function closeModal(){
+  document.getElementById('modal').classList.remove('open');
+  document.getElementById('login-inatividade').style.display='none';
+  document.getElementById('login-acesso-negado').style.display='none';
+}
+window.addEventListener('DOMContentLoaded',function(){
+  document.getElementById('modal').addEventListener('click',function(e){if(e.target===this)closeModal();});
+});
+
+</script>
 </head>
 <body>
 

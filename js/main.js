@@ -228,22 +228,6 @@ function closeMobileAndOpen(e, type, id){
 })();
 
 // ── MODAL LOGIN ──
-function openModal(e){
-  e&&e.preventDefault();
-  const t=localStorage.getItem('tt'),u=localStorage.getItem('tu');
-  if(t&&u&&typeof carregarArea==='function'){
-    carregarArea(); // Já logado: vai direto para a área do cliente
-  } else {
-    document.getElementById('modal').classList.add('open');
-  }
-}
-function closeModal(){
-  document.getElementById('modal').classList.remove('open');
-  document.getElementById('login-inatividade').style.display='none';
-  document.getElementById('login-acesso-negado').style.display='none';
-}
-document.getElementById('modal').addEventListener('click',function(e){if(e.target===this)closeModal();});
-
 // ── MODAL ORÇAMENTO ──
 function openOrca(e, solucao){
   e && e.preventDefault();
