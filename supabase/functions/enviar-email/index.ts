@@ -8,13 +8,21 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const resendKey = Deno.env.get('RESEND_API_KEY');
+  if (!resendKey) {
+    return new Response(JSON.stringify({ error: 'RESEND_API_KEY não configurada' }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
   const { to, subject, html, lead } = await req.json();
 
   // 1. Envia email via Resend
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
-      'Authorization': 'Bearer re_6wWMHw6G_JKmjCqire1xwrVdQQoYwgJ5W',
+      'Authorization': 'Bearer ' + resendKey,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({

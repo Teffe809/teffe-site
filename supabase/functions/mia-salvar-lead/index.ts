@@ -14,7 +14,13 @@ Deno.serve(async (req: Request) => {
     const apiKey           = Deno.env.get('ANTHROPIC_API_KEY')!;
     const supabaseUrl      = Deno.env.get('SUPABASE_URL')!;
     const serviceKey       = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const resendKey        = 're_6wWMHw6G_JKmjCqire1xwrVdQQoYwgJ5W';
+    const resendKey = Deno.env.get('RESEND_API_KEY');
+    if (!resendKey) {
+      return new Response(JSON.stringify({ error: 'RESEND_API_KEY não configurada' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     // Formata histórico como texto legível para extração e email
     const historicoTexto = (historico as Array<{ role: string; content: string }>)
